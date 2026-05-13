@@ -1,6 +1,6 @@
-import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useContext, useMemo, useState } from 'react';
 
-export type ControlRole = 'employee' | 'owner';
+type ControlRole = 'owner' | 'employee';
 
 type ControlRoleContextValue = {
   role: ControlRole;
@@ -10,7 +10,7 @@ type ControlRoleContextValue = {
 const ControlRoleContext = createContext<ControlRoleContextValue | null>(null);
 
 export function ControlRoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<ControlRole>('employee');
+  const [role, setRole] = useState<ControlRole>('owner');
   const value = useMemo(() => ({ role, setRole }), [role]);
 
   return <ControlRoleContext.Provider value={value}>{children}</ControlRoleContext.Provider>;

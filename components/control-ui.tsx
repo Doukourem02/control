@@ -1,55 +1,37 @@
-import { Link, type Href } from 'expo-router';
-import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import type { Href } from 'expo-router';
+import { Link } from 'expo-router';
+import type { ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { ControlRole, useControlRole } from '@/context/control-role';
+type Tone = 'primary' | 'success' | 'warning' | 'danger';
 
-type ScreenProps = {
-  title: string;
-  subtitle: string;
-  eyebrow?: string;
-  children: ReactNode;
+const toneColors: Record<Tone, { background: string; text: string; soft: string }> = {
+  primary: { background: '#111111', text: '#FFFFFF', soft: '#EDE8F7' },
+  success: { background: '#0B8F5A', text: '#FFFFFF', soft: '#E8F6EF' },
+  warning: { background: '#E8A018', text: '#111111', soft: '#FFF4D9' },
+  danger: { background: '#D94841', text: '#FFFFFF', soft: '#FDEDEC' },
 };
 
-export function ControlScreen({ title, subtitle, eyebrow = 'Poissonnerie Cocody', children }: ScreenProps) {
+export function ControlScreen({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <ThemedView style={styles.screen}>
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <View style={styles.topBar}>
-            <View style={styles.avatar}>
-              <ThemedText type="smallBold" style={styles.avatarText}>
-                C
-              </ThemedText>
-            </View>
-            <RoleSwitcher />
-          </View>
-
-          <View style={styles.header}>
-            <View style={styles.eyebrowRow}>
-              <ThemedText type="smallBold" themeColor="textSecondary">
-                {eyebrow}
-              </ThemedText>
-              <StatusPill tone="success">Sync</StatusPill>
-            </View>
-            <ThemedText selectable type="title" style={styles.screenTitle}>
-              {title}
-            </ThemedText>
-            <ThemedText themeColor="textSecondary" style={styles.subtitle}>
-              {subtitle}
-            </ThemedText>
-          </View>
-
-          {children}
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.screenContent}
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}>
+      <View style={styles.pageHeader}>
+        <Link href="/" asChild>
+          <Pressable style={styles.backButton}>
+            <Text style={styles.backText}>‹</Text>
+          </Pressable>
+        </Link>
+        <View style={styles.pageTitleBlock}>
+          <Text style={styles.pageTitle}>{title}</Text>
+          {subtitle ? <Text style={styles.pageSubtitle}>{subtitle}</Text> : null}
         </View>
-      </ScrollView>
-    </ThemedView>
+      </View>
+      {children}
+    </ScrollView>
   );
 }
 
@@ -62,20 +44,16 @@ export function HeroMetric({
   label: string;
   value: string;
   detail?: string;
-  accent?: Accent;
+  accent?: Tone;
 }) {
+  const tone = toneColors[accent];
+
   return (
-    <ThemedView style={[styles.heroMetric, accentBorderStyles[accent]]}>
-      <View style={styles.metricCopy}>
-        <ThemedText type="smallBold" themeColor="textSecondary">
-          {label}
-        </ThemedText>
-        <ThemedText selectable style={styles.heroValue}>
-          {value}
-        </ThemedText>
-      </View>
-      {detail ? <StatusPill tone={accentToTone[accent]}>{detail}</StatusPill> : null}
-    </ThemedView>
+    <View style={[styles.heroMetric, { backgroundColor: tone.soft }]}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.heroValue}>{value}</Text>
+      {detail ? <Text style={styles.metricDetail}>{detail}</Text> : null}
+    </View>
   );
 }
 
@@ -86,106 +64,62 @@ export function MetricCard({
 }: {
   label: string;
   value: string;
-  accent?: Accent;
+  accent?: Tone;
 }) {
   return (
-    <ThemedView style={[styles.card, styles.metricCard, accentBorderStyles[accent]]}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-      <ThemedText selectable style={styles.metricValue}>
-        {value}
-      </ThemedText>
-    </ThemedView>
+    <View style={styles.metricCard}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={[styles.metricValue, { color: toneColors[accent].background }]}>{value}</Text>
+    </View>
+  );
+}
+
+export function SectionTitle({ children, action }: { children: ReactNode; action?: string }) {
+  return (
+    <View style={styles.sectionRow}>
+      <Text style={styles.sectionTitle}>{children}</Text>
+      {action ? <Text style={styles.sectionAction}>{action}</Text> : null}
+    </View>
   );
 }
 
 export function ActionButton({ label, href }: { label: string; href?: Href }) {
-  const button = (
+  const content = (
     <Pressable style={({ pressed }: { pressed: boolean }) => [styles.actionButton, pressed && styles.pressed]}>
-      <ThemedText type="smallBold" style={styles.actionText}>
-        {label}
-      </ThemedText>
+      <Text style={styles.actionText}>{label}</Text>
     </Pressable>
   );
 
-  if (href) {
-    return (
-      <Link href={href} asChild>
-        {button}
-      </Link>
-    );
+  if (!href) {
+    return content;
   }
 
-  return button;
+  return (
+    <Link href={href} asChild>
+      {content}
+    </Link>
+  );
 }
 
 export function ListRow({
   title,
   meta,
   value,
-  tone,
+  tone = 'primary',
 }: {
   title: string;
-  meta: string;
+  meta?: string;
   value?: string;
   tone?: Tone;
 }) {
   return (
-    <ThemedView type="backgroundElement" style={styles.row}>
-      <View style={styles.rowText}>
-        <ThemedText type="smallBold" numberOfLines={1}>
-          {title}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-          {meta}
-        </ThemedText>
+    <View style={styles.listRow}>
+      <View style={styles.listCopy}>
+        <Text style={styles.listTitle}>{title}</Text>
+        {meta ? <Text style={styles.listMeta}>{meta}</Text> : null}
       </View>
-      {value ? <ThemedText style={[styles.rowValue, tone && toneStyles[tone]]}>{value}</ThemedText> : null}
-    </ThemedView>
-  );
-}
-
-export function SectionTitle({ children, action }: { children: ReactNode; action?: string }) {
-  return (
-    <View style={styles.sectionHeader}>
-      <ThemedText type="smallBold" style={styles.sectionTitle}>
-        {children}
-      </ThemedText>
-      {action ? (
-        <ThemedText type="smallBold" themeColor="textSecondary">
-          {action}
-        </ThemedText>
-      ) : null}
+      {value ? <Text style={[styles.listValue, { color: toneColors[tone].background }]}>{value}</Text> : null}
     </View>
-  );
-}
-
-export function MiniChart({ values }: { values: string[] }) {
-  const heights = [52, 74, 61, 90, 69, 112, 84];
-
-  return (
-    <ThemedView style={styles.card}>
-      <View style={styles.chartHeader}>
-        <View>
-          <ThemedText type="smallBold">Evolution semaine</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {"Chiffre d'affaires par jour"}
-          </ThemedText>
-        </View>
-        <StatusPill tone="primary">+18%</StatusPill>
-      </View>
-      <View style={styles.chart}>
-        {values.map((value, index) => (
-          <View key={value} style={styles.barItem}>
-            <View style={[styles.bar, { height: heights[index] }]} />
-            <ThemedText type="small" themeColor="textSecondary">
-              {value}
-            </ThemedText>
-          </View>
-        ))}
-      </View>
-    </ThemedView>
   );
 }
 
@@ -200,374 +134,277 @@ export function ProductTile({
   price: string;
   status: string;
 }) {
-  const tone = status === 'Critique' ? 'danger' : status === 'Faible' ? 'warning' : 'success';
+  const isCritical = status.toLowerCase().includes('critique');
 
   return (
-    <Pressable style={({ pressed }: { pressed: boolean }) => [styles.productTile, pressed && styles.pressed]}>
-      <View style={styles.productBadge}>
-        <ThemedText type="smallBold">{name.slice(0, 1)}</ThemedText>
+    <View style={styles.productTile}>
+      <View style={styles.productMark} />
+      <View style={styles.listCopy}>
+        <Text style={styles.listTitle}>{name}</Text>
+        <Text style={styles.listMeta}>{meta}</Text>
       </View>
-      <View style={styles.productInfo}>
-        <View style={styles.rowBetween}>
-          <ThemedText type="smallBold" numberOfLines={1}>
-            {name}
-          </ThemedText>
-          <StatusPill tone={tone}>{status}</StatusPill>
-        </View>
-        <ThemedText type="small" themeColor="textSecondary">
-          {meta}
-        </ThemedText>
-        <ThemedText selectable style={styles.productPrice}>
-          {price}
-        </ThemedText>
+      <View style={styles.productRight}>
+        <Text style={styles.listValue}>{price}</Text>
+        <StatusPill tone={isCritical ? 'danger' : 'success'}>{status}</StatusPill>
       </View>
-    </Pressable>
-  );
-}
-
-export function CheckoutPanel({ children }: { children: ReactNode }) {
-  return <ThemedView style={styles.checkoutPanel}>{children}</ThemedView>;
-}
-
-export function FormField({ label, value }: { label: string; value: string }) {
-  return (
-    <ThemedView type="backgroundElement" style={styles.formField}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-      <ThemedText type="smallBold">{value}</ThemedText>
-    </ThemedView>
-  );
-}
-
-export function StatusPill({ children, tone = 'primary' }: { children: ReactNode; tone?: Tone }) {
-  return (
-    <View style={[styles.statusPill, statusStyles[tone]]}>
-      <ThemedText type="smallBold" style={[styles.statusText, statusTextStyles[tone]]}>
-        {children}
-      </ThemedText>
     </View>
   );
 }
 
-type Accent = 'primary' | 'success' | 'warning' | 'danger';
-type Tone = 'primary' | 'success' | 'warning' | 'danger';
-
-const accentToTone: Record<Accent, Tone> = {
-  primary: 'primary',
-  success: 'success',
-  warning: 'warning',
-  danger: 'danger',
-};
-
-function RoleSwitcher() {
-  const { role, setRole } = useControlRole();
-
+export function FormField({ label, value }: { label: string; value: string }) {
   return (
-    <ThemedView type="backgroundElement" style={styles.roleSwitch}>
-      <RoleButton label="Employe" value="employee" role={role} onPress={setRole} />
-      <RoleButton label="Proprietaire" value="owner" role={role} onPress={setRole} />
-    </ThemedView>
+    <View style={styles.formField}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.formValue}>{value}</Text>
+    </View>
   );
 }
 
-function RoleButton({
-  label,
-  value,
-  role,
-  onPress,
-}: {
-  label: string;
-  value: ControlRole;
-  role: ControlRole;
-  onPress: (role: ControlRole) => void;
-}) {
-  const selected = role === value;
+export function CheckoutPanel({ children }: { children: ReactNode }) {
+  return <View style={styles.checkoutPanel}>{children}</View>;
+}
+
+export function StatusPill({ children, tone = 'primary' }: { children: ReactNode; tone?: Tone }) {
+  const colors = toneColors[tone];
 
   return (
-    <Pressable
-      onPress={() => onPress(value)}
-      style={({ pressed }: { pressed: boolean }) => [
-        styles.roleButton,
-        selected && styles.roleButtonSelected,
-        pressed && styles.pressed,
-      ]}>
-      <ThemedText type="smallBold" style={[styles.roleText, selected && styles.roleButtonTextSelected]}>
-        {label}
-      </ThemedText>
-    </Pressable>
+    <View style={[styles.statusPill, { backgroundColor: colors.background }]}>
+      <Text style={[styles.statusText, { color: colors.text }]}>{children}</Text>
+    </View>
   );
 }
 
-const accentBorderStyles = StyleSheet.create({
-  primary: { borderLeftColor: '#6D5DF6' },
-  success: { borderLeftColor: '#11B66D' },
-  warning: { borderLeftColor: '#D98200' },
-  danger: { borderLeftColor: '#E5484D' },
-});
+export function MiniChart({ values }: { values: number[] }) {
+  const max = Math.max(...values);
 
-const toneStyles = StyleSheet.create({
-  primary: { color: '#5E4CE6' },
-  success: { color: '#087F5B' },
-  warning: { color: '#A35C00' },
-  danger: { color: '#C92A2A' },
-});
-
-const statusStyles = StyleSheet.create({
-  primary: { backgroundColor: '#EFECFF' },
-  success: { backgroundColor: '#E7F8EF' },
-  warning: { backgroundColor: '#FFF3D8' },
-  danger: { backgroundColor: '#FFE8E8' },
-});
-
-const statusTextStyles = StyleSheet.create({
-  primary: { color: '#5E4CE6' },
-  success: { color: '#087F5B' },
-  warning: { color: '#A35C00' },
-  danger: { color: '#C92A2A' },
-});
+  return (
+    <View style={styles.chart}>
+      {values.map((value, index) => (
+        <View key={`${value}-${index}`} style={styles.chartColumn}>
+          <View style={[styles.chartBar, { height: `${Math.max(18, (value / max) * 100)}%` }]} />
+        </View>
+      ))}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
-  scrollContent: {
-    minHeight: '100%',
-    padding: Spacing.three,
-    paddingTop: Spacing.four,
-    paddingBottom: 118,
-    alignItems: 'center',
+  screenContent: {
+    paddingTop: 56,
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    gap: 18,
   },
-  content: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    gap: Spacing.three,
-  },
-  topBar: {
+  pageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
+    gap: 12,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
+  backButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#F4F4F4',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#101828',
   },
-  avatarText: {
-    color: '#FFFFFF',
+  backText: {
+    color: '#111111',
+    fontSize: 32,
+    lineHeight: 34,
+    fontWeight: '700',
   },
-  header: {
-    gap: Spacing.one,
+  pageTitleBlock: {
+    flex: 1,
+    gap: 4,
   },
-  eyebrowRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: Spacing.two,
+  pageTitle: {
+    color: '#111111',
+    fontSize: 28,
+    lineHeight: 32,
+    fontWeight: '900',
   },
-  screenTitle: {
-    fontSize: 40,
-    lineHeight: 44,
-    fontWeight: '800',
-  },
-  subtitle: {
-    fontSize: 18,
-    lineHeight: 25,
+  pageSubtitle: {
+    color: '#787878',
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '600',
   },
   heroMetric: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: Spacing.three,
-    minHeight: 118,
-    borderWidth: 1,
-    borderLeftWidth: 5,
-    borderColor: '#E7EAF0',
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-    boxShadow: '0 16px 35px rgba(16, 24, 40, 0.08)',
+    borderRadius: 20,
+    padding: 20,
+    gap: 8,
   },
-  metricCopy: {
-    flex: 1,
-    gap: Spacing.two,
+  metricLabel: {
+    color: '#777777',
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '700',
   },
   heroValue: {
-    fontSize: 42,
-    lineHeight: 46,
+    color: '#111111',
+    fontSize: 30,
+    lineHeight: 36,
     fontWeight: '900',
-    fontVariant: ['tabular-nums'],
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.three,
-    borderRadius: 8,
-    gap: Spacing.two,
-    borderWidth: 1,
-    borderColor: '#E7EAF0',
+  metricDetail: {
+    color: '#555555',
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '700',
   },
   metricCard: {
     flex: 1,
-    minWidth: 0,
-    borderLeftWidth: 5,
+    minHeight: 112,
+    borderRadius: 18,
+    backgroundColor: '#F5F5F5',
+    padding: 16,
+    justifyContent: 'space-between',
   },
   metricValue: {
-    fontSize: 28,
-    lineHeight: 34,
+    color: '#111111',
+    fontSize: 21,
+    lineHeight: 26,
     fontWeight: '900',
-    fontVariant: ['tabular-nums'],
   },
-  actionButton: {
-    flexGrow: 1,
-    flexBasis: '47%',
-    minHeight: 58,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.two,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E7EAF0',
-  },
-  actionText: {
-    textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.72,
-  },
-  row: {
-    borderRadius: 8,
-    padding: Spacing.three,
+  sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  rowText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  rowValue: {
-    fontSize: 14,
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
-  },
-  sectionHeader: {
-    paddingTop: Spacing.one,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
   },
   sectionTitle: {
-    fontSize: 18,
-    lineHeight: 24,
+    color: '#111111',
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '900',
   },
-  chartHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: Spacing.two,
+  sectionAction: {
+    color: '#7E7E7E',
+    fontSize: 13,
+    fontWeight: '800',
   },
-  chart: {
-    height: 150,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: Spacing.one,
-  },
-  barItem: {
+  actionButton: {
     flex: 1,
+    minHeight: 54,
+    borderRadius: 16,
+    backgroundColor: '#111111',
     alignItems: 'center',
-    gap: Spacing.one,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
   },
-  bar: {
-    width: '80%',
-    borderRadius: 4,
-    backgroundColor: '#6D5DF6',
+  actionText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: '900',
   },
-  roleSwitch: {
-    flex: 1,
+  pressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
+  },
+  listRow: {
+    minHeight: 76,
+    borderRadius: 18,
+    backgroundColor: '#F6F6F6',
+    padding: 16,
     flexDirection: 'row',
-    padding: 4,
-    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  listCopy: {
+    flex: 1,
     gap: 4,
   },
-  roleButton: {
-    flex: 1,
+  listTitle: {
+    color: '#1A1A1A',
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '900',
+  },
+  listMeta: {
+    color: '#777777',
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '600',
+  },
+  listValue: {
+    color: '#111111',
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '900',
+    textAlign: 'right',
+  },
+  productTile: {
+    minHeight: 88,
+    borderRadius: 18,
+    backgroundColor: '#F6F6F6',
+    padding: 14,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.two,
-    borderRadius: 999,
+    gap: 12,
   },
-  roleButtonSelected: {
-    backgroundColor: '#101828',
+  productMark: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#EDE8F7',
   },
-  roleText: {
-    textAlign: 'center',
+  productRight: {
+    alignItems: 'flex-end',
+    gap: 7,
   },
-  roleButtonTextSelected: {
-    color: '#FFFFFF',
+  formField: {
+    flex: 1,
+    minHeight: 78,
+    borderRadius: 18,
+    backgroundColor: '#F6F6F6',
+    padding: 15,
+    justifyContent: 'space-between',
+  },
+  formValue: {
+    color: '#111111',
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '900',
+  },
+  checkoutPanel: {
+    borderRadius: 22,
+    backgroundColor: '#F4F0FA',
+    padding: 18,
+    gap: 16,
   },
   statusPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderRadius: 99,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     alignSelf: 'flex-start',
   },
   statusText: {
     fontSize: 12,
-    lineHeight: 14,
-  },
-  productTile: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E7EAF0',
-    padding: Spacing.two,
-    flexDirection: 'row',
-    gap: Spacing.two,
-    alignItems: 'center',
-  },
-  productBadge: {
-    width: 46,
-    height: 46,
-    borderRadius: 8,
-    backgroundColor: '#F0F0F3',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  productInfo: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  rowBetween: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  productPrice: {
-    fontSize: 18,
-    lineHeight: 24,
+    lineHeight: 15,
     fontWeight: '900',
-    fontVariant: ['tabular-nums'],
   },
-  checkoutPanel: {
-    backgroundColor: '#101828',
-    borderRadius: 8,
-    padding: Spacing.three,
-    gap: Spacing.three,
+  chart: {
+    height: 170,
+    borderRadius: 20,
+    backgroundColor: '#F6F6F6',
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
   },
-  formField: {
+  chartColumn: {
     flex: 1,
-    borderRadius: 8,
-    padding: Spacing.three,
-    gap: 4,
+    height: '100%',
+    justifyContent: 'flex-end',
+  },
+  chartBar: {
+    borderRadius: 99,
+    backgroundColor: '#111111',
   },
 });

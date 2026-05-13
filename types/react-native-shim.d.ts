@@ -22,6 +22,17 @@ export type PressableStateCallbackType = {
   pressed: boolean;
 };
 
+export type NativeScrollEvent = {
+  contentOffset: {
+    x: number;
+    y: number;
+  };
+};
+
+export type NativeSyntheticEvent<T> = {
+  nativeEvent: T;
+};
+
 export type PressableProps = ViewProps & {
   onPress?: () => void;
   style?: StyleProp | ((state: PressableStateCallbackType) => StyleProp);
@@ -30,7 +41,13 @@ export type PressableProps = ViewProps & {
 export type ScrollViewProps = ViewProps & {
   contentContainerStyle?: StyleProp;
   contentInsetAdjustmentBehavior?: 'automatic' | 'scrollableAxes' | 'never' | 'always';
+  horizontal?: boolean;
+  pagingEnabled?: boolean;
+  ref?: unknown;
+  scrollEventThrottle?: number;
+  showsHorizontalScrollIndicator?: boolean;
   showsVerticalScrollIndicator?: boolean;
+  onMomentumScrollEnd?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 };
 
 export const View: ComponentType<ViewProps>;
