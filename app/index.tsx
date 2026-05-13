@@ -1,5 +1,7 @@
 import { SellerActionTile, type SellerAction } from '@/components/seller-action-tile';
+import { useStockStore } from '@/components/stock-store';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
@@ -18,38 +20,7 @@ type CarouselRef = {
   scrollTo?: (options: { x: number; y?: number; animated?: boolean }) => void;
 };
 
-const heroCards: HeroCard[] = [
-  {
-    title: 'CONTROL',
-    subtitle: 'Gardez la main sur les ventes, la caisse et le stock.',
-    metric: '125 000 F',
-    tag: 'Ventes du jour',
-    icon: 'chart-box-outline',
-    background: '#E9D8FD',
-    accent: '#7C3AED',
-    foreground: '#251137',
-  },
-  {
-    title: 'Stock précis',
-    subtitle: 'Suivez les entrées, pertes et produits presque finis.',
-    metric: '3 alertes',
-    tag: 'Stock bas',
-    icon: 'package-variant-closed-check',
-    background: '#D8F3EA',
-    accent: '#0F766E',
-    foreground: '#0B352F',
-  },
-  {
-    title: 'Caisse claire',
-    subtitle: 'Comparez les encaissements et les dépenses du jour.',
-    metric: '118 500 F',
-    tag: 'Solde estimé',
-    icon: 'wallet-bifold-outline',
-    background: '#FFE3C2',
-    accent: '#E85D2A',
-    foreground: '#3A1B0E',
-  },
-];
+type AppRoute = '/sell' | '/stock' | '/expense' | '/cash' | '/missing-stock' | '/report';
 
 const sellerActions: SellerAction[] = [
   {
@@ -58,51 +29,91 @@ const sellerActions: SellerAction[] = [
     icon: 'cash-register',
     accent: '#20A36A',
     tone: 'primary',
+    route: '/sell',
   },
   {
     title: 'Stock',
-    subtitle: 'Produits',
+    subtitle: 'Voir produits',
     icon: 'package-variant-closed',
     accent: '#2563EB',
+    route: '/stock',
   },
   {
     title: 'Dépense',
-    subtitle: 'Sortie caisse',
+    subtitle: 'Sortie argent',
     icon: 'receipt-text-outline',
     accent: '#E85D2A',
+    route: '/expense',
   },
   {
     title: 'Caisse',
-    subtitle: 'Contrôler',
+    subtitle: 'Fermer journée',
     icon: 'wallet-outline',
     accent: '#7C3AED',
+    route: '/cash',
   },
   {
-    title: 'Jour',
-    subtitle: 'Résumé',
-    icon: 'calendar-today-outline',
-    accent: '#0F766E',
-  },
-  {
-    title: 'Problème',
-    subtitle: 'Signaler un écart',
-    icon: 'alert-circle-outline',
+    title: 'Manquant',
+    subtitle: 'Stock perdu',
+    icon: 'package-variant-closed-remove',
     accent: '#DC2626',
-    tone: 'danger',
+    route: '/missing-stock',
+  },
+  {
+    title: 'Bilan',
+    subtitle: 'Voir mes ventes, dépenses et caisse',
+    icon: 'clipboard-text-clock-outline',
+    accent: '#0F766E',
+    tone: 'summary',
+    route: '/report',
   },
 ];
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { totalStockKg, stockPurchaseValue, todaySalesAmount } = useStockStore();
   const { width } = useWindowDimensions();
   const carouselRef = useRef<CarouselRef | null>(null);
   const activeIndexRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const heroWidth = Math.min(width - 40, 430);
   const snapInterval = heroWidth + 12;
+  const heroCards: HeroCard[] = [
+    {
+      title: 'CONTROL',
+      subtitle: 'Les ventes sortent uniquement du stock renseigné.',
+      metric: `${Math.round(todaySalesAmount).toLocaleString('fr-FR')} F`,
+      tag: 'Ventes du jour',
+      icon: 'chart-box-outline',
+      background: '#E9D8FD',
+      accent: '#7C3AED',
+      foreground: '#251137',
+    },
+    {
+      title: 'Stock précis',
+      subtitle: 'Ajoutez poissons, poulets, viandes, kilos et prix.',
+      metric: `${totalStockKg.toLocaleString('fr-FR')} kg`,
+      tag: 'Stock restant',
+      icon: 'package-variant-closed-check',
+      background: '#D8F3EA',
+      accent: '#0F766E',
+      foreground: '#0B352F',
+    },
+    {
+      title: 'Achats suivis',
+      subtitle: 'Gardez le montant investi dans le stock sous les yeux.',
+      metric: `${Math.round(stockPurchaseValue).toLocaleString('fr-FR')} F`,
+      tag: 'Achat stock',
+      icon: 'wallet-bifold-outline',
+      background: '#FFE3C2',
+      accent: '#E85D2A',
+      foreground: '#3A1B0E',
+    },
+  ];
 
   useEffect(() => {
     const carouselTimer = setInterval(() => {
-      const nextIndex = (activeIndexRef.current + 1) % heroCards.length;
+      const nextIndex = (activeIndexRef.current + 1) % 3;
 
       activeIndexRef.current = nextIndex;
       setActiveIndex(nextIndex);
@@ -137,19 +148,21 @@ export default function HomeScreen() {
             gap: 12,
           }}
         >
-          <View
-            style={{
+          <Pressable
+            onPress={() => router.push('/profile')}
+            style={({ pressed }: { pressed: boolean }) => ({
               width: 48,
               height: 48,
               borderRadius: 24,
               backgroundColor: '#111111',
               alignItems: 'center',
               justifyContent: 'center',
+              opacity: pressed ? 0.72 : 1,
               boxShadow: '0 8px 16px rgba(17, 17, 17, 0.12)',
-            }}
+            })}
           >
             <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '900' }}>MD</Text>
-          </View>
+          </Pressable>
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ color: '#8A8580', fontSize: 15, fontWeight: '600' }}>Hey</Text>
@@ -164,6 +177,7 @@ export default function HomeScreen() {
           </View>
 
           <Pressable
+            onPress={() => router.push('/customize')}
             style={({ pressed }: { pressed: boolean }) => ({
               width: 48,
               height: 48,
@@ -354,7 +368,11 @@ export default function HomeScreen() {
         }}
       >
         {sellerActions.map((action) => (
-          <SellerActionTile key={action.title} action={action} />
+          <SellerActionTile
+            key={action.title}
+            action={action}
+            onPress={() => router.push(action.route as AppRoute)}
+          />
         ))}
       </View>
     </ScrollView>

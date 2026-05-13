@@ -6,62 +6,65 @@ export type SellerAction = {
   subtitle: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   accent: string;
-  tone?: 'primary' | 'danger';
+  tone?: 'primary' | 'summary';
+  route?: string;
 };
 
 type SellerActionTileProps = {
   action: SellerAction;
+  onPress?: () => void;
 };
 
-export function SellerActionTile({ action }: SellerActionTileProps) {
+export function SellerActionTile({ action, onPress }: SellerActionTileProps) {
   const isPrimary = action.tone === 'primary';
-  const isDanger = action.tone === 'danger';
+  const isSummary = action.tone === 'summary';
 
   return (
     <Pressable
+      onPress={onPress}
       style={({ pressed }: { pressed: boolean }) => ({
-        width: isPrimary || isDanger ? '100%' : '48.4%',
-        minHeight: isPrimary ? 128 : isDanger ? 94 : 116,
-        borderRadius: isPrimary ? 28 : 22,
-        backgroundColor: isPrimary ? '#111111' : '#FFFFFF',
+        width: isPrimary || isSummary ? '100%' : '48.4%',
+        minHeight: isPrimary ? 120 : isSummary ? 86 : 108,
+        borderRadius: isPrimary ? 28 : 24,
+        backgroundColor: isPrimary ? '#111111' : isSummary ? '#EFFAF6' : '#FFFFFF',
         borderWidth: isPrimary ? 0 : 1,
-        borderColor: isDanger ? '#F5C7C7' : '#F0EEE9',
-        padding: isPrimary ? 20 : 16,
+        borderColor: isSummary ? '#D8EFE6' : '#F0EEE9',
+        padding: isPrimary ? 20 : isSummary ? 16 : 15,
         overflow: 'hidden',
         justifyContent: 'space-between',
         opacity: pressed ? 0.72 : 1,
         transform: [{ scale: pressed ? 0.985 : 1 }],
         boxShadow: isPrimary
           ? '0 16px 28px rgba(17, 17, 17, 0.22)'
-          : '0 10px 22px rgba(20, 20, 20, 0.06)',
+          : '0 8px 18px rgba(20, 20, 20, 0.045)',
       })}
     >
       <View
         style={{
           position: 'absolute',
-          right: isPrimary ? -34 : -28,
-          bottom: isPrimary ? -46 : -34,
-          width: isPrimary ? 140 : 104,
-          height: isPrimary ? 140 : 104,
-          borderRadius: isPrimary ? 42 : 34,
-          backgroundColor: isPrimary ? '#FFFFFF12' : `${action.accent}10`,
+          right: isPrimary ? -34 : isSummary ? -20 : -30,
+          bottom: isPrimary ? -46 : isSummary ? -52 : -34,
+          width: isPrimary ? 140 : isSummary ? 132 : 104,
+          height: isPrimary ? 140 : isSummary ? 132 : 104,
+          borderRadius: isPrimary ? 42 : isSummary ? 40 : 34,
+          backgroundColor: isPrimary ? '#FFFFFF12' : `${action.accent}0F`,
           transform: [{ rotate: '-12deg' }],
         }}
       />
 
       <View
         style={{
-          flexDirection: isPrimary || isDanger ? 'row' : 'column',
-          alignItems: isPrimary || isDanger ? 'center' : 'flex-start',
+          flexDirection: isPrimary || isSummary ? 'row' : 'column',
+          alignItems: isPrimary || isSummary ? 'center' : 'flex-start',
           justifyContent: 'space-between',
-          gap: 14,
+          gap: 12,
         }}
       >
         <View
           style={{
-            width: isPrimary ? 58 : 48,
-            height: isPrimary ? 58 : 48,
-            borderRadius: isPrimary ? 18 : 16,
+            width: isPrimary ? 58 : isSummary ? 50 : 48,
+            height: isPrimary ? 58 : isSummary ? 50 : 48,
+            borderRadius: isPrimary ? 18 : isSummary ? 17 : 16,
             backgroundColor: isPrimary ? '#FFFFFF' : `${action.accent}14`,
             alignItems: 'center',
             justifyContent: 'center',
@@ -69,23 +72,27 @@ export function SellerActionTile({ action }: SellerActionTileProps) {
         >
           <MaterialCommunityIcons
             name={action.icon}
-            size={isPrimary ? 32 : 28}
+            size={isPrimary ? 32 : isSummary ? 29 : 28}
             color={isPrimary ? '#111111' : action.accent}
           />
         </View>
 
-        {isPrimary ? (
+        {isPrimary || isSummary ? (
           <View
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: '#FFFFFF',
+              width: isPrimary ? 48 : 42,
+              height: isPrimary ? 48 : 42,
+              borderRadius: isPrimary ? 24 : 21,
+              backgroundColor: isPrimary ? '#FFFFFF' : '#FFFFFF',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <MaterialCommunityIcons name="arrow-right" size={28} color="#111111" />
+            <MaterialCommunityIcons
+              name="arrow-right"
+              size={isPrimary ? 28 : 24}
+              color={isPrimary ? '#111111' : action.accent}
+            />
           </View>
         ) : null}
       </View>
@@ -96,8 +103,8 @@ export function SellerActionTile({ action }: SellerActionTileProps) {
           adjustsFontSizeToFit
           style={{
             color: isPrimary ? '#FFFFFF' : '#171717',
-            fontSize: isPrimary ? 34 : isDanger ? 24 : 24,
-            lineHeight: isPrimary ? 38 : 28,
+            fontSize: isPrimary ? 34 : isSummary ? 25 : 23,
+            lineHeight: isPrimary ? 38 : isSummary ? 29 : 27,
             fontWeight: '900',
           }}
         >
@@ -107,8 +114,8 @@ export function SellerActionTile({ action }: SellerActionTileProps) {
           numberOfLines={1}
           adjustsFontSizeToFit
           style={{
-            color: isPrimary ? '#D8D8D8' : isDanger ? '#A23A3A' : '#777777',
-            fontSize: isPrimary ? 17 : 14,
+            color: isPrimary ? '#D8D8D8' : isSummary ? '#367A60' : '#777777',
+            fontSize: isPrimary ? 17 : isSummary ? 14 : 13,
             fontWeight: '800',
           }}
         >

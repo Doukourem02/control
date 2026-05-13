@@ -34,6 +34,7 @@ export type NativeSyntheticEvent<T> = {
 };
 
 export type PressableProps = ViewProps & {
+  disabled?: boolean;
   onPress?: () => void;
   style?: StyleProp | ((state: PressableStateCallbackType) => StyleProp);
 };
@@ -70,7 +71,7 @@ export const Animated: {
   Value: new (value: number) => {
     interpolate: (config: {
       inputRange: number[];
-      outputRange: Array<number | string>;
+      outputRange: (number | string)[];
       extrapolate?: 'clamp' | 'extend' | 'identity';
     }) => unknown;
   };
