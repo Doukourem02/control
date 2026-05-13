@@ -6,6 +6,7 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
+import type { Href } from 'expo-router';
 import React from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
 
@@ -15,9 +16,15 @@ import { ThemedView } from './themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useControlRole } from '@/context/control-role';
 
+type AppTab = {
+  name: string;
+  href: Href;
+  label: string;
+};
+
 export default function AppTabs() {
   const { role } = useControlRole();
-  const tabs =
+  const tabs: AppTab[] =
     role === 'owner'
       ? [
           { name: 'dashboard', href: '/', label: 'Dashboard' },
