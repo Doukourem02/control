@@ -53,7 +53,7 @@ export function MetricCard({
 
 export function ActionButton({ label }: { label: string }) {
   return (
-    <Pressable style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}>
+    <Pressable style={({ pressed }: { pressed: boolean }) => [styles.actionButton, pressed && styles.pressed]}>
       <ThemedText type="smallBold">{label}</ThemedText>
     </Pressable>
   );
@@ -139,7 +139,7 @@ function RoleButton({
   return (
     <Pressable
       onPress={() => onPress(value)}
-      style={({ pressed }) => [
+      style={({ pressed }: { pressed: boolean }) => [
         styles.roleButton,
         selected && styles.roleButtonSelected,
         pressed && styles.pressed,

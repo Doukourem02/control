@@ -7,7 +7,7 @@ import { useControlRole } from '@/context/control-role';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { role } = useControlRole();
   const tabs =
     role === 'owner'
