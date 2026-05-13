@@ -49,3 +49,4 @@ export const Platform: {
 };
 
 export function useColorScheme(): ColorSchemeName;
+export function useWindowDimensions(): { width: number; height: number; scale: number; fontScale: number };

@@ -7,13 +7,18 @@ export const todaySummary = {
   cashDeclared: '204 000 FCFA',
 };
 
-export const quickActions = ['Nouvelle vente', 'Ajouter depense', 'Entree stock', 'Sortie stock'];
+export const quickActions = [
+  { label: 'Nouvelle vente', href: '/sale' },
+  { label: 'Ajouter depense', href: '/expenses' },
+  { label: 'Entree stock', href: '/stock' },
+  { label: 'Sortie stock', href: '/stock' },
+];
 
 export const products = [
-  { name: 'Thon rouge', stock: '18 kg', price: '3 500 FCFA', margin: '31%', status: 'OK' },
-  { name: 'Tilapia', stock: '6 kg', price: '2 000 FCFA', margin: '24%', status: 'Faible' },
-  { name: 'Crevettes', stock: '2 kg', price: '5 500 FCFA', margin: '38%', status: 'Critique' },
-  { name: 'Sole', stock: '11 kg', price: '4 000 FCFA', margin: '29%', status: 'OK' },
+  { name: 'Thon rouge', stock: '18 kg', price: '3 500 FCFA', margin: '31%', status: 'OK', category: 'Poisson' },
+  { name: 'Tilapia', stock: '6 kg', price: '2 000 FCFA', margin: '24%', status: 'Faible', category: 'Poisson' },
+  { name: 'Crevettes', stock: '2 kg', price: '5 500 FCFA', margin: '38%', status: 'Critique', category: 'Fruits mer' },
+  { name: 'Sole', stock: '11 kg', price: '4 000 FCFA', margin: '29%', status: 'OK', category: 'Poisson' },
 ];
 
 export const transactions = [
@@ -47,3 +52,14 @@ export const alerts = [
 ];
 
 export const weeklyRevenue = ['182k', '210k', '196k', '248k', '231k', '290k', '264k'];
+
+export const saleBasket = [
+  { label: 'Thon rouge', quantity: '6 kg', amount: '21 000 FCFA' },
+  { label: 'Crevettes', quantity: '2 kg', amount: '11 000 FCFA' },
+];
+
+export const cashChecks = [
+  { label: 'Cash compte', value: '116 000 FCFA', status: 'Valide' },
+  { label: 'Mobile money', value: '88 000 FCFA', status: 'Recu' },
+  { label: 'Depenses validees', value: '42 000 FCFA', status: 'Jointes' },
+];

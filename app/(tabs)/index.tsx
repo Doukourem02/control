@@ -1,6 +1,7 @@
+import type { Href } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { ActionButton, ControlScreen, ListRow, MetricCard, MiniChart, SectionTitle } from '@/components/control-ui';
+import { ActionButton, ControlScreen, HeroMetric, ListRow, MetricCard, MiniChart, SectionTitle } from '@/components/control-ui';
 import { alerts, quickActions, stores, todaySummary, transactions, weeklyRevenue } from '@/data/control-demo';
 import { useControlRole } from '@/context/control-role';
 
@@ -18,8 +19,8 @@ function EmployeeHome() {
   return (
     <ControlScreen
       title="Accueil boutique"
-      subtitle="Poissonnerie Cocody - synchronisation a jour">
-      <MetricCard label="Ventes du jour" value={todaySummary.revenue} accent="primary" />
+      subtitle="Vue employee pour vendre, suivre le stock et fermer la caisse.">
+      <HeroMetric label="Ventes du jour" value={todaySummary.revenue} detail="31 tickets" accent="primary" />
       <View style={styles.grid}>
         <MetricCard label="Nombre de ventes" value={`${todaySummary.salesCount}`} />
         <MetricCard label="Caisse attendue" value={todaySummary.cashExpected} accent="success" />
@@ -28,11 +29,11 @@ function EmployeeHome() {
       <SectionTitle>Actions rapides</SectionTitle>
       <View style={styles.actionsGrid}>
         {quickActions.map((action) => (
-          <ActionButton key={action} label={action} />
+          <ActionButton key={action.label} label={action.label} href={action.href as Href} />
         ))}
       </View>
 
-      <SectionTitle>Derniers mouvements</SectionTitle>
+      <SectionTitle action="Aujourd'hui">Derniers mouvements</SectionTitle>
       {transactions.map((transaction) => (
         <ListRow
           key={transaction.label}
@@ -50,8 +51,8 @@ function OwnerDashboard() {
   return (
     <ControlScreen
       title="Dashboard"
-      subtitle="Vue proprietaire - toutes les boutiques">
-      <MetricCard label="Chiffre d'affaires aujourd'hui" value="528 500 FCFA" accent="primary" />
+      subtitle="Vue proprietaire pour comparer les boutiques et decider vite.">
+      <HeroMetric label="Chiffre d'affaires aujourd'hui" value="528 500 FCFA" detail="3 boutiques" accent="primary" />
       <View style={styles.grid}>
         <MetricCard label="Benefice estime" value="150 500 FCFA" accent="success" />
         <MetricCard label="Depenses" value={todaySummary.expenses} accent="warning" />

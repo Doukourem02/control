@@ -27,7 +27,8 @@ npm run ios
 
 ## Structure actuelle
 
-- `src/app` : routes et vues principales.
+- `app` : routes Expo Router, alignees sur les apps Krono.
+- `app/(tabs)` : navigation principale par onglets.
 - `src/components/control-ui.tsx` : composants UI CONTROL reutilisables.
 - `src/context/control-role.tsx` : role actif temporaire pour la maquette.
 - `src/data/control-demo.ts` : donnees fictives pour les ecrans.

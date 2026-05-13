@@ -13,10 +13,10 @@
     ],
     "paths": {
       "react-native": [
-        "./src/types/react-native-shim"
+        "./types/react-native-shim"
       ],
       "@/*": [
-        "./src/*"
+        "./*"
       ],
       "@/assets/*": [
         "./assets/*"

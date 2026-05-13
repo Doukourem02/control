@@ -1,4 +1,4 @@
-import { ControlScreen, ListRow, MetricCard, MiniChart, SectionTitle } from '@/components/control-ui';
+import { ControlScreen, HeroMetric, ListRow, MiniChart, SectionTitle } from '@/components/control-ui';
 import { weeklyRevenue } from '@/data/control-demo';
 
 const reportRows = [
@@ -9,8 +9,8 @@ const reportRows = [
 
 export default function ReportsScreen() {
   return (
-    <ControlScreen title="Rapports" subtitle="Rentabilite, marges et tendances">
-      <MetricCard label="Benefice net semaine" value="612 000 FCFA" accent="success" />
+    <ControlScreen title="Rapports" subtitle="Rentabilite, marges et tendances.">
+      <HeroMetric label="Benefice net semaine" value="612 000 FCFA" detail="Marge +4%" accent="success" />
       <MiniChart values={weeklyRevenue} />
       <SectionTitle>Indicateurs</SectionTitle>
       {reportRows.map((row) => (
