@@ -3,31 +3,39 @@ import React from 'react';
 import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
+import { useControlRole } from '@/context/control-role';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const { role } = useControlRole();
+  const tabs =
+    role === 'owner'
+      ? [
+          { name: 'index', label: 'Dashboard' },
+          { name: 'stores', label: 'Boutiques' },
+          { name: 'alerts', label: 'Alertes' },
+          { name: 'reports', label: 'Rapports' },
+          { name: 'more', label: 'Plus' },
+        ]
+      : [
+          { name: 'index', label: 'Accueil' },
+          { name: 'sale', label: 'Vente' },
+          { name: 'stock', label: 'Stock' },
+          { name: 'expenses', label: 'Depenses' },
+          { name: 'cash', label: 'Caisse' },
+        ];
 
   return (
     <NativeTabs
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
       labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
+      {tabs.map((tab) => (
+        <NativeTabs.Trigger key={tab.name} name={tab.name}>
+          <NativeTabs.Trigger.Label>{tab.label}</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+      ))}
     </NativeTabs>
   );
 }
