@@ -2,8 +2,8 @@ import { SellerActionTile, type SellerAction } from '@/components/seller-action-
 import { useStockStore } from '@/components/stock-store';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 type HeroCard = {
   title: string;
@@ -14,10 +14,6 @@ type HeroCard = {
   background: string;
   accent: string;
   foreground: string;
-};
-
-type CarouselRef = {
-  scrollTo?: (options: { x: number; y?: number; animated?: boolean }) => void;
 };
 
 type AppRoute = '/sell' | '/stock' | '/expense' | '/cash' | '/missing-stock' | '/report';
@@ -72,11 +68,13 @@ const sellerActions: SellerAction[] = [
 export default function HomeScreen() {
   const router = useRouter();
   const { totalStockKg, stockPurchaseValue, todaySalesAmount } = useStockStore();
-  const { width } = useWindowDimensions();
-  const carouselRef = useRef<CarouselRef | null>(null);
+  const { width, height } = useWindowDimensions();
+  const carouselRef = useRef<ScrollView | null>(null);
   const activeIndexRef = useRef(0);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const heroWidth = Math.min(width - 40, 430);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const isCompactHome = height <= 1100 || width <= 1000;
+  const horizontalPadding = isCompactHome ? 16 : 20;
+  const heroWidth = Math.min(width - horizontalPadding * 2, 430);
   const snapInterval = heroWidth + 12;
   const heroCards: HeroCard[] = [
     {
@@ -113,19 +111,18 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const carouselTimer = setInterval(() => {
-      const nextIndex = (activeIndexRef.current + 1) % 3;
+      const nextIndex = (activeIndexRef.current + 1) % heroCards.length;
 
       activeIndexRef.current = nextIndex;
-      setActiveIndex(nextIndex);
       carouselRef.current?.scrollTo?.({
         x: nextIndex * snapInterval,
         y: 0,
         animated: true,
       });
-    }, 3400);
+    }, 4200);
 
     return () => clearInterval(carouselTimer);
-  }, [snapInterval]);
+  }, [heroCards.length, snapInterval]);
 
   return (
     <ScrollView
@@ -133,13 +130,13 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
       style={{ flex: 1, backgroundColor: '#FFFFFF' }}
       contentContainerStyle={{
-        paddingHorizontal: 20,
-        paddingTop: 18,
-        paddingBottom: 36,
-        gap: 16,
+        paddingHorizontal: horizontalPadding,
+        paddingTop: isCompactHome ? 4 : 18,
+        paddingBottom: isCompactHome ? 12 : 36,
+        gap: isCompactHome ? 20 : 16,
       }}
     >
-      <View style={{ gap: 16 }}>
+      <View style={{ gap: isCompactHome ? 10 : 16 }}>
         <View
           style={{
             flexDirection: 'row',
@@ -151,9 +148,9 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => router.push('/profile')}
             style={({ pressed }: { pressed: boolean }) => ({
-              width: 48,
-              height: 48,
-              borderRadius: 24,
+              width: isCompactHome ? 38 : 48,
+              height: isCompactHome ? 38 : 48,
+              borderRadius: isCompactHome ? 19 : 24,
               backgroundColor: '#111111',
               alignItems: 'center',
               justifyContent: 'center',
@@ -161,16 +158,20 @@ export default function HomeScreen() {
               boxShadow: '0 8px 16px rgba(17, 17, 17, 0.12)',
             })}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '900' }}>MD</Text>
+            <Text style={{ color: '#FFFFFF', fontSize: isCompactHome ? 14 : 17, fontWeight: '900' }}>
+              MD
+            </Text>
           </Pressable>
 
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: '#8A8580', fontSize: 15, fontWeight: '600' }}>Hey</Text>
+            <Text style={{ color: '#8A8580', fontSize: isCompactHome ? 13 : 15, fontWeight: '600' }}>
+              Hey
+            </Text>
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.72}
-              style={{ color: '#211716', fontSize: 19, fontWeight: '900' }}
+              style={{ color: '#211716', fontSize: isCompactHome ? 17 : 19, fontWeight: '900' }}
             >
               Mohamed DOUKOURE
             </Text>
@@ -179,9 +180,9 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => router.push('/customize')}
             style={({ pressed }: { pressed: boolean }) => ({
-              width: 48,
-              height: 48,
-              borderRadius: 24,
+              width: isCompactHome ? 38 : 48,
+              height: isCompactHome ? 38 : 48,
+              borderRadius: isCompactHome ? 19 : 24,
               borderWidth: 1.5,
               borderColor: '#D8D4CF',
               alignItems: 'center',
@@ -189,7 +190,7 @@ export default function HomeScreen() {
               opacity: pressed ? 0.68 : 1,
             })}
           >
-            <Ionicons name="add" size={28} color="#111111" />
+            <Ionicons name="add" size={isCompactHome ? 24 : 28} color="#111111" />
           </Pressable>
         </View>
 
@@ -197,8 +198,8 @@ export default function HomeScreen() {
           <View
             style={{
               flex: 1,
-              minHeight: 52,
-              borderRadius: 21,
+              minHeight: isCompactHome ? 38 : 52,
+              borderRadius: isCompactHome ? 16 : 21,
               borderWidth: 1.5,
               borderColor: '#E4E1DD',
               backgroundColor: '#FFFFFF',
@@ -208,14 +209,14 @@ export default function HomeScreen() {
               gap: 9,
             }}
           >
-            <Ionicons name="search" size={21} color="#8F8A85" />
+            <Ionicons name="search" size={isCompactHome ? 18 : 21} color="#8F8A85" />
             <TextInput
               placeholder="Rechercher..."
               placeholderTextColor="#8F8A85"
               style={{
                 flex: 1,
                 color: '#171717',
-                fontSize: 17,
+                fontSize: isCompactHome ? 15 : 17,
                 fontWeight: '600',
                 paddingVertical: 0,
               }}
@@ -224,9 +225,9 @@ export default function HomeScreen() {
 
           <Pressable
             style={({ pressed }: { pressed: boolean }) => ({
-              width: 52,
-              height: 52,
-              borderRadius: 20,
+              width: isCompactHome ? 38 : 52,
+              height: isCompactHome ? 38 : 52,
+              borderRadius: isCompactHome ? 16 : 20,
               backgroundColor: '#FFFFFF',
               alignItems: 'center',
               justifyContent: 'center',
@@ -234,124 +235,168 @@ export default function HomeScreen() {
               boxShadow: '0 8px 16px rgba(20, 20, 20, 0.06)',
             })}
           >
-            <Ionicons name="filter" size={25} color="#111111" />
+            <Ionicons name="filter" size={isCompactHome ? 21 : 25} color="#111111" />
           </Pressable>
         </View>
       </View>
 
-      <View style={{ gap: 10 }}>
-        <ScrollView
+      <View style={{ gap: isCompactHome ? 8 : 10 }}>
+        <Animated.ScrollView
           ref={carouselRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           snapToInterval={snapInterval}
           decelerationRate="fast"
+          scrollEventThrottle={16}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: true },
+          )}
           onMomentumScrollEnd={(event) => {
             const nextIndex = Math.round(event.nativeEvent.contentOffset.x / snapInterval);
 
             activeIndexRef.current = nextIndex;
-            setActiveIndex(nextIndex);
           }}
         >
-          {heroCards.map((card) => (
-            <View
-              key={card.title}
-              style={{
-                width: heroWidth,
-                minHeight: 218,
-                borderRadius: 28,
-                backgroundColor: card.background,
-                padding: 21,
-                marginRight: 12,
-                overflow: 'hidden',
-              }}
-            >
-              <View
-                style={{
-                  position: 'absolute',
-                  right: -28,
-                  bottom: -40,
-                  width: 158,
-                  height: 158,
-                  borderRadius: 44,
-                  backgroundColor: '#FFFFFF66',
-                  transform: [{ rotate: '-12deg' }],
-                }}
-              />
+          {heroCards.map((card, index) => {
+            const inputRange = [
+              (index - 1) * snapInterval,
+              index * snapInterval,
+              (index + 1) * snapInterval,
+            ];
+            const cardScale = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.96, 1, 0.96],
+              extrapolate: 'clamp',
+            });
+            const cardOpacity = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.78, 1, 0.78],
+              extrapolate: 'clamp',
+            });
+            const cardLift = scrollX.interpolate({
+              inputRange,
+              outputRange: [6, 0, 6],
+              extrapolate: 'clamp',
+            });
 
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
-                <View style={{ flex: 1, gap: 9 }}>
-                  <Text style={{ color: card.foreground, fontSize: 30, fontWeight: '900' }}>
-                    {card.title}
-                  </Text>
-                  <Text
+            return (
+              <Animated.View
+                key={card.title}
+                style={{
+                  width: heroWidth,
+                  minHeight: isCompactHome ? 230 : 218,
+                  borderRadius: isCompactHome ? 26 : 28,
+                  backgroundColor: card.background,
+                  padding: isCompactHome ? 20 : 21,
+                  marginRight: 12,
+                  overflow: 'hidden',
+                  opacity: cardOpacity,
+                  transform: [{ translateY: cardLift }, { scale: cardScale }],
+                }}
+              >
+                <View
+                  style={{
+                    position: 'absolute',
+                    right: -28,
+                    bottom: -40,
+                    width: isCompactHome ? 158 : 158,
+                    height: isCompactHome ? 158 : 158,
+                    borderRadius: isCompactHome ? 42 : 44,
+                    backgroundColor: '#FFFFFF66',
+                    transform: [{ rotate: '-12deg' }],
+                  }}
+                />
+
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: isCompactHome ? 10 : 14 }}>
+                  <View style={{ flex: 1, gap: isCompactHome ? 6 : 9 }}>
+                    <Text style={{ color: card.foreground, fontSize: isCompactHome ? 30 : 30, fontWeight: '900' }}>
+                      {card.title}
+                    </Text>
+                    <Text
+                      style={{
+                        color: card.foreground,
+                        opacity: 0.76,
+                        fontSize: isCompactHome ? 17 : 17,
+                        lineHeight: isCompactHome ? 24 : 24,
+                        fontWeight: '800',
+                      }}
+                    >
+                      {card.subtitle}
+                    </Text>
+                  </View>
+
+                  <View
                     style={{
-                      color: card.foreground,
-                      opacity: 0.76,
-                      fontSize: 17,
-                      lineHeight: 24,
-                      fontWeight: '800',
+                      width: isCompactHome ? 90 : 88,
+                      height: isCompactHome ? 90 : 88,
+                      borderRadius: isCompactHome ? 24 : 24,
+                      backgroundColor: '#FFFFFF',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    {card.subtitle}
-                  </Text>
+                    <MaterialCommunityIcons name={card.icon} size={isCompactHome ? 52 : 50} color={card.accent} />
+                  </View>
                 </View>
 
                 <View
                   style={{
-                    width: 88,
-                    height: 88,
-                    borderRadius: 24,
-                    backgroundColor: '#FFFFFF',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    alignSelf: 'flex-start',
+                    borderRadius: isCompactHome ? 16 : 18,
+                    backgroundColor: '#FFFFFF99',
+                    paddingHorizontal: isCompactHome ? 13 : 14,
+                    paddingVertical: isCompactHome ? 9 : 10,
+                    marginTop: isCompactHome ? 18 : 19,
                   }}
                 >
-                  <MaterialCommunityIcons name={card.icon} size={50} color={card.accent} />
+                  <Text style={{ color: card.foreground, fontSize: isCompactHome ? 12 : 13, fontWeight: '800' }}>
+                    {card.tag}
+                  </Text>
+                  <Text
+                    style={{
+                      color: card.foreground,
+                      fontSize: isCompactHome ? 22 : 23,
+                      fontWeight: '900',
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {card.metric}
+                  </Text>
                 </View>
-              </View>
-
-              <View
-                style={{
-                  alignSelf: 'flex-start',
-                  borderRadius: 18,
-                  backgroundColor: '#FFFFFF99',
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  marginTop: 19,
-                }}
-              >
-                <Text style={{ color: card.foreground, fontSize: 13, fontWeight: '800' }}>
-                  {card.tag}
-                </Text>
-                <Text
-                  style={{
-                    color: card.foreground,
-                    fontSize: 23,
-                    fontWeight: '900',
-                    fontVariant: ['tabular-nums'],
-                  }}
-                >
-                  {card.metric}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
+              </Animated.View>
+            );
+          })}
+        </Animated.ScrollView>
 
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 7 }}>
           {heroCards.map((card, index) => {
-            const isActive = activeIndex === index;
+            const inputRange = [
+              (index - 1) * snapInterval,
+              index * snapInterval,
+              (index + 1) * snapInterval,
+            ];
+            const dotScale = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.28, 1, 0.28],
+              extrapolate: 'clamp',
+            });
+            const dotOpacity = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.3, 1, 0.3],
+              extrapolate: 'clamp',
+            });
 
             return (
-              <View
+              <Animated.View
                 key={card.title}
                 style={{
-                  width: isActive ? 26 : 7,
-                  height: 7,
+                  width: isCompactHome ? 24 : 26,
+                  height: isCompactHome ? 6 : 7,
                   borderRadius: 4,
                   backgroundColor: card.accent,
-                  opacity: isActive ? 1 : 0.28,
+                  opacity: dotOpacity,
+                  transform: [{ scaleX: dotScale }],
                 }}
               />
             );
@@ -363,14 +408,15 @@ export default function HomeScreen() {
         style={{
           flexDirection: 'row',
           flexWrap: 'wrap',
-          gap: 10,
-          paddingTop: 4,
+          gap: isCompactHome ? 10 : 10,
+          paddingTop: isCompactHome ? 4 : 4,
         }}
       >
         {sellerActions.map((action) => (
           <SellerActionTile
             key={action.title}
             action={action}
+            compact={isCompactHome}
             onPress={() => router.push(action.route as AppRoute)}
           />
         ))}
