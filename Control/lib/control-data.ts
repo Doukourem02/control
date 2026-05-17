@@ -1,28 +1,25 @@
-import { ID, Permission, Query, Role, type Models } from 'react-native-appwrite';
-
-import { APPWRITE_DATABASE_ID, APPWRITE_TABLES, tablesDb } from '@/lib/appwrite';
-
 export const DEFAULT_SHOP_ID = 'default-shop';
 
-type SaleRow = Models.Row & {
+type BaseRow = {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+};
+
+type SaleRow = BaseRow & {
   shopId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unit: ProductUnit;
+  unitPrice: number;
   totalAmount: number;
-  paymentMethod: 'Cash' | 'Mobile Money';
-};
-
-type ExpenseRow = Models.Row & {
-  shopId: string;
-  amount: number;
-};
-
-type CashClosureRow = Models.Row & {
-  shopId: string;
-  cashGap: number;
+  paymentMethod: PaymentMethod;
 };
 
 export type ProductUnit = 'kg' | 'piece' | 'carton' | 'tas' | 'unite';
 
-export type ProductRow = Models.Row & {
+export type ProductRow = BaseRow & {
   shopId: string;
   name: string;
   category: string;
@@ -32,7 +29,20 @@ export type ProductRow = Models.Row & {
   sellingUnitPrice: number;
 };
 
+export type StockMovementRow = BaseRow & {
+  shopId: string;
+  productId: string;
+  productName: string;
+  type: 'initial' | 'supply' | 'sale' | 'missing' | 'adjustment';
+  quantity: number;
+  unit: ProductUnit;
+  unitCost: number;
+  totalCost: number;
+  note: string;
+};
+
 export type CreateProductInput = {
+  productId?: string;
   name: string;
   category: string;
   quantity: number;
@@ -59,13 +69,12 @@ export type TodaySummary = {
   latestCashGap: number;
 };
 
-export function getAppwriteErrorMessage(error: unknown) {
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message);
-  }
+class ApiResponseError extends Error {}
 
-  return 'Erreur Appwrite inconnue.';
-}
+const backendBaseUrl = (process.env.EXPO_PUBLIC_CONTROL_API_URL ?? 'http://localhost:4000').replace(
+  /\/$/,
+  ''
+);
 
 const emptyTodaySummary: TodaySummary = {
   cashSalesAmount: 0,
@@ -77,216 +86,90 @@ const emptyTodaySummary: TodaySummary = {
   latestCashGap: 0,
 };
 
-function isToday(value: string) {
-  const date = new Date(value);
-  const now = new Date();
+export function getControlErrorMessage(error: unknown) {
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String(error.message);
+  }
 
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
+  return 'Erreur inconnue.';
 }
 
-function rowCreatedAt(row: Models.Row) {
-  return row.$createdAt;
-}
-
-async function listRows<Row extends Models.Row>(tableId: string) {
-  const response = await tablesDb.listRows<Row>({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId,
-    queries: [Query.limit(100)],
+async function requestApi<ResponseBody>(
+  path: string,
+  options: RequestInit = {}
+): Promise<ResponseBody> {
+  const response = await fetch(`${backendBaseUrl}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
-  return response.rows;
-}
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new ApiResponseError(body?.message ?? 'Erreur backend inconnue.');
+  }
 
-const testPermissions = [
-  Permission.read(Role.any()),
-  Permission.update(Role.any()),
-  Permission.delete(Role.any()),
-];
+  return response.json() as Promise<ResponseBody>;
+}
 
 export async function getProducts(shopId = DEFAULT_SHOP_ID): Promise<ProductRow[]> {
   try {
-    const products = await listRows<ProductRow>(APPWRITE_TABLES.products);
+    const response = await requestApi<{ products: ProductRow[] }>(
+      `/api/products?shopId=${encodeURIComponent(shopId)}`
+    );
 
-    return products
-      .filter((product) => product.shopId === shopId)
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return response.products;
   } catch (error) {
-    console.warn('Unable to load products from Appwrite.', getAppwriteErrorMessage(error));
+    console.warn('Unable to load products from CONTROL API.', getControlErrorMessage(error));
     return [];
   }
 }
 
 export async function createProduct(input: CreateProductInput, shopId = DEFAULT_SHOP_ID) {
-  const purchaseUnitPrice = Math.round(input.purchaseTotal / input.quantity);
-  const product = await tablesDb.createRow<ProductRow>({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: APPWRITE_TABLES.products,
-    rowId: ID.unique(),
-    data: {
-      shopId,
-      name: input.name.trim(),
-      category: input.category.trim(),
-      quantity: input.quantity,
-      unit: input.unit,
-      purchaseUnitPrice,
-      sellingUnitPrice: input.sellingUnitPrice,
-    },
-    permissions: testPermissions,
+  const response = await requestApi<{ product: ProductRow }>('/api/products', {
+    method: 'POST',
+    body: JSON.stringify({ ...input, shopId }),
   });
 
-  await Promise.all([
-    tablesDb.createRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLES.stockMovements,
-      rowId: ID.unique(),
-      data: {
-        shopId,
-        productId: product.$id,
-        productName: product.name,
-        type: 'initial',
-        quantity: product.quantity,
-        unit: product.unit,
-        unitCost: product.purchaseUnitPrice,
-        totalCost: input.purchaseTotal,
-        note: 'Stock initial',
-      },
-      permissions: testPermissions,
-    }),
-    tablesDb.createRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLES.activityLogs,
-      rowId: ID.unique(),
-      data: {
-        shopId,
-        type: 'stock',
-        actorName: 'Vendeuse',
-        message: `Stock ajoute : ${product.name}`,
-      },
-      permissions: testPermissions,
-    }),
-  ]);
-
-  return product;
+  return response.product;
 }
 
 export async function createSale(input: CreateSaleInput, shopId = DEFAULT_SHOP_ID) {
-  const product = await tablesDb.getRow<ProductRow>({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: APPWRITE_TABLES.products,
-    rowId: input.productId,
+  const response = await requestApi<{ sale: SaleRow }>('/api/sales', {
+    method: 'POST',
+    body: JSON.stringify({ ...input, shopId }),
   });
 
-  if (input.quantity <= 0) {
-    throw new Error('La quantite doit etre superieure a 0.');
+  return response.sale;
+}
+
+export async function getRecentStockMovements(
+  shopId = DEFAULT_SHOP_ID,
+  limit = 6
+): Promise<StockMovementRow[]> {
+  try {
+    const response = await requestApi<{ movements: StockMovementRow[] }>(
+      `/api/stock-movements?shopId=${encodeURIComponent(shopId)}&limit=${limit}`
+    );
+
+    return response.movements;
+  } catch (error) {
+    console.warn('Unable to load stock movements from CONTROL API.', getControlErrorMessage(error));
+    return [];
   }
-
-  if (input.quantity > product.quantity) {
-    throw new Error('Stock insuffisant pour cette vente.');
-  }
-
-  const totalAmount = Math.round(input.quantity * product.sellingUnitPrice);
-  const remainingQuantity = product.quantity - input.quantity;
-
-  const sale = await tablesDb.createRow({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: APPWRITE_TABLES.sales,
-    rowId: ID.unique(),
-    data: {
-      shopId,
-      productId: product.$id,
-      productName: product.name,
-      quantity: input.quantity,
-      unit: product.unit,
-      unitPrice: product.sellingUnitPrice,
-      totalAmount,
-      paymentMethod: input.paymentMethod,
-    },
-    permissions: testPermissions,
-  });
-
-  await Promise.all([
-    tablesDb.updateRow<ProductRow>({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLES.products,
-      rowId: product.$id,
-      data: {
-        quantity: remainingQuantity,
-      },
-    }),
-    tablesDb.createRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLES.stockMovements,
-      rowId: ID.unique(),
-      data: {
-        shopId,
-        productId: product.$id,
-        productName: product.name,
-        type: 'sale',
-        quantity: input.quantity,
-        unit: product.unit,
-        unitCost: product.purchaseUnitPrice,
-        totalCost: Math.round(input.quantity * product.purchaseUnitPrice),
-        note: `Vente ${input.paymentMethod}`,
-      },
-      permissions: testPermissions,
-    }),
-    tablesDb.createRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLES.activityLogs,
-      rowId: ID.unique(),
-      data: {
-        shopId,
-        type: 'sale',
-        actorName: 'Vendeuse',
-        message: `Vente : ${product.name}`,
-      },
-      permissions: testPermissions,
-    }),
-  ]);
-
-  return sale;
 }
 
 export async function getTodaySummary(shopId = DEFAULT_SHOP_ID): Promise<TodaySummary> {
   try {
-    const [salesRows, expenseRows, closureRows] = await Promise.all([
-      listRows<SaleRow>(APPWRITE_TABLES.sales),
-      listRows<ExpenseRow>(APPWRITE_TABLES.expenses),
-      listRows<CashClosureRow>(APPWRITE_TABLES.cashClosures),
-    ]);
-
-    const todaySales = salesRows.filter((sale) => sale.shopId === shopId && isToday(rowCreatedAt(sale)));
-    const todayExpenses = expenseRows.filter(
-      (expense) => expense.shopId === shopId && isToday(rowCreatedAt(expense))
+    const response = await requestApi<{ summary: TodaySummary }>(
+      `/api/summary/today?shopId=${encodeURIComponent(shopId)}`
     );
-    const todayClosures = closureRows
-      .filter((closure) => closure.shopId === shopId && isToday(rowCreatedAt(closure)))
-      .sort((a, b) => new Date(rowCreatedAt(b)).getTime() - new Date(rowCreatedAt(a)).getTime());
 
-    const cashSalesAmount = todaySales
-      .filter((sale) => sale.paymentMethod === 'Cash')
-      .reduce((total, sale) => total + sale.totalAmount, 0);
-    const mobileMoneySalesAmount = todaySales
-      .filter((sale) => sale.paymentMethod === 'Mobile Money')
-      .reduce((total, sale) => total + sale.totalAmount, 0);
-    const expensesAmount = todayExpenses.reduce((total, expense) => total + expense.amount, 0);
-
-    return {
-      cashSalesAmount,
-      mobileMoneySalesAmount,
-      expensesAmount,
-      physicalCashExpected: cashSalesAmount - expensesAmount,
-      salesCount: todaySales.length,
-      expensesCount: todayExpenses.length,
-      latestCashGap: todayClosures[0]?.cashGap ?? 0,
-    };
+    return response.summary;
   } catch (error) {
-    console.warn('Unable to load today summary from Appwrite.', error);
+    console.warn('Unable to load today summary from CONTROL API.', getControlErrorMessage(error));
     return emptyTodaySummary;
   }
 }

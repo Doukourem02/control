@@ -13,6 +13,8 @@ Roles prevus :
 
 ## Lancer le projet
 
+Demarrer le backend dans `../backend_Control`, puis lancer l'app :
+
 ```bash
 npm run start
 ```
@@ -33,6 +35,6 @@ npm run ios
 - `src/context/control-role.tsx` : role actif temporaire pour la maquette.
 - `src/data/control-demo.ts` : donnees fictives pour les ecrans.
 
-## Etat
+## Backend
 
-Cette version est une maquette mobile minimale, sans backend.
+L'app utilise `EXPO_PUBLIC_CONTROL_API_URL` pour appeler l'API CONTROL. Les operations metier passent par `backend_Control`; le front ne modifie pas directement la base ou le stockage.

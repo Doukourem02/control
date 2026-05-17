@@ -1,6 +1,6 @@
 import {
   createSale,
-  getAppwriteErrorMessage,
+  getControlErrorMessage,
   getProducts,
   type PaymentMethod,
   type ProductRow,
@@ -81,6 +81,7 @@ export default function SaleScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const selectedProduct = useMemo(
     () => products.find((product) => product.$id === selectedProductId),
@@ -90,12 +91,20 @@ export default function SaleScreen() {
   const totalAmount =
     selectedProduct && !Number.isNaN(parsedQuantity) ? parsedQuantity * selectedProduct.sellingUnitPrice : 0;
 
-  const loadProducts = useCallback(async () => {
-    setLoading(true);
+  const loadProducts = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) {
+      setLoading(true);
+    }
+
     const nextProducts = await getProducts();
     setProducts(nextProducts);
-    setSelectedProductId((current) => current || nextProducts[0]?.$id || '');
-    setLoading(false);
+    setSelectedProductId((current) =>
+      nextProducts.some((product) => product.$id === current) ? current : nextProducts[0]?.$id || ''
+    );
+
+    if (!silent) {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -104,6 +113,7 @@ export default function SaleScreen() {
 
   async function handleCreateSale() {
     setFormError('');
+    setSuccessMessage('');
 
     if (!selectedProduct) {
       setFormError('Ajoute un produit en stock avant de vendre.');
@@ -128,10 +138,19 @@ export default function SaleScreen() {
         quantity: parsedQuantity,
         paymentMethod,
       });
+      const remainingQuantity = selectedProduct.quantity - parsedQuantity;
+      setProducts((currentProducts) =>
+        currentProducts.map((product) =>
+          product.$id === selectedProduct.$id ? { ...product, quantity: remainingQuantity } : product
+        )
+      );
       setQuantity('');
-      await loadProducts();
+      setSuccessMessage(
+        `${selectedProduct.name} vendu : reste ${remainingQuantity} ${selectedProduct.unit}.`
+      );
+      await loadProducts({ silent: true });
     } catch (error) {
-      setFormError(getAppwriteErrorMessage(error));
+      setFormError(getControlErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -320,6 +339,12 @@ export default function SaleScreen() {
               {formError ? (
                 <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>
                   {formError}
+                </Text>
+              ) : null}
+
+              {successMessage ? (
+                <Text style={{ color: '#2A8D55', fontSize: 13, fontWeight: '700' }}>
+                  {successMessage}
                 </Text>
               ) : null}
 

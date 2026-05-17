@@ -2,9 +2,9 @@ import { SellerActionTile, type SellerAction } from '@/components/seller-action-
 import { getTodaySummary, type TodaySummary } from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useRouter } from 'expo-router';
-import type { ComponentProps } from 'react';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, type ComponentProps } from 'react';
+import { useState } from 'react';
 import { Image, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -386,7 +386,7 @@ export default function HomeScreen() {
       }`
     : 'Détails de caisse masqués';
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let isMounted = true;
 
     getTodaySummary().then((summary) => {
@@ -398,7 +398,7 @@ export default function HomeScreen() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, []));
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
