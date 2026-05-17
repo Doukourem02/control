@@ -1,8 +1,10 @@
 import { SellerActionTile, type SellerAction } from '@/components/seller-action-tile';
+import { getTodaySummary, type TodaySummary } from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useRouter } from 'expo-router';
 import type { ComponentProps } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -227,7 +229,15 @@ function SettingsRow({
   );
 }
 
-function HomeMenu({ compact, onOpenReport }: { compact: boolean; onOpenReport: () => void }) {
+function HomeMenu({
+  compact,
+  onOpenReport,
+  onOpenStock,
+}: {
+  compact: boolean;
+  onOpenReport: () => void;
+  onOpenStock: () => void;
+}) {
   return (
     <>
       <View style={{ marginTop: compact ? 24 : 34, gap: compact ? 14 : 18 }}>
@@ -244,7 +254,12 @@ function HomeMenu({ compact, onOpenReport }: { compact: boolean; onOpenReport: (
           }}
         >
           {quickActions.map((action) => (
-            <SellerActionTile key={action.title} action={action} compact={compact} />
+            <SellerActionTile
+              key={action.title}
+              action={action}
+              compact={compact}
+              onPress={action.title === 'Stock' ? onOpenStock : undefined}
+            />
           ))}
         </View>
       </View>
@@ -274,8 +289,20 @@ function HomeMenu({ compact, onOpenReport }: { compact: boolean; onOpenReport: (
   );
 }
 
-function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisible: boolean }) {
-  const moneyValue = amountsVisible ? '0 F' : '•••';
+function ReportMenu({
+  compact,
+  amountsVisible,
+  summary,
+}: {
+  compact: boolean;
+  amountsVisible: boolean;
+  summary: TodaySummary;
+}) {
+  const salesValue = amountsVisible
+    ? formatMoney(summary.cashSalesAmount + summary.mobileMoneySalesAmount)
+    : '•••';
+  const expensesValue = amountsVisible ? formatMoney(summary.expensesAmount) : '•••';
+  const cashGapValue = amountsVisible ? formatMoney(summary.latestCashGap) : '•••';
 
   return (
     <View style={{ marginTop: compact ? 24 : 34, marginBottom: compact ? 46 : 62, gap: 16 }}>
@@ -288,10 +315,10 @@ function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisi
           rowGap: compact ? 12 : 14,
         }}
       >
-        <MetricCard label="Ventes" value={moneyValue} compact={compact} />
-        <MetricCard label="Sorties" value={moneyValue} compact={compact} />
-        <MetricCard label="Écart caisse" value={moneyValue} compact={compact} />
-        <MetricCard label="Tickets" value="0" compact={compact} />
+        <MetricCard label="Ventes" value={salesValue} compact={compact} />
+        <MetricCard label="Sorties" value={expensesValue} compact={compact} />
+        <MetricCard label="Écart caisse" value={cashGapValue} compact={compact} />
+        <MetricCard label="Tickets" value={`${summary.salesCount}`} compact={compact} />
       </View>
     </View>
   );
@@ -325,16 +352,49 @@ function ProfileMenu({ compact }: { compact: boolean }) {
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [activeMenu, setActiveMenu] = useState<NavKey>('home');
   const [amountsVisible, setAmountsVisible] = useState(true);
+  const [todaySummary, setTodaySummary] = useState<TodaySummary>({
+    cashSalesAmount: 0,
+    mobileMoneySalesAmount: 0,
+    expensesAmount: 0,
+    physicalCashExpected: 0,
+    salesCount: 0,
+    expensesCount: 0,
+    latestCashGap: 0,
+  });
   const { width, height } = useWindowDimensions();
   const compact = height < 900;
   const contentWidth = Math.min(width, 520);
-  const alertText = 'Aucune vente aujourd’hui';
-  const expectedCashAmount = 0;
+  const alertText =
+    todaySummary.salesCount === 0
+      ? 'Aucune vente aujourd’hui'
+      : `${todaySummary.salesCount} vente${todaySummary.salesCount > 1 ? 's' : ''} aujourd’hui`;
+  const expectedCashAmount = todaySummary.physicalCashExpected;
   const displayedCashAmount = amountsVisible ? formatMoney(expectedCashAmount) : '•••';
   const cashTrendText = amountsVisible ? 'à encaisser' : 'masqué';
-  const dailySummary = amountsVisible ? '0 vente · 0 sortie · aucun écart' : 'Détails de caisse masqués';
+  const dailySummary = amountsVisible
+    ? `${todaySummary.salesCount} vente${todaySummary.salesCount > 1 ? 's' : ''} · ${
+        todaySummary.expensesCount
+      } sortie${todaySummary.expensesCount > 1 ? 's' : ''} · ${
+        todaySummary.latestCashGap === 0 ? 'aucun écart' : `${formatMoney(todaySummary.latestCashGap)} écart`
+      }`
+    : 'Détails de caisse masqués';
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getTodaySummary().then((summary) => {
+      if (isMounted) {
+        setTodaySummary(summary);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -488,9 +548,17 @@ export default function HomeScreen() {
             </Pressable>
 
             {activeMenu === 'home' ? (
-              <HomeMenu compact={compact} onOpenReport={() => setActiveMenu('report')} />
+              <HomeMenu
+                compact={compact}
+                onOpenReport={() => setActiveMenu('report')}
+                onOpenStock={() => router.push('/stock' as never)}
+              />
             ) : activeMenu === 'report' ? (
-              <ReportMenu compact={compact} amountsVisible={amountsVisible} />
+              <ReportMenu
+                compact={compact}
+                amountsVisible={amountsVisible}
+                summary={todaySummary}
+              />
             ) : activeMenu === 'missing' ? (
               <MissingMenu compact={compact} amountsVisible={amountsVisible} />
             ) : (

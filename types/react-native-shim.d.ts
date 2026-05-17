@@ -54,6 +54,15 @@ export type ScrollViewProps = ViewProps & {
   onMomentumScrollEnd?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 };
 
+export type ActivityIndicatorProps = ViewProps & {
+  color?: string;
+  size?: 'small' | 'large' | number;
+};
+
+export type KeyboardAvoidingViewProps = ViewProps & {
+  behavior?: 'height' | 'position' | 'padding';
+};
+
 export type TextInputProps = ViewProps & {
   placeholder?: string;
   placeholderTextColor?: string;
@@ -72,6 +81,8 @@ export const TextInput: ComponentType<TextInputProps>;
 export const Pressable: ComponentType<PressableProps>;
 export const ScrollView: ComponentType<ScrollViewProps>;
 export const Image: ComponentType<ImageProps>;
+export const ActivityIndicator: ComponentType<ActivityIndicatorProps>;
+export const KeyboardAvoidingView: ComponentType<KeyboardAvoidingViewProps>;
 
 export const Animated: {
   Value: new (value: number) => {
