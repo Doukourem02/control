@@ -1,128 +1,130 @@
 import { SellerActionTile, type SellerAction } from '@/components/seller-action-tile';
 import { useStockStore } from '@/components/stock-store';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { Animated, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 
-type HeroCard = {
-  title: string;
-  subtitle: string;
-  metric: string;
-  tag: string;
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  background: string;
-  accent: string;
-  foreground: string;
-};
+type AppRoute =
+  | '/'
+  | '/sell'
+  | '/stock'
+  | '/expense'
+  | '/cash'
+  | '/missing-stock'
+  | '/report'
+  | '/profile';
 
-type AppRoute = '/sell' | '/stock' | '/expense' | '/cash' | '/missing-stock' | '/report';
-
-const sellerActions: SellerAction[] = [
+const quickActions: SellerAction[] = [
   {
     title: 'Vendre',
     subtitle: 'Nouvelle vente',
-    icon: 'cash-register',
-    accent: '#20A36A',
-    tone: 'primary',
+    icon: 'arrow-top-right',
+    accent: '#4C9BFF',
     route: '/sell',
   },
   {
     title: 'Stock',
-    subtitle: 'Voir produits',
+    subtitle: 'Produits',
     icon: 'package-variant-closed',
-    accent: '#2563EB',
+    accent: '#FF8A4C',
     route: '/stock',
-  },
-  {
-    title: 'Dépense',
-    subtitle: 'Sortie argent',
-    icon: 'receipt-text-outline',
-    accent: '#E85D2A',
-    route: '/expense',
   },
   {
     title: 'Caisse',
     subtitle: 'Fermer journée',
     icon: 'wallet-outline',
-    accent: '#7C3AED',
+    accent: '#B94DFF',
     route: '/cash',
   },
   {
-    title: 'Manquant',
-    subtitle: 'Stock perdu',
-    icon: 'package-variant-closed-remove',
-    accent: '#DC2626',
-    route: '/missing-stock',
-  },
-  {
-    title: 'Bilan',
-    subtitle: 'Voir mes ventes, dépenses et caisse',
-    icon: 'clipboard-text-clock-outline',
-    accent: '#0F766E',
-    tone: 'summary',
-    route: '/report',
+    title: 'Dépense',
+    subtitle: 'Sortie argent',
+    icon: 'receipt-text-outline',
+    accent: '#333333',
+    route: '/expense',
   },
 ];
 
-export default function HomeScreen() {
+function formatMoney(value: number) {
+  return `${Math.round(value).toLocaleString('fr-FR')} F`;
+}
+
+function BottomNav({ active = 'home' }: { active?: 'home' | 'report' | 'missing' | 'profile' }) {
   const router = useRouter();
-  const { totalStockKg, stockPurchaseValue, todaySalesAmount } = useStockStore();
-  const { width, height } = useWindowDimensions();
-  const carouselRef = useRef<ScrollView | null>(null);
-  const activeIndexRef = useRef(0);
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const isCompactHome = height <= 1100 || width <= 1000;
-  const horizontalPadding = isCompactHome ? 16 : 20;
-  const heroWidth = Math.min(width - horizontalPadding * 2, 430);
-  const snapInterval = heroWidth + 12;
-  const heroCards: HeroCard[] = [
-    {
-      title: 'CONTROL',
-      subtitle: 'Les ventes sortent uniquement du stock renseigné.',
-      metric: `${Math.round(todaySalesAmount).toLocaleString('fr-FR')} F`,
-      tag: 'Ventes du jour',
-      icon: 'chart-box-outline',
-      background: '#E9D8FD',
-      accent: '#7C3AED',
-      foreground: '#251137',
-    },
-    {
-      title: 'Stock précis',
-      subtitle: 'Ajoutez poissons, poulets, viandes, kilos et prix.',
-      metric: `${totalStockKg.toLocaleString('fr-FR')} kg`,
-      tag: 'Stock restant',
-      icon: 'package-variant-closed-check',
-      background: '#D8F3EA',
-      accent: '#0F766E',
-      foreground: '#0B352F',
-    },
-    {
-      title: 'Achats suivis',
-      subtitle: 'Gardez le montant investi dans le stock sous les yeux.',
-      metric: `${Math.round(stockPurchaseValue).toLocaleString('fr-FR')} F`,
-      tag: 'Achat stock',
-      icon: 'wallet-bifold-outline',
-      background: '#FFE3C2',
-      accent: '#E85D2A',
-      foreground: '#3A1B0E',
-    },
+  const items: {
+    key: 'home' | 'report' | 'missing' | 'profile';
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    route: AppRoute;
+  }[] = [
+    { key: 'home', icon: 'home-variant', route: '/' },
+    { key: 'report', icon: 'chart-pie', route: '/report' },
+    { key: 'missing', icon: 'package-variant-closed-remove', route: '/missing-stock' },
+    { key: 'profile', icon: 'cog', route: '/profile' },
   ];
 
-  useEffect(() => {
-    const carouselTimer = setInterval(() => {
-      const nextIndex = (activeIndexRef.current + 1) % heroCards.length;
+  return (
+    <View
+      style={{
+        alignSelf: 'center',
+        width: '78%',
+        minWidth: 286,
+        maxWidth: 360,
+        height: 78,
+        borderRadius: 39,
+        backgroundColor: '#FFFFFF',
+        padding: 9,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 18px 38px rgba(0, 0, 0, 0.08)',
+      }}
+    >
+      {items.map((item) => {
+        const isActive = active === item.key;
 
-      activeIndexRef.current = nextIndex;
-      carouselRef.current?.scrollTo?.({
-        x: nextIndex * snapInterval,
-        y: 0,
-        animated: true,
-      });
-    }, 4200);
+        return (
+          <Pressable
+            key={item.key}
+            onPress={() => router.push(item.route)}
+            style={({ pressed }: { pressed: boolean }) => ({
+              width: 58,
+              height: 58,
+              borderRadius: 29,
+              backgroundColor: isActive ? '#F7F7F7' : 'transparent',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.64 : 1,
+            })}
+          >
+            <MaterialCommunityIcons
+              name={item.icon}
+              size={27}
+              color={isActive ? '#050505' : '#A7A7A7'}
+            />
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
-    return () => clearInterval(carouselTimer);
-  }, [heroCards.length, snapInterval]);
+export default function HomeScreen() {
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+  const {
+    sales,
+    expenses,
+    missingStocks,
+    todaySalesAmount,
+    todayExpensesAmount,
+    expectedCashAmount,
+    totalStockKg,
+  } = useStockStore();
+  const contentWidth = Math.min(width, 520);
+  const lastSale = sales[0];
+  const alertText = lastSale
+    ? `${lastSale.productName} vendu pour ${formatMoney(lastSale.totalAmount)}`
+    : 'Aucune vente enregistrée pour aujourd’hui';
 
   return (
     <ScrollView
@@ -130,297 +132,199 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
       style={{ flex: 1, backgroundColor: '#FFFFFF' }}
       contentContainerStyle={{
-        paddingHorizontal: horizontalPadding,
-        paddingTop: isCompactHome ? 4 : 18,
-        paddingBottom: isCompactHome ? 12 : 36,
-        gap: isCompactHome ? 20 : 16,
+        alignItems: 'center',
+        paddingHorizontal: 22,
+        paddingTop: 34,
+        paddingBottom: 30,
       }}
     >
-      <View style={{ gap: isCompactHome ? 10 : 16 }}>
+      <View style={{ width: contentWidth, gap: 26 }}>
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: 12,
           }}
         >
           <Pressable
             onPress={() => router.push('/profile')}
             style={({ pressed }: { pressed: boolean }) => ({
-              width: isCompactHome ? 38 : 48,
-              height: isCompactHome ? 38 : 48,
-              borderRadius: isCompactHome ? 19 : 24,
-              backgroundColor: '#111111',
+              width: 42,
+              height: 42,
+              borderRadius: 21,
               alignItems: 'center',
               justifyContent: 'center',
-              opacity: pressed ? 0.72 : 1,
-              boxShadow: '0 8px 16px rgba(17, 17, 17, 0.12)',
+              opacity: pressed ? 0.62 : 1,
             })}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: isCompactHome ? 14 : 17, fontWeight: '900' }}>
-              MD
-            </Text>
+            <MaterialCommunityIcons name="account" size={27} color="#7E7E7E" />
           </Pressable>
 
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: '#8A8580', fontSize: isCompactHome ? 13 : 15, fontWeight: '600' }}>
-              Hey
+          <Pressable
+            onPress={() => router.push('/report')}
+            style={({ pressed }: { pressed: boolean }) => ({
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.62 : 1,
+            })}
+          >
+            <MaterialCommunityIcons name="bell" size={25} color="#7E7E7E" />
+          </Pressable>
+        </View>
+
+        <View style={{ gap: 15 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ color: '#8E8E8E', fontSize: 18, fontWeight: '700' }}>
+              Argent attendu
+            </Text>
+            <MaterialCommunityIcons name="eye" size={18} color="#A5A5A5" />
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 14, flexWrap: 'wrap' }}>
+            <Text
+              selectable
+              style={{
+                color: '#0A0A0A',
+                fontSize: 43,
+                lineHeight: 48,
+                fontWeight: '900',
+                fontVariant: ['tabular-nums'],
+              }}
+            >
+              {formatMoney(expectedCashAmount)}
             </Text>
             <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.72}
-              style={{ color: '#211716', fontSize: isCompactHome ? 17 : 19, fontWeight: '900' }}
+              style={{
+                color: expectedCashAmount >= 0 ? '#34C875' : '#E5484D',
+                fontSize: 16,
+                lineHeight: 30,
+                fontWeight: '800',
+              }}
             >
-              Mohamed DOUKOURE
+              {expectedCashAmount >= 0 ? '↗' : '↘'} caisse
             </Text>
           </View>
-
-          <Pressable
-            onPress={() => router.push('/customize')}
-            style={({ pressed }: { pressed: boolean }) => ({
-              width: isCompactHome ? 38 : 48,
-              height: isCompactHome ? 38 : 48,
-              borderRadius: isCompactHome ? 19 : 24,
-              borderWidth: 1.5,
-              borderColor: '#D8D4CF',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.68 : 1,
-            })}
-          >
-            <Ionicons name="add" size={isCompactHome ? 24 : 28} color="#111111" />
-          </Pressable>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 10 }}>
+        <Pressable
+          onPress={() => router.push('/report')}
+          style={({ pressed }: { pressed: boolean }) => ({
+            minHeight: 84,
+            borderRadius: 24,
+            borderCurve: 'continuous',
+            backgroundColor: '#FFFFFF',
+            padding: 18,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+            opacity: pressed ? 0.7 : 1,
+            boxShadow: '0 10px 26px rgba(0, 0, 0, 0.04)',
+          })}
+        >
           <View
             style={{
-              flex: 1,
-              minHeight: isCompactHome ? 38 : 52,
-              borderRadius: isCompactHome ? 16 : 21,
-              borderWidth: 1.5,
-              borderColor: '#E4E1DD',
-              backgroundColor: '#FFFFFF',
-              paddingHorizontal: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 9,
-            }}
-          >
-            <Ionicons name="search" size={isCompactHome ? 18 : 21} color="#8F8A85" />
-            <TextInput
-              placeholder="Rechercher..."
-              placeholderTextColor="#8F8A85"
-              style={{
-                flex: 1,
-                color: '#171717',
-                fontSize: isCompactHome ? 15 : 17,
-                fontWeight: '600',
-                paddingVertical: 0,
-              }}
-            />
-          </View>
-
-          <Pressable
-            style={({ pressed }: { pressed: boolean }) => ({
-              width: isCompactHome ? 38 : 52,
-              height: isCompactHome ? 38 : 52,
-              borderRadius: isCompactHome ? 16 : 20,
-              backgroundColor: '#FFFFFF',
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              backgroundColor: '#F4F9F6',
               alignItems: 'center',
               justifyContent: 'center',
-              opacity: pressed ? 0.68 : 1,
-              boxShadow: '0 8px 16px rgba(20, 20, 20, 0.06)',
+            }}
+          >
+            <MaterialCommunityIcons name="arrow-bottom-left" size={25} color="#32C171" />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              numberOfLines={1}
+              style={{ color: '#111111', fontSize: 17, fontWeight: '700' }}
+            >
+              {alertText}
+            </Text>
+            <Text numberOfLines={1} style={{ color: '#B0B0B0', fontSize: 14, fontWeight: '600' }}>
+              {sales.length} ventes · {expenses.length} dépenses · {missingStocks.length} manquants
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={25} color="#111111" />
+        </Pressable>
+
+        <View style={{ gap: 15 }}>
+          <Text style={{ color: '#111111', fontSize: 22, fontWeight: '900' }}>Quick Actions</Text>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+            {quickActions.map((action) => (
+              <SellerActionTile
+                key={action.title}
+                action={action}
+                onPress={() => router.push(action.route as AppRoute)}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={{ gap: 20, alignItems: 'center', paddingTop: 8 }}>
+          <Pressable
+            onPress={() => router.push('/report')}
+            style={({ pressed }: { pressed: boolean }) => ({
+              minHeight: 42,
+              paddingHorizontal: 18,
+              borderRadius: 21,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              opacity: pressed ? 0.62 : 1,
             })}
           >
-            <Ionicons name="filter" size={isCompactHome ? 21 : 25} color="#111111" />
+            <Text style={{ color: '#2A8DEB', fontSize: 18, fontWeight: '800' }}>
+              Voir le bilan du jour
+            </Text>
+            <MaterialCommunityIcons name="arrow-right" size={20} color="#2A8DEB" />
           </Pressable>
+
+          <View
+            style={{
+              width: '100%',
+              borderRadius: 26,
+              borderCurve: 'continuous',
+              backgroundColor: '#FAFAFA',
+              borderWidth: 1,
+              borderColor: '#F1F1F1',
+              padding: 18,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+            }}
+          >
+            <View
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: 17,
+                borderCurve: 'continuous',
+                backgroundColor: '#EAF6FF',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MaterialCommunityIcons name="scale-balance" size={27} color="#2A8DEB" />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: '#111111', fontSize: 19, fontWeight: '800' }}>
+                Résumé rapide
+              </Text>
+              <Text numberOfLines={1} style={{ color: '#A1A1A1', fontSize: 15, fontWeight: '600' }}>
+                {formatMoney(todaySalesAmount)} ventes · {formatMoney(todayExpensesAmount)} sorties ·{' '}
+                {totalStockKg.toLocaleString('fr-FR')} kg
+              </Text>
+            </View>
+          </View>
         </View>
-      </View>
 
-      <View style={{ gap: isCompactHome ? 8 : 10 }}>
-        <Animated.ScrollView
-          ref={carouselRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={snapInterval}
-          decelerationRate="fast"
-          scrollEventThrottle={16}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: true },
-          )}
-          onMomentumScrollEnd={(event) => {
-            const nextIndex = Math.round(event.nativeEvent.contentOffset.x / snapInterval);
-
-            activeIndexRef.current = nextIndex;
-          }}
-        >
-          {heroCards.map((card, index) => {
-            const inputRange = [
-              (index - 1) * snapInterval,
-              index * snapInterval,
-              (index + 1) * snapInterval,
-            ];
-            const cardScale = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.96, 1, 0.96],
-              extrapolate: 'clamp',
-            });
-            const cardOpacity = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.78, 1, 0.78],
-              extrapolate: 'clamp',
-            });
-            const cardLift = scrollX.interpolate({
-              inputRange,
-              outputRange: [6, 0, 6],
-              extrapolate: 'clamp',
-            });
-
-            return (
-              <Animated.View
-                key={card.title}
-                style={{
-                  width: heroWidth,
-                  minHeight: isCompactHome ? 230 : 218,
-                  borderRadius: isCompactHome ? 26 : 28,
-                  backgroundColor: card.background,
-                  padding: isCompactHome ? 20 : 21,
-                  marginRight: 12,
-                  overflow: 'hidden',
-                  opacity: cardOpacity,
-                  transform: [{ translateY: cardLift }, { scale: cardScale }],
-                }}
-              >
-                <View
-                  style={{
-                    position: 'absolute',
-                    right: -28,
-                    bottom: -40,
-                    width: isCompactHome ? 158 : 158,
-                    height: isCompactHome ? 158 : 158,
-                    borderRadius: isCompactHome ? 42 : 44,
-                    backgroundColor: '#FFFFFF66',
-                    transform: [{ rotate: '-12deg' }],
-                  }}
-                />
-
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: isCompactHome ? 10 : 14 }}>
-                  <View style={{ flex: 1, gap: isCompactHome ? 6 : 9 }}>
-                    <Text style={{ color: card.foreground, fontSize: isCompactHome ? 30 : 30, fontWeight: '900' }}>
-                      {card.title}
-                    </Text>
-                    <Text
-                      style={{
-                        color: card.foreground,
-                        opacity: 0.76,
-                        fontSize: isCompactHome ? 17 : 17,
-                        lineHeight: isCompactHome ? 24 : 24,
-                        fontWeight: '800',
-                      }}
-                    >
-                      {card.subtitle}
-                    </Text>
-                  </View>
-
-                  <View
-                    style={{
-                      width: isCompactHome ? 90 : 88,
-                      height: isCompactHome ? 90 : 88,
-                      borderRadius: isCompactHome ? 24 : 24,
-                      backgroundColor: '#FFFFFF',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialCommunityIcons name={card.icon} size={isCompactHome ? 52 : 50} color={card.accent} />
-                  </View>
-                </View>
-
-                <View
-                  style={{
-                    alignSelf: 'flex-start',
-                    borderRadius: isCompactHome ? 16 : 18,
-                    backgroundColor: '#FFFFFF99',
-                    paddingHorizontal: isCompactHome ? 13 : 14,
-                    paddingVertical: isCompactHome ? 9 : 10,
-                    marginTop: isCompactHome ? 18 : 19,
-                  }}
-                >
-                  <Text style={{ color: card.foreground, fontSize: isCompactHome ? 12 : 13, fontWeight: '800' }}>
-                    {card.tag}
-                  </Text>
-                  <Text
-                    style={{
-                      color: card.foreground,
-                      fontSize: isCompactHome ? 22 : 23,
-                      fontWeight: '900',
-                      fontVariant: ['tabular-nums'],
-                    }}
-                  >
-                    {card.metric}
-                  </Text>
-                </View>
-              </Animated.View>
-            );
-          })}
-        </Animated.ScrollView>
-
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 7 }}>
-          {heroCards.map((card, index) => {
-            const inputRange = [
-              (index - 1) * snapInterval,
-              index * snapInterval,
-              (index + 1) * snapInterval,
-            ];
-            const dotScale = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.28, 1, 0.28],
-              extrapolate: 'clamp',
-            });
-            const dotOpacity = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.3, 1, 0.3],
-              extrapolate: 'clamp',
-            });
-
-            return (
-              <Animated.View
-                key={card.title}
-                style={{
-                  width: isCompactHome ? 24 : 26,
-                  height: isCompactHome ? 6 : 7,
-                  borderRadius: 4,
-                  backgroundColor: card.accent,
-                  opacity: dotOpacity,
-                  transform: [{ scaleX: dotScale }],
-                }}
-              />
-            );
-          })}
-        </View>
-      </View>
-
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: isCompactHome ? 10 : 10,
-          paddingTop: isCompactHome ? 4 : 4,
-        }}
-      >
-        {sellerActions.map((action) => (
-          <SellerActionTile
-            key={action.title}
-            action={action}
-            compact={isCompactHome}
-            onPress={() => router.push(action.route as AppRoute)}
-          />
-        ))}
+        <BottomNav />
       </View>
     </ScrollView>
   );
-} 
+}
