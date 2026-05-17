@@ -1,8 +1,13 @@
 import {
+  createCategory,
   createProduct,
+  DEFAULT_SHOP_ID,
+  deleteCategory,
+  getCategories,
   getControlErrorMessage,
   getProducts,
   getRecentStockMovements,
+  type CategoryRow,
   type ProductRow,
   type ProductUnit,
   type StockMovementRow,
@@ -182,8 +187,13 @@ export default function StockScreen() {
   const [successMessage, setSuccessMessage] = useState('');
   const [supplyMode, setSupplyMode] = useState<SupplyMode>('new');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryEmoji, setNewCategoryEmoji] = useState('📦');
+  const [savingCategory, setSavingCategory] = useState(false);
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState<ProductUnit>('kg');
   const [purchaseTotal, setPurchaseTotal] = useState('');
@@ -196,6 +206,7 @@ export default function StockScreen() {
       ? Math.round(parsedPurchaseTotal / parsedQuantity)
       : 0;
   const selectedProduct = products.find((product) => product.$id === selectedProductId);
+  const selectedCategory = categories.find((c) => c.$id === selectedCategoryId);
   const lowStockCount = products.filter((product) => product.quantity > 0 && product.quantity <= 5).length;
   const recentSupplies = stockMovements.filter(
     (movement) => movement.type === 'initial' || movement.type === 'supply'
@@ -206,13 +217,15 @@ export default function StockScreen() {
       setLoading(true);
     }
 
-    const [nextProducts, nextMovements] = await Promise.all([
+    const [nextProducts, nextMovements, nextCategories] = await Promise.all([
       getProducts(),
       getRecentStockMovements(),
+      getCategories(),
     ]);
 
     setProducts(nextProducts);
     setStockMovements(nextMovements);
+    setCategories(nextCategories);
     setSelectedProductId((current) =>
       nextProducts.some((product) => product.$id === current) ? current : nextProducts[0]?.$id || ''
     );
@@ -243,8 +256,8 @@ export default function StockScreen() {
       return;
     }
 
-    if (!isExistingSupply && (!name.trim() || !category.trim())) {
-      setFormError('Renseigne le nom et la categorie.');
+    if (!isExistingSupply && (!name.trim() || !selectedCategoryId)) {
+      setFormError('Renseigne le nom et selectionne une categorie.');
       return;
     }
 
@@ -263,36 +276,75 @@ export default function StockScreen() {
       return;
     }
 
+    const now = new Date().toISOString();
+    const tempProductId = isExistingSupply ? selectedProduct!.$id : `temp-${Date.now()}`;
+    const tempProduct: ProductRow = {
+      $id: tempProductId,
+      $createdAt: isExistingSupply ? selectedProduct!.$createdAt : now,
+      $updatedAt: now,
+      shopId: DEFAULT_SHOP_ID,
+      name: isExistingSupply ? selectedProduct!.name : name.trim(),
+      category: isExistingSupply ? selectedProduct!.category : (selectedCategory?.name ?? ''),
+      emoji: isExistingSupply ? selectedProduct!.emoji : (selectedCategory?.emoji ?? '📦'),
+      quantity: isExistingSupply ? selectedProduct!.quantity + parsedQuantity : parsedQuantity,
+      unit: isExistingSupply ? selectedProduct!.unit : unit,
+      purchaseUnitPrice: purchaseUnitPrice,
+      sellingUnitPrice: Math.round(parsedSellingPrice),
+    };
+    const tempMovement: StockMovementRow = {
+      $id: `temp-movement-${Date.now()}`,
+      $createdAt: now,
+      $updatedAt: now,
+      shopId: DEFAULT_SHOP_ID,
+      productId: tempProductId,
+      productName: tempProduct.name,
+      type: isExistingSupply ? 'supply' : 'initial',
+      quantity: parsedQuantity,
+      unit: tempProduct.unit,
+      unitCost: purchaseUnitPrice,
+      totalCost: Math.round(parsedPurchaseTotal),
+      note: '',
+    };
+
+    const prevProducts = products;
+    const prevMovements = stockMovements;
+
+    setProducts((prev) => {
+      const exists = prev.some((p) => p.$id === tempProductId);
+      const next = exists
+        ? prev.map((p) => (p.$id === tempProductId ? tempProduct : p))
+        : [...prev, tempProduct];
+      return next.sort((a, b) => a.name.localeCompare(b.name));
+    });
+    setStockMovements((prev) => [tempMovement, ...prev]);
+    setSelectedProductId(tempProductId);
+    setName('');
+    setSelectedCategoryId('');
+    setQuantity('');
+    setUnit('kg');
+    setPurchaseTotal('');
+    setSellingUnitPrice(isExistingSupply ? String(Math.round(parsedSellingPrice)) : '');
+
     setSaving(true);
 
     try {
       const product = await createProduct({
         productId: isExistingSupply ? selectedProduct?.$id : undefined,
         name: isExistingSupply ? selectedProduct?.name ?? '' : name,
-        category: isExistingSupply ? selectedProduct?.category ?? '' : category,
+        category: isExistingSupply ? selectedProduct?.category ?? '' : (selectedCategory?.name ?? ''),
+        emoji: isExistingSupply ? selectedProduct?.emoji ?? '📦' : (selectedCategory?.emoji ?? '📦'),
         quantity: parsedQuantity,
         unit: isExistingSupply ? selectedProduct?.unit ?? unit : unit,
         purchaseTotal: Math.round(parsedPurchaseTotal),
         sellingUnitPrice: Math.round(parsedSellingPrice),
       });
 
-      setProducts((currentProducts) => {
-        const exists = currentProducts.some((currentProduct) => currentProduct.$id === product.$id);
-        const nextProducts = exists
-          ? currentProducts.map((currentProduct) =>
-              currentProduct.$id === product.$id ? product : currentProduct
-            )
-          : [...currentProducts, product];
-
-        return nextProducts.sort((a, b) => a.name.localeCompare(b.name));
-      });
+      setProducts((prev) =>
+        prev
+          .map((p) => (p.$id === tempProductId ? product : p))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
       setSelectedProductId(product.$id);
-      setName('');
-      setCategory('');
-      setQuantity('');
-      setUnit('kg');
-      setPurchaseTotal('');
-      setSellingUnitPrice(isExistingSupply ? String(product.sellingUnitPrice) : '');
       setSuccessMessage(
         isExistingSupply
           ? `${product.name} approvisionne : stock ${product.quantity} ${product.unit}.`
@@ -300,6 +352,9 @@ export default function StockScreen() {
       );
       await loadProducts({ silent: true });
     } catch (error) {
+      setProducts(prevProducts);
+      setStockMovements(prevMovements);
+      setSelectedProductId(prevProducts[0]?.$id || '');
       const message = getControlErrorMessage(error);
       console.warn('Unable to create product.', message);
       setFormError(message);
@@ -307,6 +362,35 @@ export default function StockScreen() {
       setSaving(false);
     }
   }
+
+  async function handleAddCategory() {
+    if (!newCategoryName.trim()) return;
+    setSavingCategory(true);
+    try {
+      const created = await createCategory({ name: newCategoryName.trim(), emoji: newCategoryEmoji });
+      setCategories((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setSelectedCategoryId(created.$id);
+      setNewCategoryName('');
+      setNewCategoryEmoji('📦');
+      setShowAddCategory(false);
+    } catch (error) {
+      setFormError(getControlErrorMessage(error));
+    } finally {
+      setSavingCategory(false);
+    }
+  }
+
+  async function handleDeleteCategory(categoryId: string) {
+    try {
+      await deleteCategory(categoryId);
+      setCategories((prev) => prev.filter((c) => c.$id !== categoryId));
+      if (selectedCategoryId === categoryId) setSelectedCategoryId('');
+    } catch (error) {
+      setFormError(getControlErrorMessage(error));
+    }
+  }
+
+  const EMOJI_OPTIONS = ['🐟','🥩','🐔','🐑','🐷','🦐','🥬','🍎','🍌','🌾','🫙','🥤','🍞','🥛','🥚','🧂','🥕','🧅','🌽','🫘','🍅','📦'];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -487,12 +571,113 @@ export default function StockScreen() {
               ) : (
                 <>
                   <Field label="Nom" value={name} onChangeText={setName} placeholder="Poisson, boeuf, tripe" />
-                  <Field
-                    label="Categorie"
-                    value={category}
-                    onChangeText={setCategory}
-                    placeholder="Poissonnerie, boucherie, volaille"
-                  />
+
+                  <View style={{ gap: 9 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Categorie</Text>
+                      <Pressable
+                        onPress={() => setShowAddCategory((v) => !v)}
+                        style={({ pressed }: { pressed: boolean }) => ({
+                          flexDirection: 'row', alignItems: 'center', gap: 4,
+                          opacity: pressed ? 0.6 : 1,
+                        })}
+                      >
+                        <Feather name={showAddCategory ? 'x' : 'plus'} size={14} color="#2A8DEB" />
+                        <Text style={{ color: '#2A8DEB', fontSize: 13, fontWeight: '700' }}>
+                          {showAddCategory ? 'Annuler' : 'Nouvelle'}
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {showAddCategory ? (
+                      <View style={{ gap: 8 }}>
+                        <TextInput
+                          value={newCategoryName}
+                          onChangeText={setNewCategoryName}
+                          placeholder="Nom de la categorie"
+                          placeholderTextColor="#B4B4B4"
+                          style={{
+                            minHeight: 48, borderRadius: 16, borderCurve: 'continuous',
+                            backgroundColor: '#F7F7F7', borderWidth: 1, borderColor: '#EEEEEE',
+                            paddingHorizontal: 14, color: '#111111', fontSize: 15, fontWeight: '600',
+                          }}
+                        />
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          <View style={{ flexDirection: 'row', gap: 8 }}>
+                            {EMOJI_OPTIONS.map((emoji) => (
+                              <Pressable
+                                key={emoji}
+                                onPress={() => setNewCategoryEmoji(emoji)}
+                                style={({ pressed }: { pressed: boolean }) => ({
+                                  width: 42, height: 42, borderRadius: 14, borderCurve: 'continuous',
+                                  backgroundColor: newCategoryEmoji === emoji ? '#111111' : '#F2F2F2',
+                                  alignItems: 'center', justifyContent: 'center',
+                                  opacity: pressed ? 0.7 : 1,
+                                })}
+                              >
+                                <Text style={{ fontSize: 22 }}>{emoji}</Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        </ScrollView>
+                        <Pressable
+                          onPress={handleAddCategory}
+                          disabled={savingCategory || !newCategoryName.trim()}
+                          style={({ pressed }: { pressed: boolean }) => ({
+                            height: 44, borderRadius: 16, borderCurve: 'continuous',
+                            backgroundColor: savingCategory || !newCategoryName.trim() ? '#C8E3F7' : '#2A8DEB',
+                            alignItems: 'center', justifyContent: 'center',
+                            opacity: pressed ? 0.76 : 1,
+                          })}
+                        >
+                          {savingCategory
+                            ? <ActivityIndicator color="#FFFFFF" />
+                            : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Enregistrer la categorie</Text>
+                          }
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          {categories.map((cat) => {
+                            const selected = selectedCategoryId === cat.$id;
+                            return (
+                              <Pressable
+                                key={cat.$id}
+                                onPress={() => setSelectedCategoryId(cat.$id)}
+                                style={({ pressed }: { pressed: boolean }) => ({
+                                  flexDirection: 'row', alignItems: 'center', gap: 6,
+                                  minHeight: 42, borderRadius: 16, borderCurve: 'continuous',
+                                  backgroundColor: selected ? '#111111' : '#F2F2F2',
+                                  paddingHorizontal: 12,
+                                  opacity: pressed ? 0.7 : 1,
+                                })}
+                              >
+                                <Text style={{ fontSize: 18 }}>{cat.emoji}</Text>
+                                <Text style={{ color: selected ? '#FFFFFF' : '#555555', fontSize: 13, fontWeight: '700' }}>
+                                  {cat.name}
+                                </Text>
+                                {selected && (
+                                  <Pressable
+                                    onPress={() => handleDeleteCategory(cat.$id)}
+                                    hitSlop={8}
+                                    style={({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.5 : 0.7 })}
+                                  >
+                                    <Feather name="x" size={13} color="#FFFFFF" />
+                                  </Pressable>
+                                )}
+                              </Pressable>
+                            );
+                          })}
+                          {categories.length === 0 && (
+                            <Text style={{ color: '#B4B4B4', fontSize: 13, fontWeight: '600', paddingVertical: 10 }}>
+                              Aucune categorie — clique sur Nouvelle
+                            </Text>
+                          )}
+                        </View>
+                      </ScrollView>
+                    )}
+                  </View>
                 </>
               )}
 
@@ -632,26 +817,6 @@ export default function StockScreen() {
                 <View style={{ paddingVertical: 22, alignItems: 'center' }}>
                   <ActivityIndicator color="#2A8DEB" />
                 </View>
-              ) : products.length === 0 ? (
-                <View
-                  style={{
-                    minHeight: 86,
-                    borderRadius: 22,
-                    borderCurve: 'continuous',
-                    backgroundColor: '#F7F7F7',
-                    borderWidth: 1,
-                    borderColor: '#EFEFEF',
-                    padding: 18,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
-                    Aucun produit
-                  </Text>
-                  <Text style={{ marginTop: 5, color: '#9A9A9A', fontSize: 14 }}>
-                    Ajoute le premier stock de la boutique.
-                  </Text>
-                </View>
               ) : (
                 products.map((product) => <ProductItem key={product.$id} product={product} />)
               )}
@@ -665,26 +830,6 @@ export default function StockScreen() {
               {loading ? (
                 <View style={{ paddingVertical: 22, alignItems: 'center' }}>
                   <ActivityIndicator color="#2A8DEB" />
-                </View>
-              ) : recentSupplies.length === 0 ? (
-                <View
-                  style={{
-                    minHeight: 78,
-                    borderRadius: 22,
-                    borderCurve: 'continuous',
-                    backgroundColor: '#F7F7F7',
-                    borderWidth: 1,
-                    borderColor: '#EFEFEF',
-                    padding: 18,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
-                    Aucun arrivage enregistre
-                  </Text>
-                  <Text style={{ marginTop: 5, color: '#9A9A9A', fontSize: 14 }}>
-                    Les ajouts de stock apparaitront ici avec leur cout.
-                  </Text>
                 </View>
               ) : (
                 recentSupplies.map((movement) => (

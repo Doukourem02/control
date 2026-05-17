@@ -26,11 +26,10 @@ function formatMoney(value: number) {
 
 function parseQuantity(value: string) {
   const parsed = Number(value.replace(',', '.').trim());
-
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
-function ProductOption({
+function ProductTile({
   product,
   selected,
   onPress,
@@ -39,34 +38,46 @@ function ProductOption({
   selected: boolean;
   onPress: () => void;
 }) {
+  const emoji = product.emoji || '📦';
+
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }: { pressed: boolean }) => ({
-        minHeight: 72,
-        borderRadius: 22,
+        flex: 1,
+        aspectRatio: 1,
+        borderRadius: 24,
         borderCurve: 'continuous',
         backgroundColor: selected ? '#111111' : '#F7F7F7',
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: selected ? '#111111' : '#EFEFEF',
-        padding: 15,
-        flexDirection: 'row',
+        padding: 14,
         alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
+        justifyContent: 'center',
+        gap: 6,
         opacity: pressed ? 0.72 : 1,
       })}
     >
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: selected ? '#FFFFFF' : '#111111', fontSize: 16, fontWeight: '800' }}>
-          {product.name}
-        </Text>
-        <Text numberOfLines={1} style={{ marginTop: 4, color: selected ? '#CFCFCF' : '#9A9A9A', fontSize: 13 }}>
-          {product.quantity} {product.unit} disponible
-        </Text>
-      </View>
-      <Text style={{ color: selected ? '#FFFFFF' : '#2A8DEB', fontSize: 14, fontWeight: '800' }}>
-        {formatMoney(product.sellingUnitPrice)}
+      <Text style={{ fontSize: 34 }}>{emoji}</Text>
+      <Text
+        numberOfLines={2}
+        style={{
+          color: selected ? '#FFFFFF' : '#111111',
+          fontSize: 14,
+          fontWeight: '800',
+          textAlign: 'center',
+        }}
+      >
+        {product.name}
+      </Text>
+      <Text
+        style={{
+          color: selected ? '#AAAAAA' : '#2A8DEB',
+          fontSize: 12,
+          fontWeight: '700',
+        }}
+      >
+        {formatMoney(product.sellingUnitPrice)} / {product.unit}
       </Text>
     </Pressable>
   );
@@ -89,22 +100,18 @@ export default function SaleScreen() {
   );
   const parsedQuantity = parseQuantity(quantity);
   const totalAmount =
-    selectedProduct && !Number.isNaN(parsedQuantity) ? parsedQuantity * selectedProduct.sellingUnitPrice : 0;
+    selectedProduct && !Number.isNaN(parsedQuantity)
+      ? parsedQuantity * selectedProduct.sellingUnitPrice
+      : 0;
 
   const loadProducts = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
-    if (!silent) {
-      setLoading(true);
-    }
-
+    if (!silent) setLoading(true);
     const nextProducts = await getProducts();
     setProducts(nextProducts);
     setSelectedProductId((current) =>
-      nextProducts.some((product) => product.$id === current) ? current : nextProducts[0]?.$id || ''
+      nextProducts.some((p) => p.$id === current) ? current : nextProducts[0]?.$id || ''
     );
-
-    if (!silent) {
-      setLoading(false);
-    }
+    if (!silent) setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -116,19 +123,27 @@ export default function SaleScreen() {
     setSuccessMessage('');
 
     if (!selectedProduct) {
-      setFormError('Ajoute un produit en stock avant de vendre.');
+      setFormError('Selectionne un produit.');
       return;
     }
-
     if (Number.isNaN(parsedQuantity) || parsedQuantity <= 0) {
       setFormError('La quantite doit etre superieure a 0.');
       return;
     }
-
     if (parsedQuantity > selectedProduct.quantity) {
       setFormError('Stock insuffisant pour cette vente.');
       return;
     }
+
+    const prevProducts = products;
+    const remainingQuantity = selectedProduct.quantity - parsedQuantity;
+
+    setProducts((current) =>
+      current.map((p) =>
+        p.$id === selectedProduct.$id ? { ...p, quantity: remainingQuantity } : p
+      )
+    );
+    setQuantity('');
 
     setSaving(true);
 
@@ -138,22 +153,21 @@ export default function SaleScreen() {
         quantity: parsedQuantity,
         paymentMethod,
       });
-      const remainingQuantity = selectedProduct.quantity - parsedQuantity;
-      setProducts((currentProducts) =>
-        currentProducts.map((product) =>
-          product.$id === selectedProduct.$id ? { ...product, quantity: remainingQuantity } : product
-        )
-      );
-      setQuantity('');
       setSuccessMessage(
-        `${selectedProduct.name} vendu : reste ${remainingQuantity} ${selectedProduct.unit}.`
+        `${selectedProduct.name} vendu · reste ${remainingQuantity} ${selectedProduct.unit}`
       );
       await loadProducts({ silent: true });
     } catch (error) {
+      setProducts(prevProducts);
       setFormError(getControlErrorMessage(error));
     } finally {
       setSaving(false);
     }
+  }
+
+  const rows: ProductRow[][] = [];
+  for (let i = 0; i < products.length; i += 2) {
+    rows.push(products.slice(i, i + 2));
   }
 
   return (
@@ -162,16 +176,15 @@ export default function SaleScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{
-            paddingHorizontal: 24,
-            paddingTop: 12,
-            paddingBottom: 36,
-            alignItems: 'center',
-          }}
-        >
-          <View style={{ width: '100%', maxWidth: 520 }}>
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 12,
+              paddingBottom: 16,
+            }}
+          >
             <View
               style={{
                 minHeight: 42,
@@ -210,94 +223,98 @@ export default function SaleScreen() {
               </Pressable>
             </View>
 
-            <View style={{ marginTop: 26, gap: 8 }}>
+            <View style={{ marginTop: 20, marginBottom: 20 }}>
               <Text style={{ color: '#111111', fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
                 Vente
               </Text>
-              <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
-                {selectedProduct ? `${selectedProduct.name} selectionne` : 'Aucun produit disponible'}
-              </Text>
-            </View>
-
-            <View style={{ marginTop: 26, gap: 13 }}>
-              <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>
-                Produit
-              </Text>
-
-              {loading ? (
-                <View style={{ paddingVertical: 22, alignItems: 'center' }}>
-                  <ActivityIndicator color="#2A8DEB" />
-                </View>
-              ) : products.length === 0 ? (
-                <View
-                  style={{
-                    minHeight: 86,
-                    borderRadius: 22,
-                    borderCurve: 'continuous',
-                    backgroundColor: '#F7F7F7',
-                    borderWidth: 1,
-                    borderColor: '#EFEFEF',
-                    padding: 18,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
-                    Aucun stock
-                  </Text>
-                  <Text style={{ marginTop: 5, color: '#9A9A9A', fontSize: 14 }}>
-                    Ajoute un produit avant la premiere vente.
-                  </Text>
-                </View>
+              {selectedProduct ? (
+                <Text style={{ marginTop: 6, color: '#9A9A9A', fontSize: 15 }}>
+                  {selectedProduct.name} · {selectedProduct.quantity} {selectedProduct.unit} en stock
+                </Text>
               ) : (
-                products.map((product) => (
-                  <ProductOption
-                    key={product.$id}
-                    product={product}
-                    selected={product.$id === selectedProductId}
-                    onPress={() => setSelectedProductId(product.$id)}
-                  />
-                ))
+                <Text style={{ marginTop: 6, color: '#9A9A9A', fontSize: 15 }}>
+                  Selectionne un produit
+                </Text>
               )}
             </View>
 
-            <View style={{ marginTop: 26, gap: 15 }}>
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <View style={{ flex: 1, gap: 7 }}>
-                  <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Quantite</Text>
-                  <TextInput
-                    value={quantity}
-                    onChangeText={setQuantity}
-                    placeholder="0"
-                    placeholderTextColor="#B4B4B4"
-                    keyboardType="decimal-pad"
-                    style={{
-                      minHeight: 54,
-                      borderRadius: 18,
-                      borderCurve: 'continuous',
-                      backgroundColor: '#F7F7F7',
-                      borderWidth: 1,
-                      borderColor: '#EEEEEE',
-                      paddingHorizontal: 16,
-                      color: '#111111',
-                      fontSize: 18,
-                      fontWeight: '800',
-                    }}
-                  />
-                </View>
-                <View style={{ flex: 1, gap: 7 }}>
-                  <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Paiement</Text>
+            {loading ? (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <ActivityIndicator color="#2A8DEB" />
+              </View>
+            ) : (
+              <View style={{ gap: 12 }}>
+                {rows.map((row, rowIndex) => (
+                  <View key={rowIndex} style={{ flexDirection: 'row', gap: 12 }}>
+                    {row.map((product) => (
+                      <ProductTile
+                        key={product.$id}
+                        product={product}
+                        selected={product.$id === selectedProductId}
+                        onPress={() => {
+                          setSelectedProductId(product.$id);
+                          setFormError('');
+                          setSuccessMessage('');
+                        }}
+                      />
+                    ))}
+                    {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
+                  </View>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+
+          <View
+            style={{
+              paddingHorizontal: 20,
+              paddingTop: 14,
+              paddingBottom: 8,
+              borderTopWidth: 1,
+              borderTopColor: '#F0F0F0',
+              gap: 10,
+            }}
+          >
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1, gap: 7 }}>
+                <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Quantite</Text>
+                <TextInput
+                  value={quantity}
+                  onChangeText={setQuantity}
+                  placeholder="0"
+                  placeholderTextColor="#B4B4B4"
+                  keyboardType="decimal-pad"
+                  style={{
+                    height: 54,
+                    borderRadius: 18,
+                    borderCurve: 'continuous',
+                    backgroundColor: '#F7F7F7',
+                    borderWidth: 1,
+                    borderColor: '#EEEEEE',
+                    paddingHorizontal: 16,
+                    color: '#111111',
+                    fontSize: 22,
+                    fontWeight: '800',
+                  }}
+                />
+              </View>
+
+              <View style={{ flex: 1, gap: 7 }}>
+                <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Paiement</Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
                   {(['Cash', 'Mobile Money'] as PaymentMethod[]).map((method) => {
                     const selected = paymentMethod === method;
-
                     return (
                       <Pressable
                         key={method}
                         onPress={() => setPaymentMethod(method)}
                         style={({ pressed }: { pressed: boolean }) => ({
-                          minHeight: 39,
-                          borderRadius: 17,
+                          flex: 1,
+                          height: 54,
+                          borderRadius: 18,
+                          borderCurve: 'continuous',
                           backgroundColor: selected ? '#111111' : '#F2F2F2',
-                          paddingHorizontal: 12,
+                          alignItems: 'center',
                           justifyContent: 'center',
                           opacity: pressed ? 0.72 : 1,
                         })}
@@ -306,7 +323,7 @@ export default function SaleScreen() {
                           numberOfLines={1}
                           style={{
                             color: selected ? '#FFFFFF' : '#777777',
-                            fontSize: 13,
+                            fontSize: 11,
                             fontWeight: '800',
                           }}
                         >
@@ -317,58 +334,63 @@ export default function SaleScreen() {
                   })}
                 </View>
               </View>
-
-              <View
-                style={{
-                  minHeight: 82,
-                  borderRadius: 24,
-                  borderCurve: 'continuous',
-                  backgroundColor: '#F7F7F7',
-                  borderWidth: 1,
-                  borderColor: '#EFEFEF',
-                  padding: 18,
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Text style={{ color: '#777777', fontSize: 14, fontWeight: '700' }}>Total</Text>
-                <Text style={{ color: '#111111', fontSize: 26, lineHeight: 31, fontWeight: '900' }}>
-                  {formatMoney(totalAmount)}
-                </Text>
-              </View>
-
-              {formError ? (
-                <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>
-                  {formError}
-                </Text>
-              ) : null}
-
-              {successMessage ? (
-                <Text style={{ color: '#2A8D55', fontSize: 13, fontWeight: '700' }}>
-                  {successMessage}
-                </Text>
-              ) : null}
-
-              <Pressable
-                onPress={handleCreateSale}
-                disabled={saving}
-                style={({ pressed }: { pressed: boolean }) => ({
-                  height: 54,
-                  borderRadius: 20,
-                  borderCurve: 'continuous',
-                  backgroundColor: saving ? '#9FCAEF' : '#2A8DEB',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'row',
-                  gap: 9,
-                  opacity: pressed ? 0.76 : 1,
-                })}
-              >
-                {saving ? <ActivityIndicator color="#FFFFFF" /> : <Feather name="arrow-up-right" size={20} color="#FFFFFF" />}
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>Valider la vente</Text>
-              </Pressable>
             </View>
+
+            <View
+              style={{
+                height: 58,
+                borderRadius: 20,
+                borderCurve: 'continuous',
+                backgroundColor: '#F7F7F7',
+                borderWidth: 1,
+                borderColor: '#EFEFEF',
+                paddingHorizontal: 18,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text style={{ color: '#777777', fontSize: 14, fontWeight: '700' }}>Total</Text>
+              <Text style={{ color: '#111111', fontSize: 24, fontWeight: '900' }}>
+                {formatMoney(totalAmount)}
+              </Text>
+            </View>
+
+            {formError ? (
+              <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>{formError}</Text>
+            ) : null}
+
+            {successMessage ? (
+              <Text style={{ color: '#2A8D55', fontSize: 13, fontWeight: '700' }}>{successMessage}</Text>
+            ) : null}
+
+            <Pressable
+              onPress={handleCreateSale}
+              disabled={saving}
+              style={({ pressed }: { pressed: boolean }) => ({
+                height: 54,
+                borderRadius: 20,
+                borderCurve: 'continuous',
+                backgroundColor: saving ? '#9FCAEF' : '#2A8DEB',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 9,
+                opacity: pressed ? 0.76 : 1,
+                marginBottom: 8,
+              })}
+            >
+              {saving ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Feather name="arrow-up-right" size={20} color="#FFFFFF" />
+              )}
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                Valider la vente
+              </Text>
+            </Pressable>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

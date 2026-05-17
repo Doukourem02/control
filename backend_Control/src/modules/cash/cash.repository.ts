@@ -1,5 +1,6 @@
-import { createId, nowIso, readStore, updateStore } from '../../database/control-store';
-import { isToday } from '../../utils/dates';
+import { ID, Query, type Models } from 'node-appwrite';
+import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
+import type { CashClosureRow } from '../../types/control';
 
 export type CreateCashClosureInput = {
   shopId: string;
@@ -10,40 +11,50 @@ export type CreateCashClosureInput = {
   note: string;
 };
 
-export async function createCashClosureRecord(input: CreateCashClosureInput) {
-  return updateStore((store) => {
-    const timestamp = nowIso();
-    const closure = {
-      $id: createId(),
-      $createdAt: timestamp,
-      $updatedAt: timestamp,
-      shopId: input.shopId,
-      businessDate: input.businessDate,
-      expectedCashAmount: input.expectedCashAmount,
-      physicalCashAmount: input.physicalCashAmount,
-      cashGap: input.cashGap,
-      note: input.note,
-    };
-
-    store.cashClosures.push(closure);
-    store.activityLogs.push({
-      $id: createId(),
-      $createdAt: timestamp,
-      $updatedAt: timestamp,
-      shopId: input.shopId,
-      type: 'cash',
-      actorName: 'Vendeuse',
-      message: `Cloture caisse : ecart ${input.cashGap} F`,
-    });
-
-    return closure;
-  });
+function toCashClosureRow(doc: any): CashClosureRow {
+  return {
+    $id: doc.$id,
+    $createdAt: doc.$createdAt,
+    $updatedAt: doc.$updatedAt,
+    shopId: doc['shopId'] as string,
+    businessDate: doc['businessDate'] as string,
+    expectedCashAmount: doc['expectedCashAmount'] as number,
+    physicalCashAmount: doc['physicalCashAmount'] as number,
+    cashGap: doc['cashGap'] as number,
+    note: doc['note'] as string,
+  };
 }
 
-export async function listTodayCashClosuresByShop(shopId: string) {
-  const store = await readStore();
+export async function createCashClosureRecord(input: CreateCashClosureInput): Promise<CashClosureRow> {
+  const closureDoc = await databases.createDocument(DATABASE_ID, COLLECTIONS.cashClosures, ID.unique(), {
+    shopId: input.shopId,
+    businessDate: input.businessDate,
+    expectedCashAmount: input.expectedCashAmount,
+    physicalCashAmount: input.physicalCashAmount,
+    cashGap: input.cashGap,
+    note: input.note,
+  });
 
-  return store.cashClosures
-    .filter((closure) => closure.shopId === shopId && isToday(closure.$createdAt))
-    .sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
+  await databases.createDocument(DATABASE_ID, COLLECTIONS.activityLogs, ID.unique(), {
+    shopId: input.shopId,
+    type: 'cash',
+    actorName: 'Vendeuse',
+    message: `Cloture caisse : ecart ${input.cashGap} F`,
+  });
+
+  return toCashClosureRow(closureDoc);
+}
+
+export async function listTodayCashClosuresByShop(shopId: string): Promise<CashClosureRow[]> {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.cashClosures, [
+    Query.equal('shopId', shopId),
+    Query.greaterThanEqual('$createdAt', startOfToday.toISOString()),
+    Query.orderDesc('$createdAt'),
+    Query.limit(50),
+  ]);
+
+  return response.documents.map(toCashClosureRow);
 }

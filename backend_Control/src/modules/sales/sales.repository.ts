@@ -1,6 +1,6 @@
-import { createId, nowIso, readStore, updateStore } from '../../database/control-store';
-import type { PaymentMethod } from '../../types/control';
-import { isToday } from '../../utils/dates';
+import { ID, Query, type Models } from 'node-appwrite';
+import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
+import type { PaymentMethod, SaleRow } from '../../types/control';
 
 export type CreateSaleInput = {
   shopId: string;
@@ -9,70 +9,83 @@ export type CreateSaleInput = {
   paymentMethod: PaymentMethod;
 };
 
-export async function createSaleRecord(input: CreateSaleInput) {
-  return updateStore((store) => {
-    const product = store.products.find(
-      (currentProduct) =>
-        currentProduct.$id === input.productId && currentProduct.shopId === input.shopId
-    );
-
-    if (!product) {
-      throw new Error('Produit introuvable.');
-    }
-
-    if (input.quantity > product.quantity) {
-      throw new Error('Stock insuffisant pour cette vente.');
-    }
-
-    const timestamp = nowIso();
-    const totalAmount = Math.round(input.quantity * product.sellingUnitPrice);
-    const saleRow = {
-      $id: createId(),
-      $createdAt: timestamp,
-      $updatedAt: timestamp,
-      shopId: input.shopId,
-      productId: product.$id,
-      productName: product.name,
-      quantity: input.quantity,
-      unit: product.unit,
-      unitPrice: product.sellingUnitPrice,
-      totalAmount,
-      paymentMethod: input.paymentMethod,
-    };
-
-    product.quantity -= input.quantity;
-    product.$updatedAt = timestamp;
-    store.sales.push(saleRow);
-    store.stockMovements.push({
-      $id: createId(),
-      $createdAt: timestamp,
-      $updatedAt: timestamp,
-      shopId: input.shopId,
-      productId: product.$id,
-      productName: product.name,
-      type: 'sale',
-      quantity: input.quantity,
-      unit: product.unit,
-      unitCost: product.purchaseUnitPrice,
-      totalCost: Math.round(input.quantity * product.purchaseUnitPrice),
-      note: `Vente ${input.paymentMethod}`,
-    });
-    store.activityLogs.push({
-      $id: createId(),
-      $createdAt: timestamp,
-      $updatedAt: timestamp,
-      shopId: input.shopId,
-      type: 'sale',
-      actorName: 'Vendeuse',
-      message: `Vente : ${product.name}`,
-    });
-
-    return saleRow;
-  });
+function toSaleRow(doc: any): SaleRow {
+  return {
+    $id: doc.$id,
+    $createdAt: doc.$createdAt,
+    $updatedAt: doc.$updatedAt,
+    shopId: doc['shopId'] as string,
+    productId: doc['productId'] as string,
+    productName: doc['productName'] as string,
+    quantity: doc['quantity'] as number,
+    unit: doc['unit'] as SaleRow['unit'],
+    unitPrice: doc['unitPrice'] as number,
+    totalAmount: doc['totalAmount'] as number,
+    paymentMethod: doc['paymentMethod'] as PaymentMethod,
+  };
 }
 
-export async function listTodaySalesByShop(shopId: string) {
-  const store = await readStore();
+export async function createSaleRecord(input: CreateSaleInput): Promise<SaleRow> {
+  const productDoc = await databases.getDocument(DATABASE_ID, COLLECTIONS.products, input.productId);
 
-  return store.sales.filter((sale) => sale.shopId === shopId && isToday(sale.$createdAt));
+  if (productDoc['shopId'] !== input.shopId) {
+    throw new Error('Produit introuvable.');
+  }
+
+  const currentQuantity = productDoc['quantity'] as number;
+
+  if (input.quantity > currentQuantity) {
+    throw new Error('Stock insuffisant pour cette vente.');
+  }
+
+  const totalAmount = Math.round(input.quantity * (productDoc['sellingUnitPrice'] as number));
+
+  const saleDoc = await databases.createDocument(DATABASE_ID, COLLECTIONS.sales, ID.unique(), {
+    shopId: input.shopId,
+    productId: productDoc.$id,
+    productName: productDoc['name'] as string,
+    quantity: input.quantity,
+    unit: productDoc['unit'] as string,
+    unitPrice: productDoc['sellingUnitPrice'] as number,
+    totalAmount,
+    paymentMethod: input.paymentMethod,
+  });
+
+  await databases.updateDocument(DATABASE_ID, COLLECTIONS.products, input.productId, {
+    quantity: currentQuantity - input.quantity,
+  });
+
+  await databases.createDocument(DATABASE_ID, COLLECTIONS.stockMovements, ID.unique(), {
+    shopId: input.shopId,
+    productId: productDoc.$id,
+    productName: productDoc['name'] as string,
+    type: 'sale',
+    quantity: input.quantity,
+    unit: productDoc['unit'] as string,
+    unitCost: productDoc['purchaseUnitPrice'] as number,
+    totalCost: Math.round(input.quantity * (productDoc['purchaseUnitPrice'] as number)),
+    note: `Vente ${input.paymentMethod}`,
+  });
+
+  await databases.createDocument(DATABASE_ID, COLLECTIONS.activityLogs, ID.unique(), {
+    shopId: input.shopId,
+    type: 'sale',
+    actorName: 'Vendeuse',
+    message: `Vente : ${productDoc['name'] as string}`,
+  });
+
+  return toSaleRow(saleDoc);
+}
+
+export async function listTodaySalesByShop(shopId: string): Promise<SaleRow[]> {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.sales, [
+    Query.equal('shopId', shopId),
+    Query.greaterThanEqual('$createdAt', startOfToday.toISOString()),
+    Query.limit(500),
+  ]);
+
+  return response.documents.map(toSaleRow);
 }

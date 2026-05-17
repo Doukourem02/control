@@ -63,10 +63,17 @@ export type ActivityLogRow = BaseRow & {
 
 export type ProductUnit = 'kg' | 'piece' | 'carton' | 'tas' | 'unite';
 
+export type CategoryRow = BaseRow & {
+  shopId: string;
+  name: string;
+  emoji: string;
+};
+
 export type ProductRow = BaseRow & {
   shopId: string;
   name: string;
   category: string;
+  emoji: string;
   quantity: number;
   unit: ProductUnit;
   purchaseUnitPrice: number;
@@ -89,10 +96,16 @@ export type CreateProductInput = {
   productId?: string;
   name: string;
   category: string;
+  emoji: string;
   quantity: number;
   unit: ProductUnit;
   purchaseTotal: number;
   sellingUnitPrice: number;
+};
+
+export type CreateCategoryInput = {
+  name: string;
+  emoji: string;
 };
 
 export type PaymentMethod = 'Cash' | 'Mobile Money';
@@ -174,6 +187,30 @@ async function requestApi<ResponseBody>(
   }
 
   return response.json() as Promise<ResponseBody>;
+}
+
+export async function getCategories(shopId = DEFAULT_SHOP_ID): Promise<CategoryRow[]> {
+  try {
+    const response = await requestApi<{ categories: CategoryRow[] }>(
+      `/api/categories?shopId=${encodeURIComponent(shopId)}`
+    );
+    return response.categories;
+  } catch (error) {
+    console.warn('Unable to load categories.', getControlErrorMessage(error));
+    return [];
+  }
+}
+
+export async function createCategory(input: CreateCategoryInput, shopId = DEFAULT_SHOP_ID): Promise<CategoryRow> {
+  const response = await requestApi<{ category: CategoryRow }>('/api/categories', {
+    method: 'POST',
+    body: JSON.stringify({ ...input, shopId }),
+  });
+  return response.category;
+}
+
+export async function deleteCategory(categoryId: string): Promise<void> {
+  await requestApi(`/api/categories/${categoryId}`, { method: 'DELETE' });
 }
 
 export async function getProducts(shopId = DEFAULT_SHOP_ID): Promise<ProductRow[]> {

@@ -1,4 +1,5 @@
-import { createId, nowIso, readStore, updateStore } from '../../database/control-store';
+import { ID, Query } from 'node-appwrite';
+import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 import type { ProductRow, ProductUnit } from '../../types/control';
 
 export type SaveProductInput = {
@@ -6,93 +7,94 @@ export type SaveProductInput = {
   productId?: string;
   name: string;
   category: string;
+  emoji: string;
   quantity: number;
   unit: ProductUnit;
   purchaseTotal: number;
   sellingUnitPrice: number;
 };
 
-function byName(a: ProductRow, b: ProductRow) {
-  return a.name.localeCompare(b.name, 'fr');
+function toProductRow(doc: any): ProductRow {
+  return {
+    $id: doc.$id,
+    $createdAt: doc.$createdAt,
+    $updatedAt: doc.$updatedAt,
+    shopId: doc['shopId'] as string,
+    name: doc['name'] as string,
+    category: doc['category'] as string,
+    emoji: (doc['emoji'] as string) || '📦',
+    quantity: doc['quantity'] as number,
+    unit: doc['unit'] as ProductUnit,
+    purchaseUnitPrice: doc['purchaseUnitPrice'] as number,
+    sellingUnitPrice: doc['sellingUnitPrice'] as number,
+  };
 }
 
-export async function listProductsByShop(shopId: string) {
-  const store = await readStore();
+export async function listProductsByShop(shopId: string): Promise<ProductRow[]> {
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.products, [
+    Query.equal('shopId', shopId),
+    Query.orderAsc('name'),
+    Query.limit(200),
+  ]);
 
-  return store.products.filter((product) => product.shopId === shopId).sort(byName);
+  return response.documents.map(toProductRow);
 }
 
-export async function saveProductSupply(input: SaveProductInput) {
-  return updateStore((store) => {
-    const timestamp = nowIso();
-    const incomingUnitCost = Math.round(input.purchaseTotal / input.quantity);
-    let savedProduct: ProductRow;
-    let movementType: 'initial' | 'supply' = 'initial';
+export async function saveProductSupply(input: SaveProductInput): Promise<ProductRow> {
+  const incomingUnitCost = Math.round(input.purchaseTotal / input.quantity);
+  let savedProduct: ProductRow;
+  let movementType: 'initial' | 'supply' = 'initial';
 
-    if (input.productId) {
-      const existingProduct = store.products.find(
-        (currentProduct) =>
-          currentProduct.$id === input.productId && currentProduct.shopId === input.shopId
-      );
+  if (input.productId) {
+    const existingDoc = await databases.getDocument(DATABASE_ID, COLLECTIONS.products, input.productId);
+    const existing = toProductRow(existingDoc);
 
-      if (!existingProduct) {
-        throw new Error('Produit introuvable.');
-      }
+    const nextQuantity = existing.quantity + input.quantity;
+    const weightedPurchaseTotal = existing.quantity * existing.purchaseUnitPrice + input.purchaseTotal;
 
-      const nextQuantity = existingProduct.quantity + input.quantity;
-      const weightedPurchaseTotal =
-        existingProduct.quantity * existingProduct.purchaseUnitPrice + input.purchaseTotal;
+    const updatedDoc = await databases.updateDocument(DATABASE_ID, COLLECTIONS.products, input.productId, {
+      quantity: nextQuantity,
+      purchaseUnitPrice: Math.round(weightedPurchaseTotal / nextQuantity),
+      sellingUnitPrice: input.sellingUnitPrice,
+    });
 
-      existingProduct.quantity = nextQuantity;
-      existingProduct.purchaseUnitPrice = Math.round(weightedPurchaseTotal / nextQuantity);
-      existingProduct.sellingUnitPrice = input.sellingUnitPrice;
-      existingProduct.$updatedAt = timestamp;
-      savedProduct = existingProduct;
-      movementType = 'supply';
-    } else {
-      savedProduct = {
-        $id: createId(),
-        $createdAt: timestamp,
-        $updatedAt: timestamp,
-        shopId: input.shopId,
-        name: input.name,
-        category: input.category,
-        quantity: input.quantity,
-        unit: input.unit,
-        purchaseUnitPrice: incomingUnitCost,
-        sellingUnitPrice: input.sellingUnitPrice,
-      };
-      store.products.push(savedProduct);
-    }
-
-    store.stockMovements.push({
-      $id: createId(),
-      $createdAt: timestamp,
-      $updatedAt: timestamp,
+    savedProduct = toProductRow(updatedDoc);
+    movementType = 'supply';
+  } else {
+    const newDoc = await databases.createDocument(DATABASE_ID, COLLECTIONS.products, ID.unique(), {
       shopId: input.shopId,
-      productId: savedProduct.$id,
-      productName: savedProduct.name,
-      type: movementType,
+      name: input.name,
+      category: input.category,
+      emoji: input.emoji || '📦',
       quantity: input.quantity,
-      unit: savedProduct.unit,
-      unitCost: incomingUnitCost,
-      totalCost: input.purchaseTotal,
-      note: movementType === 'initial' ? 'Stock initial' : 'Approvisionnement',
+      unit: input.unit,
+      purchaseUnitPrice: incomingUnitCost,
+      sellingUnitPrice: input.sellingUnitPrice,
     });
 
-    store.activityLogs.push({
-      $id: createId(),
-      $createdAt: timestamp,
-      $updatedAt: timestamp,
-      shopId: input.shopId,
-      type: 'stock',
-      actorName: 'Vendeuse',
-      message:
-        movementType === 'initial'
-          ? `Stock ajoute : ${savedProduct.name}`
-          : `Approvisionnement : ${savedProduct.name}`,
-    });
+    savedProduct = toProductRow(newDoc);
+  }
 
-    return savedProduct;
+  await databases.createDocument(DATABASE_ID, COLLECTIONS.stockMovements, ID.unique(), {
+    shopId: input.shopId,
+    productId: savedProduct.$id,
+    productName: savedProduct.name,
+    type: movementType,
+    quantity: input.quantity,
+    unit: savedProduct.unit,
+    unitCost: incomingUnitCost,
+    totalCost: input.purchaseTotal,
+    note: movementType === 'initial' ? 'Stock initial' : 'Approvisionnement',
   });
+
+  await databases.createDocument(DATABASE_ID, COLLECTIONS.activityLogs, ID.unique(), {
+    shopId: input.shopId,
+    type: 'stock',
+    actorName: 'Vendeuse',
+    message: movementType === 'initial'
+      ? `Stock ajoute : ${savedProduct.name}`
+      : `Approvisionnement : ${savedProduct.name}`,
+  });
+
+  return savedProduct;
 }

@@ -14,6 +14,7 @@ export async function createOrSupplyProduct(body: Record<string, unknown>, shopI
   const productId = typeof body.productId === 'string' ? body.productId : '';
   const name = String(body.name ?? '').trim();
   const category = String(body.category ?? '').trim();
+  const emoji = String(body.emoji ?? '📦').trim();
   const quantity = parseAmount(body.quantity);
   const purchaseTotal = Math.round(parseAmount(body.purchaseTotal));
   const sellingUnitPrice = Math.round(parseAmount(body.sellingUnitPrice));
@@ -44,6 +45,7 @@ export async function createOrSupplyProduct(body: Record<string, unknown>, shopI
     productId,
     name,
     category,
+    emoji,
     quantity,
     unit: unit as ProductUnit,
     purchaseTotal,

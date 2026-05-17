@@ -4,6 +4,15 @@ export type ProductUnit = (typeof productUnits)[number];
 
 export type PaymentMethod = 'Cash' | 'Mobile Money';
 
+export type CategoryRow = {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  shopId: string;
+  name: string;
+  emoji: string;
+};
+
 export type ProductRow = {
   $id: string;
   $createdAt: string;
@@ -11,6 +20,7 @@ export type ProductRow = {
   shopId: string;
   name: string;
   category: string;
+  emoji: string;
   quantity: number;
   unit: ProductUnit;
   purchaseUnitPrice: number;

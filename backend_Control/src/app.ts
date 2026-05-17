@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 
 import { activityRouter } from './modules/activity/activity.routes';
+import { categoriesRouter } from './modules/categories/categories.routes';
 import { cashRouter } from './modules/cash/cash.routes';
 import { expensesRouter } from './modules/expenses/expenses.routes';
 import { healthRouter } from './modules/health/health.routes';
@@ -24,5 +25,6 @@ app.use(expensesRouter);
 app.use(cashRouter);
 app.use(missingRouter);
 app.use(activityRouter);
+app.use(categoriesRouter);
 
 app.use(errorHandler);
