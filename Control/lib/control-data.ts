@@ -8,19 +8,16 @@ type SaleRow = Models.Row & {
   shopId: string;
   totalAmount: number;
   paymentMethod: 'Cash' | 'Mobile Money';
-  createdAt: string;
 };
 
 type ExpenseRow = Models.Row & {
   shopId: string;
   amount: number;
-  createdAt: string;
 };
 
 type CashClosureRow = Models.Row & {
   shopId: string;
   cashGap: number;
-  createdAt: string;
 };
 
 export type ProductUnit = 'kg' | 'piece' | 'carton' | 'tas' | 'unite';
@@ -33,8 +30,6 @@ export type ProductRow = Models.Row & {
   unit: ProductUnit;
   purchaseUnitPrice: number;
   sellingUnitPrice: number;
-  createdAt: string;
-  updatedAt: string;
 };
 
 export type CreateProductInput = {
@@ -42,8 +37,16 @@ export type CreateProductInput = {
   category: string;
   quantity: number;
   unit: ProductUnit;
-  purchaseUnitPrice: number;
+  purchaseTotal: number;
   sellingUnitPrice: number;
+};
+
+export type PaymentMethod = 'Cash' | 'Mobile Money';
+
+export type CreateSaleInput = {
+  productId: string;
+  quantity: number;
+  paymentMethod: PaymentMethod;
 };
 
 export type TodaySummary = {
@@ -55,6 +58,14 @@ export type TodaySummary = {
   expensesCount: number;
   latestCashGap: number;
 };
+
+export function getAppwriteErrorMessage(error: unknown) {
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String(error.message);
+  }
+
+  return 'Erreur Appwrite inconnue.';
+}
 
 const emptyTodaySummary: TodaySummary = {
   cashSalesAmount: 0,
@@ -75,6 +86,10 @@ function isToday(value: string) {
     date.getMonth() === now.getMonth() &&
     date.getDate() === now.getDate()
   );
+}
+
+function rowCreatedAt(row: Models.Row) {
+  return row.$createdAt;
 }
 
 async function listRows<Row extends Models.Row>(tableId: string) {
@@ -101,13 +116,13 @@ export async function getProducts(shopId = DEFAULT_SHOP_ID): Promise<ProductRow[
       .filter((product) => product.shopId === shopId)
       .sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.warn('Unable to load products from Appwrite.', error);
+    console.warn('Unable to load products from Appwrite.', getAppwriteErrorMessage(error));
     return [];
   }
 }
 
 export async function createProduct(input: CreateProductInput, shopId = DEFAULT_SHOP_ID) {
-  const now = new Date().toISOString();
+  const purchaseUnitPrice = Math.round(input.purchaseTotal / input.quantity);
   const product = await tablesDb.createRow<ProductRow>({
     databaseId: APPWRITE_DATABASE_ID,
     tableId: APPWRITE_TABLES.products,
@@ -118,10 +133,8 @@ export async function createProduct(input: CreateProductInput, shopId = DEFAULT_
       category: input.category.trim(),
       quantity: input.quantity,
       unit: input.unit,
-      purchaseUnitPrice: input.purchaseUnitPrice,
+      purchaseUnitPrice,
       sellingUnitPrice: input.sellingUnitPrice,
-      createdAt: now,
-      updatedAt: now,
     },
     permissions: testPermissions,
   });
@@ -139,9 +152,8 @@ export async function createProduct(input: CreateProductInput, shopId = DEFAULT_
         quantity: product.quantity,
         unit: product.unit,
         unitCost: product.purchaseUnitPrice,
-        totalCost: Math.round(product.quantity * product.purchaseUnitPrice),
+        totalCost: input.purchaseTotal,
         note: 'Stock initial',
-        createdAt: now,
       },
       permissions: testPermissions,
     }),
@@ -154,13 +166,90 @@ export async function createProduct(input: CreateProductInput, shopId = DEFAULT_
         type: 'stock',
         actorName: 'Vendeuse',
         message: `Stock ajoute : ${product.name}`,
-        createdAt: now,
       },
       permissions: testPermissions,
     }),
   ]);
 
   return product;
+}
+
+export async function createSale(input: CreateSaleInput, shopId = DEFAULT_SHOP_ID) {
+  const product = await tablesDb.getRow<ProductRow>({
+    databaseId: APPWRITE_DATABASE_ID,
+    tableId: APPWRITE_TABLES.products,
+    rowId: input.productId,
+  });
+
+  if (input.quantity <= 0) {
+    throw new Error('La quantite doit etre superieure a 0.');
+  }
+
+  if (input.quantity > product.quantity) {
+    throw new Error('Stock insuffisant pour cette vente.');
+  }
+
+  const totalAmount = Math.round(input.quantity * product.sellingUnitPrice);
+  const remainingQuantity = product.quantity - input.quantity;
+
+  const sale = await tablesDb.createRow({
+    databaseId: APPWRITE_DATABASE_ID,
+    tableId: APPWRITE_TABLES.sales,
+    rowId: ID.unique(),
+    data: {
+      shopId,
+      productId: product.$id,
+      productName: product.name,
+      quantity: input.quantity,
+      unit: product.unit,
+      unitPrice: product.sellingUnitPrice,
+      totalAmount,
+      paymentMethod: input.paymentMethod,
+    },
+    permissions: testPermissions,
+  });
+
+  await Promise.all([
+    tablesDb.updateRow<ProductRow>({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLES.products,
+      rowId: product.$id,
+      data: {
+        quantity: remainingQuantity,
+      },
+    }),
+    tablesDb.createRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLES.stockMovements,
+      rowId: ID.unique(),
+      data: {
+        shopId,
+        productId: product.$id,
+        productName: product.name,
+        type: 'sale',
+        quantity: input.quantity,
+        unit: product.unit,
+        unitCost: product.purchaseUnitPrice,
+        totalCost: Math.round(input.quantity * product.purchaseUnitPrice),
+        note: `Vente ${input.paymentMethod}`,
+      },
+      permissions: testPermissions,
+    }),
+    tablesDb.createRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLES.activityLogs,
+      rowId: ID.unique(),
+      data: {
+        shopId,
+        type: 'sale',
+        actorName: 'Vendeuse',
+        message: `Vente : ${product.name}`,
+      },
+      permissions: testPermissions,
+    }),
+  ]);
+
+  return sale;
 }
 
 export async function getTodaySummary(shopId = DEFAULT_SHOP_ID): Promise<TodaySummary> {
@@ -171,13 +260,13 @@ export async function getTodaySummary(shopId = DEFAULT_SHOP_ID): Promise<TodaySu
       listRows<CashClosureRow>(APPWRITE_TABLES.cashClosures),
     ]);
 
-    const todaySales = salesRows.filter((sale) => sale.shopId === shopId && isToday(sale.createdAt));
+    const todaySales = salesRows.filter((sale) => sale.shopId === shopId && isToday(rowCreatedAt(sale)));
     const todayExpenses = expenseRows.filter(
-      (expense) => expense.shopId === shopId && isToday(expense.createdAt)
+      (expense) => expense.shopId === shopId && isToday(rowCreatedAt(expense))
     );
     const todayClosures = closureRows
-      .filter((closure) => closure.shopId === shopId && isToday(closure.createdAt))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .filter((closure) => closure.shopId === shopId && isToday(rowCreatedAt(closure)))
+      .sort((a, b) => new Date(rowCreatedAt(b)).getTime() - new Date(rowCreatedAt(a)).getTime());
 
     const cashSalesAmount = todaySales
       .filter((sale) => sale.paymentMethod === 'Cash')

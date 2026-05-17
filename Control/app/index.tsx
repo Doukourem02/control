@@ -233,10 +233,12 @@ function HomeMenu({
   compact,
   onOpenReport,
   onOpenStock,
+  onOpenSale,
 }: {
   compact: boolean;
   onOpenReport: () => void;
   onOpenStock: () => void;
+  onOpenSale: () => void;
 }) {
   return (
     <>
@@ -258,7 +260,9 @@ function HomeMenu({
               key={action.title}
               action={action}
               compact={compact}
-              onPress={action.title === 'Stock' ? onOpenStock : undefined}
+              onPress={
+                action.title === 'Stock' ? onOpenStock : action.title === 'Vente' ? onOpenSale : undefined
+              }
             />
           ))}
         </View>
@@ -552,6 +556,7 @@ export default function HomeScreen() {
                 compact={compact}
                 onOpenReport={() => setActiveMenu('report')}
                 onOpenStock={() => router.push('/stock' as never)}
+                onOpenSale={() => router.push('/sale' as never)}
               />
             ) : activeMenu === 'report' ? (
               <ReportMenu

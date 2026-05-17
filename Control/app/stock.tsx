@@ -1,5 +1,6 @@
 import {
   createProduct,
+  getAppwriteErrorMessage,
   getProducts,
   type ProductRow,
   type ProductUnit,
@@ -124,8 +125,15 @@ export default function StockScreen() {
   const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState<ProductUnit>('kg');
-  const [purchaseUnitPrice, setPurchaseUnitPrice] = useState('');
+  const [purchaseTotal, setPurchaseTotal] = useState('');
   const [sellingUnitPrice, setSellingUnitPrice] = useState('');
+  const parsedQuantity = parseAmount(quantity);
+  const parsedPurchaseTotal = parseAmount(purchaseTotal);
+  const parsedSellingPrice = parseAmount(sellingUnitPrice);
+  const purchaseUnitPrice =
+    parsedQuantity > 0 && parsedPurchaseTotal >= 0
+      ? Math.round(parsedPurchaseTotal / parsedQuantity)
+      : 0;
 
   const loadProducts = useCallback(async () => {
     setLoading(true);
@@ -141,10 +149,6 @@ export default function StockScreen() {
   async function handleCreateProduct() {
     setFormError('');
 
-    const parsedQuantity = parseAmount(quantity);
-    const parsedPurchasePrice = parseAmount(purchaseUnitPrice);
-    const parsedSellingPrice = parseAmount(sellingUnitPrice);
-
     if (!name.trim() || !category.trim()) {
       setFormError('Renseigne le nom et la categorie.');
       return;
@@ -155,8 +159,13 @@ export default function StockScreen() {
       return;
     }
 
-    if (parsedPurchasePrice < 0 || parsedSellingPrice <= 0 || Number.isNaN(parsedSellingPrice)) {
-      setFormError('Verifie les prix achat et vente.');
+    if (parsedPurchaseTotal < 0 || Number.isNaN(parsedPurchaseTotal)) {
+      setFormError('Le cout achat total doit etre valide.');
+      return;
+    }
+
+    if (parsedSellingPrice <= 0 || Number.isNaN(parsedSellingPrice)) {
+      setFormError('Le prix de vente par unite doit etre superieur a 0.');
       return;
     }
 
@@ -168,7 +177,7 @@ export default function StockScreen() {
         category,
         quantity: parsedQuantity,
         unit,
-        purchaseUnitPrice: Math.round(parsedPurchasePrice),
+        purchaseTotal: Math.round(parsedPurchaseTotal),
         sellingUnitPrice: Math.round(parsedSellingPrice),
       });
 
@@ -176,12 +185,13 @@ export default function StockScreen() {
       setCategory('');
       setQuantity('');
       setUnit('kg');
-      setPurchaseUnitPrice('');
+      setPurchaseTotal('');
       setSellingUnitPrice('');
       await loadProducts();
     } catch (error) {
-      console.warn('Unable to create product.', error);
-      setFormError('Impossible d’enregistrer le produit pour le moment.');
+      const message = getAppwriteErrorMessage(error);
+      console.warn('Unable to create product.', message);
+      setFormError(message);
     } finally {
       setSaving(false);
     }
@@ -256,18 +266,18 @@ export default function StockScreen() {
                 Ajouter un produit
               </Text>
 
-              <Field label="Nom" value={name} onChangeText={setName} placeholder="Riz, huile, savon" />
+              <Field label="Nom" value={name} onChangeText={setName} placeholder="Poisson, boeuf, tripe" />
               <Field
                 label="Categorie"
                 value={category}
                 onChangeText={setCategory}
-                placeholder="Alimentaire, hygiene"
+                placeholder="Poissonnerie, boucherie, volaille"
               />
 
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Field
-                    label="Quantite"
+                    label="Quantite vendable"
                     value={quantity}
                     onChangeText={setQuantity}
                     placeholder="0"
@@ -313,16 +323,16 @@ export default function StockScreen() {
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Field
-                    label="Prix achat"
-                    value={purchaseUnitPrice}
-                    onChangeText={setPurchaseUnitPrice}
+                    label="Cout achat total"
+                    value={purchaseTotal}
+                    onChangeText={setPurchaseTotal}
                     placeholder="0 F"
                     keyboardType="number-pad"
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Field
-                    label="Prix vente"
+                    label="Vente / unite"
                     value={sellingUnitPrice}
                     onChangeText={setSellingUnitPrice}
                     placeholder="0 F"
@@ -330,6 +340,29 @@ export default function StockScreen() {
                   />
                 </View>
               </View>
+
+              {parsedQuantity > 0 && parsedPurchaseTotal >= 0 ? (
+                <View
+                  style={{
+                    minHeight: 54,
+                    borderRadius: 18,
+                    borderCurve: 'continuous',
+                    backgroundColor: '#F7F7F7',
+                    borderWidth: 1,
+                    borderColor: '#EEEEEE',
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>
+                    Achat / unite vendable
+                  </Text>
+                  <Text style={{ marginTop: 3, color: '#111111', fontSize: 18, fontWeight: '800' }}>
+                    {formatMoney(purchaseUnitPrice)}
+                  </Text>
+                </View>
+              ) : null}
 
               {formError ? (
                 <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>{formError}</Text>
