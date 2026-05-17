@@ -1,10 +1,16 @@
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import type { ComponentProps } from 'react';
 import { Pressable, Text, View } from 'react-native';
+
+type ActionIcon =
+  | { family: 'feather'; name: ComponentProps<typeof Feather>['name'] }
+  | { family: 'material'; name: ComponentProps<typeof MaterialCommunityIcons>['name'] };
 
 export type SellerAction = {
   title: string;
   subtitle: string;
-  icon: keyof typeof Feather.glyphMap;
+  icon: ActionIcon;
   accent: string;
 };
 
@@ -15,50 +21,68 @@ type SellerActionTileProps = {
 };
 
 export function SellerActionTile({ action, compact = false, onPress }: SellerActionTileProps) {
+  const iconSize = compact ? 40 : 44;
+  const glyphSize = compact ? 20 : 22;
+
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }: { pressed: boolean }) => ({
         width: '48%',
-        height: compact ? 122 : 136,
-        borderRadius: 30,
+        height: compact ? 158 : 176,
+        borderRadius: 28,
         borderCurve: 'continuous',
-        backgroundColor: '#F8F8F8',
+        backgroundColor: '#F7F7F7',
         borderWidth: 1,
-        borderColor: '#F1F1F1',
-        padding: compact ? 18 : 22,
-        justifyContent: 'space-between',
+        borderColor: '#F0F0F0',
+        paddingTop: compact ? 22 : 24,
+        paddingHorizontal: compact ? 22 : 24,
+        paddingBottom: compact ? 20 : 22,
         opacity: pressed ? 0.68 : 1,
         transform: [{ scale: pressed ? 0.985 : 1 }],
-        boxShadow: '0 8px 20px rgba(0, 0, 0, 0.025)',
+        boxShadow: '0 8px 18px rgba(0, 0, 0, 0.018)',
       })}
     >
       <View
         style={{
-          width: compact ? 48 : 52,
-          height: compact ? 48 : 52,
-          borderRadius: 18,
+          width: iconSize,
+          height: iconSize,
+          borderRadius: 14,
           borderCurve: 'continuous',
-          backgroundColor: `${action.accent}18`,
+          backgroundColor: action.accent,
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <Feather name={action.icon} size={22} color={action.accent} />
+        {action.icon.family === 'material' ? (
+          <MaterialCommunityIcons name={action.icon.name} size={glyphSize} color="#FFFFFF" />
+        ) : (
+          <Feather name={action.icon.name} size={glyphSize} color="#FFFFFF" />
+        )}
       </View>
 
-      <View style={{ gap: 4 }}>
+      <View style={{ gap: 5, marginTop: compact ? 30 : 40 }}>
         <Text
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.82}
-          style={{ color: '#111111', fontSize: compact ? 20 : 21, fontWeight: '700' }}
+          style={{
+            color: '#111111',
+            fontSize: compact ? 17 : 18,
+            lineHeight: compact ? 21 : 22,
+            fontWeight: '700',
+          }}
         >
           {action.title}
         </Text>
         <Text
           numberOfLines={1}
-          style={{ color: '#A6A6A6', fontSize: compact ? 14 : 15, fontWeight: '400' }}
+          style={{
+            color: '#A8A8A8',
+            fontSize: compact ? 14 : 15,
+            lineHeight: compact ? 17 : 18,
+            fontWeight: '400',
+          }}
         >
           {action.subtitle}
         </Text>

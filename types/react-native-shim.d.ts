@@ -61,11 +61,17 @@ export type TextInputProps = ViewProps & {
   onChangeText?: (value: string) => void;
 };
 
+export type ImageProps = ViewProps & {
+  source?: unknown;
+  resizeMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'center';
+};
+
 export const View: ComponentType<ViewProps>;
 export const Text: ComponentType<TextProps>;
 export const TextInput: ComponentType<TextInputProps>;
 export const Pressable: ComponentType<PressableProps>;
 export const ScrollView: ComponentType<ScrollViewProps>;
+export const Image: ComponentType<ImageProps>;
 
 export const Animated: {
   Value: new (value: number) => {
