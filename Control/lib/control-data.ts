@@ -113,6 +113,7 @@ export type PaymentMethod = 'Cash' | 'Mobile Money';
 export type CreateSaleInput = {
   productId: string;
   quantity: number;
+  totalAmount: number;
   paymentMethod: PaymentMethod;
 };
 

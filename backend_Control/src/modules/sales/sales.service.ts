@@ -25,10 +25,13 @@ export async function createSale(body: Record<string, unknown>, shopId: string) 
     throw new Error('Selectionne un mode de paiement valide.');
   }
 
+  const totalAmount = parseAmount(body.totalAmount);
+
   return createSaleRecord({
     shopId,
     productId,
     quantity,
+    totalAmount: Number.isFinite(totalAmount) && totalAmount > 0 ? totalAmount : undefined,
     paymentMethod,
   });
 }

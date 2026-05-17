@@ -6,6 +6,7 @@ export type CreateSaleInput = {
   shopId: string;
   productId: string;
   quantity: number;
+  totalAmount?: number;
   paymentMethod: PaymentMethod;
 };
 
@@ -16,7 +17,7 @@ function toSaleRow(doc: any): SaleRow {
     $updatedAt: doc.$updatedAt,
     shopId: doc['shopId'] as string,
     productId: doc['productId'] as string,
-    productName: doc['productName'] as string,
+    productName: (doc['productName'] ?? doc['productname']) as string,
     quantity: doc['quantity'] as number,
     unit: doc['unit'] as SaleRow['unit'],
     unitPrice: doc['unitPrice'] as number,
@@ -38,12 +39,14 @@ export async function createSaleRecord(input: CreateSaleInput): Promise<SaleRow>
     throw new Error('Stock insuffisant pour cette vente.');
   }
 
-  const totalAmount = Math.round(input.quantity * (productDoc['sellingUnitPrice'] as number));
+  const totalAmount = input.totalAmount != null
+    ? Math.round(input.totalAmount)
+    : Math.round(input.quantity * (productDoc['sellingUnitPrice'] as number));
 
   const saleDoc = await databases.createDocument(DATABASE_ID, COLLECTIONS.sales, ID.unique(), {
     shopId: input.shopId,
     productId: productDoc.$id,
-    productName: productDoc['name'] as string,
+    productname: productDoc['name'] as string,
     quantity: input.quantity,
     unit: productDoc['unit'] as string,
     unitPrice: productDoc['sellingUnitPrice'] as number,

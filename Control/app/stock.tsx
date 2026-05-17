@@ -6,11 +6,9 @@ import {
   getCategories,
   getControlErrorMessage,
   getProducts,
-  getRecentStockMovements,
   type CategoryRow,
   type ProductRow,
   type ProductUnit,
-  type StockMovementRow,
 } from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -39,15 +37,6 @@ type SupplyMode = 'new' | 'existing';
 
 function formatMoney(value: number) {
   return `${Math.round(value).toLocaleString('fr-FR')} F`;
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
 }
 
 function parseAmount(value: string) {
@@ -96,92 +85,10 @@ function Field({
   );
 }
 
-function ProductItem({ product }: { product: ProductRow }) {
-  const stockValue = product.quantity * product.sellingUnitPrice;
-
-  return (
-    <View
-      style={{
-        minHeight: 76,
-        borderRadius: 22,
-        borderCurve: 'continuous',
-        backgroundColor: '#F7F7F7',
-        borderWidth: 1,
-        borderColor: '#EFEFEF',
-        padding: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-      }}
-    >
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
-          {product.name}
-        </Text>
-        <Text numberOfLines={1} style={{ marginTop: 4, color: '#9A9A9A', fontSize: 13 }}>
-          {product.category}
-        </Text>
-      </View>
-      <View style={{ alignItems: 'flex-end', gap: 4 }}>
-        <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
-          {product.quantity} {product.unit}
-        </Text>
-        <Text style={{ color: '#2A8DEB', fontSize: 13, fontWeight: '700' }}>
-          {formatMoney(product.sellingUnitPrice)} / {product.unit}
-        </Text>
-        <Text style={{ color: '#9A9A9A', fontSize: 12, fontWeight: '600' }}>
-          valeur {formatMoney(stockValue)}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-function StockMovementItem({ movement }: { movement: StockMovementRow }) {
-  const label = movement.type === 'initial' ? 'Stock initial' : 'Approvisionnement';
-
-  return (
-    <View
-      style={{
-        minHeight: 66,
-        borderRadius: 20,
-        borderCurve: 'continuous',
-        backgroundColor: '#F7F7F7',
-        borderWidth: 1,
-        borderColor: '#EFEFEF',
-        padding: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-      }}
-    >
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
-          {movement.productName}
-        </Text>
-        <Text numberOfLines={1} style={{ marginTop: 4, color: '#9A9A9A', fontSize: 13 }}>
-          {label} · {formatDateTime(movement.$createdAt)}
-        </Text>
-      </View>
-      <View style={{ alignItems: 'flex-end', gap: 3 }}>
-        <Text style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>
-          +{movement.quantity} {movement.unit}
-        </Text>
-        <Text style={{ color: '#2A8DEB', fontSize: 12, fontWeight: '700' }}>
-          {formatMoney(movement.totalCost)}
-        </Text>
-      </View>
-    </View>
-  );
-}
 
 export default function StockScreen() {
   const router = useRouter();
   const [products, setProducts] = useState<ProductRow[]>([]);
-  const [stockMovements, setStockMovements] = useState<StockMovementRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -196,43 +103,29 @@ export default function StockScreen() {
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState<ProductUnit>('kg');
-  const [purchaseTotal, setPurchaseTotal] = useState('');
+  const [purchaseUnitInput, setPurchaseUnitInput] = useState('');
   const [sellingUnitPrice, setSellingUnitPrice] = useState('');
   const parsedQuantity = parseAmount(quantity);
-  const parsedPurchaseTotal = parseAmount(purchaseTotal);
+  const parsedPurchaseUnit = parseAmount(purchaseUnitInput);
+  const parsedPurchaseTotal = parsedPurchaseUnit > 0 && parsedQuantity > 0
+    ? Math.round(parsedPurchaseUnit * parsedQuantity)
+    : 0;
   const parsedSellingPrice = parseAmount(sellingUnitPrice);
-  const purchaseUnitPrice =
-    parsedQuantity > 0 && parsedPurchaseTotal >= 0
-      ? Math.round(parsedPurchaseTotal / parsedQuantity)
-      : 0;
+  const purchaseUnitPrice = parsedPurchaseUnit > 0 ? Math.round(parsedPurchaseUnit) : 0;
   const selectedProduct = products.find((product) => product.$id === selectedProductId);
   const selectedCategory = categories.find((c) => c.$id === selectedCategoryId);
   const lowStockCount = products.filter((product) => product.quantity > 0 && product.quantity <= 5).length;
-  const recentSupplies = stockMovements.filter(
-    (movement) => movement.type === 'initial' || movement.type === 'supply'
-  );
-
-  const loadProducts = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
-    if (!silent) {
-      setLoading(true);
-    }
-
-    const [nextProducts, nextMovements, nextCategories] = await Promise.all([
+  const loadProducts = useCallback(async ({ silent: _silent = false }: { silent?: boolean } = {}) => {
+    const [nextProducts, nextCategories] = await Promise.all([
       getProducts(),
-      getRecentStockMovements(),
       getCategories(),
     ]);
 
     setProducts(nextProducts);
-    setStockMovements(nextMovements);
     setCategories(nextCategories);
     setSelectedProductId((current) =>
-      nextProducts.some((product) => product.$id === current) ? current : nextProducts[0]?.$id || ''
+      nextProducts.some((product: ProductRow) => product.$id === current) ? current : nextProducts[0]?.$id || ''
     );
-
-    if (!silent) {
-      setLoading(false);
-    }
   }, []);
 
   useEffect(() => {
@@ -291,23 +184,7 @@ export default function StockScreen() {
       purchaseUnitPrice: purchaseUnitPrice,
       sellingUnitPrice: Math.round(parsedSellingPrice),
     };
-    const tempMovement: StockMovementRow = {
-      $id: `temp-movement-${Date.now()}`,
-      $createdAt: now,
-      $updatedAt: now,
-      shopId: DEFAULT_SHOP_ID,
-      productId: tempProductId,
-      productName: tempProduct.name,
-      type: isExistingSupply ? 'supply' : 'initial',
-      quantity: parsedQuantity,
-      unit: tempProduct.unit,
-      unitCost: purchaseUnitPrice,
-      totalCost: Math.round(parsedPurchaseTotal),
-      note: '',
-    };
-
     const prevProducts = products;
-    const prevMovements = stockMovements;
 
     setProducts((prev) => {
       const exists = prev.some((p) => p.$id === tempProductId);
@@ -316,13 +193,12 @@ export default function StockScreen() {
         : [...prev, tempProduct];
       return next.sort((a, b) => a.name.localeCompare(b.name));
     });
-    setStockMovements((prev) => [tempMovement, ...prev]);
     setSelectedProductId(tempProductId);
     setName('');
     setSelectedCategoryId('');
     setQuantity('');
     setUnit('kg');
-    setPurchaseTotal('');
+    setPurchaseUnitInput('');
     setSellingUnitPrice(isExistingSupply ? String(Math.round(parsedSellingPrice)) : '');
 
     setSaving(true);
@@ -353,7 +229,6 @@ export default function StockScreen() {
       await loadProducts({ silent: true });
     } catch (error) {
       setProducts(prevProducts);
-      setStockMovements(prevMovements);
       setSelectedProductId(prevProducts[0]?.$id || '');
       const message = getControlErrorMessage(error);
       console.warn('Unable to create product.', message);
@@ -390,7 +265,7 @@ export default function StockScreen() {
     }
   }
 
-  const EMOJI_OPTIONS = ['🐟','🥩','🐔','🐑','🐷','🦐','🥬','🍎','🍌','🌾','🫙','🥤','🍞','🥛','🥚','🧂','🥕','🧅','🌽','🫘','🍅','📦'];
+  const EMOJI_OPTIONS = ['🐟','🥩','🐔','🐑','🐷'];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -559,7 +434,7 @@ export default function StockScreen() {
                                   fontWeight: '800',
                                 }}
                               >
-                                {product.name} · {product.quantity} {product.unit}
+                                {product.emoji} {product.name}
                               </Text>
                             </Pressable>
                           );
@@ -735,9 +610,9 @@ export default function StockScreen() {
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Field
-                    label="Cout achat total"
-                    value={purchaseTotal}
-                    onChangeText={setPurchaseTotal}
+                    label="Achat / unite"
+                    value={purchaseUnitInput}
+                    onChangeText={setPurchaseUnitInput}
                     placeholder="0 F"
                     keyboardType="number-pad"
                   />
@@ -753,10 +628,9 @@ export default function StockScreen() {
                 </View>
               </View>
 
-              {parsedQuantity > 0 && parsedPurchaseTotal >= 0 ? (
+              {parsedQuantity > 0 && purchaseUnitPrice > 0 ? (
                 <View
                   style={{
-                    minHeight: 54,
                     borderRadius: 18,
                     borderCurve: 'continuous',
                     backgroundColor: '#F7F7F7',
@@ -764,15 +638,24 @@ export default function StockScreen() {
                     borderColor: '#EEEEEE',
                     paddingHorizontal: 16,
                     paddingVertical: 12,
-                    justifyContent: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
                   }}
                 >
-                  <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>
-                    Achat / unite vendable
-                  </Text>
-                  <Text style={{ marginTop: 3, color: '#111111', fontSize: 18, fontWeight: '800' }}>
-                    {formatMoney(purchaseUnitPrice)}
-                  </Text>
+                  <View>
+                    <Text style={{ color: '#777777', fontSize: 12, fontWeight: '600' }}>Cout total</Text>
+                    <Text style={{ marginTop: 3, color: '#111111', fontSize: 17, fontWeight: '800' }}>
+                      {formatMoney(parsedPurchaseTotal)}
+                    </Text>
+                  </View>
+                  {parsedSellingPrice > 0 ? (
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ color: '#777777', fontSize: 12, fontWeight: '600' }}>Benefice / unite</Text>
+                      <Text style={{ marginTop: 3, color: '#2A8D55', fontSize: 17, fontWeight: '800' }}>
+                        {formatMoney(parsedSellingPrice - purchaseUnitPrice)}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
 
@@ -808,35 +691,6 @@ export default function StockScreen() {
               </Pressable>
             </View>
 
-            <View style={{ marginTop: 30, gap: 13 }}>
-              <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>
-                Produits
-              </Text>
-
-              {loading ? (
-                <View style={{ paddingVertical: 22, alignItems: 'center' }}>
-                  <ActivityIndicator color="#2A8DEB" />
-                </View>
-              ) : (
-                products.map((product) => <ProductItem key={product.$id} product={product} />)
-              )}
-            </View>
-
-            <View style={{ marginTop: 30, gap: 13 }}>
-              <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>
-                Derniers approvisionnements
-              </Text>
-
-              {loading ? (
-                <View style={{ paddingVertical: 22, alignItems: 'center' }}>
-                  <ActivityIndicator color="#2A8DEB" />
-                </View>
-              ) : (
-                recentSupplies.map((movement) => (
-                  <StockMovementItem key={movement.$id} movement={movement} />
-                ))
-              )}
-            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

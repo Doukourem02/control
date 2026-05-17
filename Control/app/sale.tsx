@@ -88,6 +88,7 @@ export default function SaleScreen() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [totalInput, setTotalInput] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -99,10 +100,35 @@ export default function SaleScreen() {
     [products, selectedProductId]
   );
   const parsedQuantity = parseQuantity(quantity);
-  const totalAmount =
+  const autoTotal =
     selectedProduct && !Number.isNaN(parsedQuantity)
       ? parsedQuantity * selectedProduct.sellingUnitPrice
       : 0;
+  const parsedTotal = parseQuantity(totalInput);
+  const totalAmount = Number.isFinite(parsedTotal) && parsedTotal > 0 ? parsedTotal : autoTotal;
+
+  function handleQuantityChange(val: string) {
+    setQuantity(val);
+    const qty = parseQuantity(val);
+    if (selectedProduct && Number.isFinite(qty) && qty > 0) {
+      setTotalInput(String(Math.round(qty * selectedProduct.sellingUnitPrice)));
+    } else {
+      setTotalInput('');
+    }
+  }
+
+  function handleProductSelect(productId: string) {
+    setSelectedProductId(productId);
+    setFormError('');
+    setSuccessMessage('');
+    const product = products.find(p => p.$id === productId);
+    const qty = parseQuantity(quantity);
+    if (product && Number.isFinite(qty) && qty > 0) {
+      setTotalInput(String(Math.round(qty * product.sellingUnitPrice)));
+    } else {
+      setTotalInput('');
+    }
+  }
 
   const loadProducts = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!silent) setLoading(true);
@@ -144,6 +170,7 @@ export default function SaleScreen() {
       )
     );
     setQuantity('');
+    setTotalInput('');
 
     setSaving(true);
 
@@ -151,6 +178,7 @@ export default function SaleScreen() {
       await createSale({
         productId: selectedProduct.$id,
         quantity: parsedQuantity,
+        totalAmount,
         paymentMethod,
       });
       setSuccessMessage(
@@ -251,11 +279,7 @@ export default function SaleScreen() {
                         key={product.$id}
                         product={product}
                         selected={product.$id === selectedProductId}
-                        onPress={() => {
-                          setSelectedProductId(product.$id);
-                          setFormError('');
-                          setSuccessMessage('');
-                        }}
+                        onPress={() => handleProductSelect(product.$id)}
                       />
                     ))}
                     {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
@@ -280,7 +304,7 @@ export default function SaleScreen() {
                 <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Quantite</Text>
                 <TextInput
                   value={quantity}
-                  onChangeText={setQuantity}
+                  onChangeText={handleQuantityChange}
                   placeholder="0"
                   placeholderTextColor="#B4B4B4"
                   keyboardType="decimal-pad"
@@ -351,9 +375,20 @@ export default function SaleScreen() {
               }}
             >
               <Text style={{ color: '#777777', fontSize: 14, fontWeight: '700' }}>Total</Text>
-              <Text style={{ color: '#111111', fontSize: 24, fontWeight: '900' }}>
-                {formatMoney(totalAmount)}
-              </Text>
+              <TextInput
+                value={totalInput}
+                onChangeText={setTotalInput}
+                placeholder={formatMoney(autoTotal)}
+                placeholderTextColor="#B4B4B4"
+                keyboardType="number-pad"
+                style={{
+                  color: '#111111',
+                  fontSize: 24,
+                  fontWeight: '900',
+                  textAlign: 'right',
+                  minWidth: 120,
+                }}
+              />
             </View>
 
             {formError ? (

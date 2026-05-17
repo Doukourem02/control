@@ -47,6 +47,7 @@ export async function createCashClosure(body: Record<string, unknown>, shopId: s
   return createCashClosureRecord({
     shopId,
     businessDate,
+    cashSalesAmount: summary.cashSalesAmount,
     expectedCashAmount,
     physicalCashAmount,
     cashGap,

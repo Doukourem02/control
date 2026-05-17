@@ -5,6 +5,7 @@ import type { CashClosureRow } from '../../types/control';
 export type CreateCashClosureInput = {
   shopId: string;
   businessDate: string;
+  cashSalesAmount: number;
   expectedCashAmount: number;
   physicalCashAmount: number;
   cashGap: number;
@@ -29,6 +30,7 @@ export async function createCashClosureRecord(input: CreateCashClosureInput): Pr
   const closureDoc = await databases.createDocument(DATABASE_ID, COLLECTIONS.cashClosures, ID.unique(), {
     shopId: input.shopId,
     businessDate: input.businessDate,
+    cashSalesAmount: input.cashSalesAmount,
     expectedCashAmount: input.expectedCashAmount,
     physicalCashAmount: input.physicalCashAmount,
     cashGap: input.cashGap,
