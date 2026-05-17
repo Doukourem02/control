@@ -1,4 +1,4 @@
-import { createExpense, getControlErrorMessage } from '@/lib/control-data';
+import { createExpense, getControlErrorMessage, type ExpenseCategory } from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -14,6 +14,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const categories: { label: string; value: ExpenseCategory }[] = [
+  { label: 'Transport', value: 'transport' },
+  { label: 'Courant', value: 'courant' },
+  { label: 'Sachets', value: 'sachets' },
+  { label: 'Eau', value: 'eau' },
+  { label: 'Salaire', value: 'salaire' },
+  { label: 'Imprévu', value: 'imprevu' },
+  { label: 'Nettoyage', value: 'nettoyage' },
+];
+
 function parseAmount(value: string) {
   const parsed = Number(value.replace(',', '.').trim());
 
@@ -26,6 +36,7 @@ function formatMoney(value: number) {
 
 export default function ExpenseScreen() {
   const router = useRouter();
+  const [category, setCategory] = useState<ExpenseCategory>('transport');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -46,6 +57,7 @@ export default function ExpenseScreen() {
 
     try {
       const expense = await createExpense({
+        category,
         amount: Math.round(parsedAmount),
         note: note.trim(),
       });
@@ -109,6 +121,40 @@ export default function ExpenseScreen() {
               </Text>
             </View>
 
+            <View style={{ marginTop: 26, gap: 13 }}>
+              <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>Categorie</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
+                {categories.map((item) => {
+                  const selected = category === item.value;
+
+                  return (
+                    <Pressable
+                      key={item.value}
+                      onPress={() => setCategory(item.value)}
+                      style={({ pressed }: { pressed: boolean }) => ({
+                        minHeight: 38,
+                        borderRadius: 19,
+                        backgroundColor: selected ? '#111111' : '#F2F2F2',
+                        paddingHorizontal: 14,
+                        justifyContent: 'center',
+                        opacity: pressed ? 0.72 : 1,
+                      })}
+                    >
+                      <Text
+                        style={{
+                          color: selected ? '#FFFFFF' : '#777777',
+                          fontSize: 13,
+                          fontWeight: '800',
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
             <View style={{ marginTop: 26, gap: 15 }}>
               <View style={{ gap: 7 }}>
                 <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Montant</Text>
@@ -134,11 +180,11 @@ export default function ExpenseScreen() {
               </View>
 
               <View style={{ gap: 7 }}>
-                <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Motif</Text>
+                <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Motif (optionnel)</Text>
                 <TextInput
                   value={note}
                   onChangeText={setNote}
-                  placeholder="Transport, sachets, monnaie..."
+                  placeholder="Précision..."
                   placeholderTextColor="#B4B4B4"
                   style={{
                     minHeight: 54,

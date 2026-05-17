@@ -46,11 +46,24 @@ export type SaleRow = {
   paymentMethod: PaymentMethod;
 };
 
+export const expenseCategories = [
+  'transport',
+  'courant',
+  'sachets',
+  'eau',
+  'salaire',
+  'imprevu',
+  'nettoyage',
+] as const;
+
+export type ExpenseCategory = (typeof expenseCategories)[number];
+
 export type ExpenseRow = {
   $id: string;
   $createdAt: string;
   $updatedAt: string;
   shopId: string;
+  category: ExpenseCategory;
   amount: number;
   note: string;
 };
@@ -60,9 +73,27 @@ export type CashClosureRow = {
   $createdAt: string;
   $updatedAt: string;
   shopId: string;
+  businessDate: string;
   expectedCashAmount: number;
   physicalCashAmount: number;
   cashGap: number;
+  note: string;
+};
+
+export const missingReasons = ['perdu', 'abime', 'erreur', 'consommation interne'] as const;
+
+export type MissingReason = (typeof missingReasons)[number];
+
+export type MissingRow = {
+  $id: string;
+  $createdAt: string;
+  $updatedAt: string;
+  shopId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unit: ProductUnit;
+  reason: MissingReason;
   note: string;
 };
 
@@ -82,6 +113,7 @@ export type ControlStore = {
   sales: SaleRow[];
   expenses: ExpenseRow[];
   cashClosures: CashClosureRow[];
+  missings: MissingRow[];
   activityLogs: ActivityLogRow[];
 };
 

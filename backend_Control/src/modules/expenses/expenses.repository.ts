@@ -1,8 +1,10 @@
 import { createId, nowIso, readStore, updateStore } from '../../database/control-store';
+import type { ExpenseCategory } from '../../types/control';
 import { isToday } from '../../utils/dates';
 
 export type CreateExpenseInput = {
   shopId: string;
+  category: ExpenseCategory;
   amount: number;
   note: string;
 };
@@ -15,6 +17,7 @@ export async function createExpenseRecord(input: CreateExpenseInput) {
       $createdAt: timestamp,
       $updatedAt: timestamp,
       shopId: input.shopId,
+      category: input.category,
       amount: input.amount,
       note: input.note,
     };
@@ -27,7 +30,9 @@ export async function createExpenseRecord(input: CreateExpenseInput) {
       shopId: input.shopId,
       type: 'expense',
       actorName: 'Vendeuse',
-      message: input.note ? `Sortie caisse : ${input.note}` : 'Sortie caisse',
+      message: input.note
+        ? `Sortie caisse (${input.category}) : ${input.note}`
+        : `Sortie caisse : ${input.category}`,
     });
 
     return expense;

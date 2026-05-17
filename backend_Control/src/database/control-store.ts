@@ -14,6 +14,7 @@ function createEmptyStore(): ControlStore {
     sales: [],
     expenses: [],
     cashClosures: [],
+    missings: [],
     activityLogs: [],
   };
 }
@@ -43,6 +44,7 @@ export async function readStore(): Promise<ControlStore> {
       sales: parsedStore.sales ?? [],
       expenses: parsedStore.expenses ?? [],
       cashClosures: parsedStore.cashClosures ?? [],
+      missings: parsedStore.missings ?? [],
       activityLogs: parsedStore.activityLogs ?? [],
     };
   } catch (error) {

@@ -17,18 +17,48 @@ type SaleRow = BaseRow & {
   paymentMethod: PaymentMethod;
 };
 
+export type ExpenseCategory =
+  | 'transport'
+  | 'courant'
+  | 'sachets'
+  | 'eau'
+  | 'salaire'
+  | 'imprevu'
+  | 'nettoyage';
+
+export type MissingReason = 'perdu' | 'abime' | 'erreur' | 'consommation interne';
+
 type ExpenseRow = BaseRow & {
   shopId: string;
+  category: ExpenseCategory;
   amount: number;
   note: string;
 };
 
 type CashClosureRow = BaseRow & {
   shopId: string;
+  businessDate: string;
   expectedCashAmount: number;
   physicalCashAmount: number;
   cashGap: number;
   note: string;
+};
+
+export type MissingRow = BaseRow & {
+  shopId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unit: ProductUnit;
+  reason: MissingReason;
+  note: string;
+};
+
+export type ActivityLogRow = BaseRow & {
+  shopId: string;
+  type: 'stock' | 'sale' | 'expense' | 'missing' | 'cash';
+  actorName: string;
+  message: string;
 };
 
 export type ProductUnit = 'kg' | 'piece' | 'carton' | 'tas' | 'unite';
@@ -74,7 +104,15 @@ export type CreateSaleInput = {
 };
 
 export type CreateExpenseInput = {
+  category: ExpenseCategory;
   amount: number;
+  note?: string;
+};
+
+export type CreateMissingInput = {
+  productId: string;
+  quantity: number;
+  reason: MissingReason;
   note?: string;
 };
 
@@ -176,6 +214,47 @@ export async function createExpense(input: CreateExpenseInput, shopId = DEFAULT_
   });
 
   return response.expense;
+}
+
+export async function createMissing(input: CreateMissingInput, shopId = DEFAULT_SHOP_ID) {
+  const response = await requestApi<{ missing: MissingRow }>('/api/missings', {
+    method: 'POST',
+    body: JSON.stringify({ ...input, shopId }),
+  });
+
+  return response.missing;
+}
+
+export async function getRecentMissings(
+  shopId = DEFAULT_SHOP_ID,
+  limit = 10
+): Promise<MissingRow[]> {
+  try {
+    const response = await requestApi<{ missings: MissingRow[] }>(
+      `/api/missings?shopId=${encodeURIComponent(shopId)}&limit=${limit}`
+    );
+
+    return response.missings;
+  } catch (error) {
+    console.warn('Unable to load missings from CONTROL API.', getControlErrorMessage(error));
+    return [];
+  }
+}
+
+export async function getActivityLogs(
+  shopId = DEFAULT_SHOP_ID,
+  limit = 20
+): Promise<ActivityLogRow[]> {
+  try {
+    const response = await requestApi<{ logs: ActivityLogRow[] }>(
+      `/api/activity-logs?shopId=${encodeURIComponent(shopId)}&limit=${limit}`
+    );
+
+    return response.logs;
+  } catch (error) {
+    console.warn('Unable to load activity logs from CONTROL API.', getControlErrorMessage(error));
+    return [];
+  }
 }
 
 export async function createCashClosure(

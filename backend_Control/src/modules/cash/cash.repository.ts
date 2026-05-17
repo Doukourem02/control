@@ -3,6 +3,7 @@ import { isToday } from '../../utils/dates';
 
 export type CreateCashClosureInput = {
   shopId: string;
+  businessDate: string;
   expectedCashAmount: number;
   physicalCashAmount: number;
   cashGap: number;
@@ -17,6 +18,7 @@ export async function createCashClosureRecord(input: CreateCashClosureInput) {
       $createdAt: timestamp,
       $updatedAt: timestamp,
       shopId: input.shopId,
+      businessDate: input.businessDate,
       expectedCashAmount: input.expectedCashAmount,
       physicalCashAmount: input.physicalCashAmount,
       cashGap: input.cashGap,

@@ -1,11 +1,11 @@
 import { SellerActionTile, type SellerAction } from '@/components/seller-action-tile';
-import { getTodaySummary, type TodaySummary } from '@/lib/control-data';
+import { getActivityLogs, getTodaySummary, type ActivityLogRow, type TodaySummary } from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ComponentProps } from 'react';
 import { useState } from 'react';
-import { Image, Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NavKey = 'home' | 'report' | 'missing' | 'profile';
@@ -231,6 +231,7 @@ function SettingsRow({
 
 function HomeMenu({
   compact,
+  activityLogs,
   onOpenReport,
   onOpenStock,
   onOpenSale,
@@ -238,6 +239,7 @@ function HomeMenu({
   onOpenExpense,
 }: {
   compact: boolean;
+  activityLogs: ActivityLogRow[];
   onOpenReport: () => void;
   onOpenStock: () => void;
   onOpenSale: () => void;
@@ -277,6 +279,30 @@ function HomeMenu({
           ))}
         </View>
       </View>
+
+      {activityLogs.length > 0 ? (
+        <View style={{ marginTop: compact ? 24 : 34, gap: 10 }}>
+          <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>
+            Dernières actions
+          </Text>
+          <View
+            style={{
+              borderRadius: 22,
+              borderCurve: 'continuous',
+              backgroundColor: '#F7F7F7',
+              borderWidth: 1,
+              borderColor: '#F0F0F0',
+              paddingHorizontal: 16,
+              paddingTop: 4,
+              paddingBottom: 4,
+            }}
+          >
+            {activityLogs.slice(0, 5).map((log) => (
+              <ActivityLogItem key={log.$id} log={log} />
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       <Pressable
         onPress={onOpenReport}
@@ -338,36 +364,118 @@ function ReportMenu({
   );
 }
 
+function ActivityLogItem({ log }: { log: ActivityLogRow }) {
+  const iconMap: Record<ActivityLogRow['type'], ComponentProps<typeof MaterialCommunityIcons>['name']> = {
+    stock: 'package-variant',
+    sale: 'cart-outline',
+    expense: 'cash-minus',
+    missing: 'alert-circle-outline',
+    cash: 'cash-register',
+  };
+  const colorMap: Record<ActivityLogRow['type'], string> = {
+    stock: '#FF8A4C',
+    sale: '#4C9BFF',
+    expense: '#3B3B3B',
+    missing: '#E5484D',
+    cash: '#B94DFF',
+  };
+
+  return (
+    <View
+      style={{
+        minHeight: 52,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F3F3',
+      }}
+    >
+      <View
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 17,
+          backgroundColor: `${colorMap[log.type]}18`,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <MaterialCommunityIcons name={iconMap[log.type]} size={18} color={colorMap[log.type]} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>
+          {log.message}
+        </Text>
+        <Text style={{ color: '#A4A4A4', fontSize: 12, marginTop: 1 }}>
+          {new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(log.$createdAt))}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function MissingMenu({
   compact,
   amountsVisible,
   summary,
+  onOpenMissing,
 }: {
   compact: boolean;
   amountsVisible: boolean;
   summary: TodaySummary;
+  onOpenMissing: () => void;
 }) {
-  const missingValue =
-    amountsVisible && summary.latestCashGap < 0 ? formatMoney(Math.abs(summary.latestCashGap)) : '0 F';
-  const surplusValue =
-    amountsVisible && summary.latestCashGap > 0 ? formatMoney(summary.latestCashGap) : '0 F';
+  const cashGapAbs = Math.abs(summary.latestCashGap);
   const hiddenValue = '•••';
 
   return (
     <View style={{ marginTop: compact ? 24 : 34, marginBottom: compact ? 46 : 62, gap: 16 }}>
-      <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Écarts</Text>
+      <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Écarts caisse</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 }}>
-        <MetricCard label="Manquant" value={amountsVisible ? missingValue : hiddenValue} compact={compact} />
-        <MetricCard label="Surplus" value={amountsVisible ? surplusValue : hiddenValue} compact={compact} />
+        <MetricCard
+          label={summary.latestCashGap < 0 ? 'Manquant' : 'Surplus'}
+          value={amountsVisible ? formatMoney(cashGapAbs) : hiddenValue}
+          compact={compact}
+        />
+        <MetricCard
+          label="Écart caisse"
+          value={
+            amountsVisible
+              ? summary.latestCashGap === 0
+                ? 'Équilibré'
+                : formatMoney(summary.latestCashGap)
+              : hiddenValue
+          }
+          compact={compact}
+        />
       </View>
-      <SettingsRow
-        icon="wallet"
-        title={summary.latestCashGap === 0 ? 'Caisse équilibrée' : 'Écart à vérifier'}
-        subtitle={
-          summary.latestCashGap === 0 ? 'Aucun mouvement à vérifier' : 'Dernière clôture caisse'
-        }
-      />
-      <SettingsRow icon="clipboard-text" title="Historique" subtitle="Sorties et corrections caisse" />
+      <Pressable
+        onPress={onOpenMissing}
+        style={({ pressed }: { pressed: boolean }) => ({
+          minHeight: 58,
+          borderRadius: 22,
+          borderCurve: 'continuous',
+          backgroundColor: '#FFF5F5',
+          borderWidth: 1,
+          borderColor: '#FFD7D9',
+          paddingHorizontal: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 13,
+          opacity: pressed ? 0.68 : 1,
+        })}
+      >
+        <MaterialCommunityIcons name="alert-circle-outline" size={22} color="#E5484D" />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ color: '#111111', fontSize: 15, fontWeight: '700' }}>Déclarer un manquant</Text>
+          <Text numberOfLines={1} style={{ color: '#A4A4A4', fontSize: 13, marginTop: 2 }}>
+            Perte, casse, erreur ou consommation interne
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={20} color="#B0B0B0" />
+      </Pressable>
     </View>
   );
 }
@@ -396,6 +504,7 @@ export default function HomeScreen() {
     expensesCount: 0,
     latestCashGap: 0,
   });
+  const [activityLogs, setActivityLogs] = useState<ActivityLogRow[]>([]);
   const { width, height } = useWindowDimensions();
   const compact = height < 900;
   const contentWidth = Math.min(width, 520);
@@ -417,9 +526,10 @@ export default function HomeScreen() {
   useFocusEffect(useCallback(() => {
     let isMounted = true;
 
-    getTodaySummary().then((summary) => {
+    Promise.all([getTodaySummary(), getActivityLogs()]).then(([summary, logs]) => {
       if (isMounted) {
         setTodaySummary(summary);
+        setActivityLogs(logs);
       }
     });
 
@@ -582,6 +692,7 @@ export default function HomeScreen() {
             {activeMenu === 'home' ? (
               <HomeMenu
                 compact={compact}
+                activityLogs={activityLogs}
                 onOpenReport={() => setActiveMenu('report')}
                 onOpenStock={() => router.push('/stock' as never)}
                 onOpenSale={() => router.push('/sale' as never)}
@@ -595,7 +706,12 @@ export default function HomeScreen() {
                 summary={todaySummary}
               />
             ) : activeMenu === 'missing' ? (
-              <MissingMenu compact={compact} amountsVisible={amountsVisible} summary={todaySummary} />
+              <MissingMenu
+                compact={compact}
+                amountsVisible={amountsVisible}
+                summary={todaySummary}
+                onOpenMissing={() => router.push('/missing' as never)}
+              />
             ) : (
               <ProfileMenu compact={compact} />
             )}

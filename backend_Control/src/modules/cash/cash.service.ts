@@ -37,12 +37,16 @@ export async function createCashClosure(body: Record<string, unknown>, shopId: s
     throw new Error('Le montant compte doit etre valide.');
   }
 
+  const now = new Date();
+  const businessDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
   const summary = await getTodaySummary(shopId);
   const expectedCashAmount = summary.physicalCashExpected;
   const cashGap = physicalCashAmount - expectedCashAmount;
 
   return createCashClosureRecord({
     shopId,
+    businessDate,
     expectedCashAmount,
     physicalCashAmount,
     cashGap,
