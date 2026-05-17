@@ -17,6 +17,20 @@ type SaleRow = BaseRow & {
   paymentMethod: PaymentMethod;
 };
 
+type ExpenseRow = BaseRow & {
+  shopId: string;
+  amount: number;
+  note: string;
+};
+
+type CashClosureRow = BaseRow & {
+  shopId: string;
+  expectedCashAmount: number;
+  physicalCashAmount: number;
+  cashGap: number;
+  note: string;
+};
+
 export type ProductUnit = 'kg' | 'piece' | 'carton' | 'tas' | 'unite';
 
 export type ProductRow = BaseRow & {
@@ -57,6 +71,16 @@ export type CreateSaleInput = {
   productId: string;
   quantity: number;
   paymentMethod: PaymentMethod;
+};
+
+export type CreateExpenseInput = {
+  amount: number;
+  note?: string;
+};
+
+export type CreateCashClosureInput = {
+  physicalCashAmount: number;
+  note?: string;
 };
 
 export type TodaySummary = {
@@ -143,6 +167,27 @@ export async function createSale(input: CreateSaleInput, shopId = DEFAULT_SHOP_I
   });
 
   return response.sale;
+}
+
+export async function createExpense(input: CreateExpenseInput, shopId = DEFAULT_SHOP_ID) {
+  const response = await requestApi<{ expense: ExpenseRow }>('/api/expenses', {
+    method: 'POST',
+    body: JSON.stringify({ ...input, shopId }),
+  });
+
+  return response.expense;
+}
+
+export async function createCashClosure(
+  input: CreateCashClosureInput,
+  shopId = DEFAULT_SHOP_ID
+) {
+  const response = await requestApi<{ closure: CashClosureRow }>('/api/cash-closures', {
+    method: 'POST',
+    body: JSON.stringify({ ...input, shopId }),
+  });
+
+  return response.closure;
 }
 
 export async function getRecentStockMovements(

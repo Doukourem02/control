@@ -1,6 +1,7 @@
 import { listTodayExpensesByShop } from '../expenses/expenses.repository';
 import { listTodaySalesByShop } from '../sales/sales.repository';
-import { listTodayCashClosuresByShop } from './cash.repository';
+import { parseAmount } from '../../utils/http';
+import { createCashClosureRecord, listTodayCashClosuresByShop } from './cash.repository';
 
 export async function getTodaySummary(shopId: string) {
   const [todaySales, todayExpenses, todayClosures] = await Promise.all([
@@ -26,4 +27,25 @@ export async function getTodaySummary(shopId: string) {
     expensesCount: todayExpenses.length,
     latestCashGap: todayClosures[0]?.cashGap ?? 0,
   };
+}
+
+export async function createCashClosure(body: Record<string, unknown>, shopId: string) {
+  const physicalCashAmount = Math.round(parseAmount(body.physicalCashAmount));
+  const note = String(body.note ?? '').trim();
+
+  if (!Number.isFinite(physicalCashAmount) || physicalCashAmount < 0) {
+    throw new Error('Le montant compte doit etre valide.');
+  }
+
+  const summary = await getTodaySummary(shopId);
+  const expectedCashAmount = summary.physicalCashExpected;
+  const cashGap = physicalCashAmount - expectedCashAmount;
+
+  return createCashClosureRecord({
+    shopId,
+    expectedCashAmount,
+    physicalCashAmount,
+    cashGap,
+    note,
+  });
 }

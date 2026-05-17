@@ -52,6 +52,7 @@ export type ExpenseRow = {
   $updatedAt: string;
   shopId: string;
   amount: number;
+  note: string;
 };
 
 export type CashClosureRow = {
@@ -59,7 +60,10 @@ export type CashClosureRow = {
   $createdAt: string;
   $updatedAt: string;
   shopId: string;
+  expectedCashAmount: number;
+  physicalCashAmount: number;
   cashGap: number;
+  note: string;
 };
 
 export type ActivityLogRow = {

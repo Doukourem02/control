@@ -1,10 +1,16 @@
 import type { Request, Response } from 'express';
 
 import { getShopId } from '../../utils/http';
-import { getTodaySummary } from './cash.service';
+import { createCashClosure, getTodaySummary } from './cash.service';
 
 export async function getTodaySummaryController(request: Request, response: Response) {
   const summary = await getTodaySummary(getShopId(request));
 
   response.json({ summary });
+}
+
+export async function createCashClosureController(request: Request, response: Response) {
+  const closure = await createCashClosure(request.body, getShopId(request));
+
+  response.status(201).json({ closure });
 }

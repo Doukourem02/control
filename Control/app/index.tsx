@@ -234,11 +234,15 @@ function HomeMenu({
   onOpenReport,
   onOpenStock,
   onOpenSale,
+  onOpenClosure,
+  onOpenExpense,
 }: {
   compact: boolean;
   onOpenReport: () => void;
   onOpenStock: () => void;
   onOpenSale: () => void;
+  onOpenClosure: () => void;
+  onOpenExpense: () => void;
 }) {
   return (
     <>
@@ -261,7 +265,13 @@ function HomeMenu({
               action={action}
               compact={compact}
               onPress={
-                action.title === 'Stock' ? onOpenStock : action.title === 'Vente' ? onOpenSale : undefined
+                action.title === 'Stock'
+                  ? onOpenStock
+                  : action.title === 'Vente'
+                    ? onOpenSale
+                    : action.title === 'Clôture'
+                      ? onOpenClosure
+                      : onOpenExpense
               }
             />
           ))}
@@ -328,17 +338,35 @@ function ReportMenu({
   );
 }
 
-function MissingMenu({ compact, amountsVisible }: { compact: boolean; amountsVisible: boolean }) {
-  const moneyValue = amountsVisible ? '0 F' : '•••';
+function MissingMenu({
+  compact,
+  amountsVisible,
+  summary,
+}: {
+  compact: boolean;
+  amountsVisible: boolean;
+  summary: TodaySummary;
+}) {
+  const missingValue =
+    amountsVisible && summary.latestCashGap < 0 ? formatMoney(Math.abs(summary.latestCashGap)) : '0 F';
+  const surplusValue =
+    amountsVisible && summary.latestCashGap > 0 ? formatMoney(summary.latestCashGap) : '0 F';
+  const hiddenValue = '•••';
 
   return (
     <View style={{ marginTop: compact ? 24 : 34, marginBottom: compact ? 46 : 62, gap: 16 }}>
       <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Écarts</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 }}>
-        <MetricCard label="Manquant" value={moneyValue} compact={compact} />
-        <MetricCard label="Surplus" value={moneyValue} compact={compact} />
+        <MetricCard label="Manquant" value={amountsVisible ? missingValue : hiddenValue} compact={compact} />
+        <MetricCard label="Surplus" value={amountsVisible ? surplusValue : hiddenValue} compact={compact} />
       </View>
-      <SettingsRow icon="wallet" title="Caisse équilibrée" subtitle="Aucun mouvement à vérifier" />
+      <SettingsRow
+        icon="wallet"
+        title={summary.latestCashGap === 0 ? 'Caisse équilibrée' : 'Écart à vérifier'}
+        subtitle={
+          summary.latestCashGap === 0 ? 'Aucun mouvement à vérifier' : 'Dernière clôture caisse'
+        }
+      />
       <SettingsRow icon="clipboard-text" title="Historique" subtitle="Sorties et corrections caisse" />
     </View>
   );
@@ -557,6 +585,8 @@ export default function HomeScreen() {
                 onOpenReport={() => setActiveMenu('report')}
                 onOpenStock={() => router.push('/stock' as never)}
                 onOpenSale={() => router.push('/sale' as never)}
+                onOpenClosure={() => router.push('/closure' as never)}
+                onOpenExpense={() => router.push('/expense' as never)}
               />
             ) : activeMenu === 'report' ? (
               <ReportMenu
@@ -565,7 +595,7 @@ export default function HomeScreen() {
                 summary={todaySummary}
               />
             ) : activeMenu === 'missing' ? (
-              <MissingMenu compact={compact} amountsVisible={amountsVisible} />
+              <MissingMenu compact={compact} amountsVisible={amountsVisible} summary={todaySummary} />
             ) : (
               <ProfileMenu compact={compact} />
             )}
