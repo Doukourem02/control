@@ -4,7 +4,8 @@ import { getShopId } from '../../utils/http';
 import { createCashClosure, getTodaySummary } from './cash.service';
 
 export async function getTodaySummaryController(request: Request, response: Response) {
-  const summary = await getTodaySummary(getShopId(request));
+  const date = typeof request.query.date === 'string' ? request.query.date : undefined;
+  const summary = await getTodaySummary(getShopId(request), date);
 
   response.json({ summary });
 }

@@ -954,24 +954,22 @@ function MissingMenu({
   compact,
   amountsVisible,
   summary,
+  onOpenClosure,
   onOpenMissing,
+  onOpenMissingHistory,
 }: {
   compact: boolean;
   amountsVisible: boolean;
   summary: TodaySummary;
+  onOpenClosure: () => void;
   onOpenMissing: () => void;
+  onOpenMissingHistory: () => void;
 }) {
-  const cashGapAbs = Math.abs(summary.latestCashGap);
   const hiddenValue = '•••';
   const hasGap = summary.latestCashGap !== 0;
-  const gapKind = summary.latestCashGap < 0 ? 'Manquant' : 'Surplus';
   const gapColor = summary.latestCashGap < 0 ? '#E5484D' : '#34C875';
-  const gapValue = amountsVisible ? formatMoney(cashGapAbs) : hiddenValue;
-  const balanceValue = amountsVisible
-    ? hasGap
-      ? formatMoney(summary.latestCashGap)
-      : 'Équilibré'
-    : hiddenValue;
+  const expectedValue = amountsVisible ? formatMoney(summary.physicalCashExpected) : hiddenValue;
+  const latestGapValue = amountsVisible ? formatMoney(summary.latestCashGap) : hiddenValue;
 
   return (
     <View style={{ marginTop: compact ? 24 : 34, marginBottom: compact ? 46 : 62, gap: 28 }}>
@@ -979,20 +977,22 @@ function MissingMenu({
         <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Contrôle caisse</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 }}>
           <EcartsTile
-            title={hasGap ? gapKind : 'Aucun écart'}
-            subtitle={hasGap ? gapValue : 'Caisse juste'}
-            subtitleColor={hasGap ? gapColor : '#A8A8A8'}
-            icon={hasGap ? 'alert' : 'check'}
+            title="Cash attendu"
+            subtitle={expectedValue}
+            subtitleColor="#A8A8A8"
+            icon="cash"
             accent="#4C9BFF"
             compact={compact}
+            onPress={onOpenClosure}
           />
           <EcartsTile
-            title="État caisse"
-            subtitle={balanceValue}
-            subtitleColor={hasGap ? gapColor : '#34C875'}
-            icon="cash-register"
+            title="Dernier écart"
+            subtitle={latestGapValue}
+            subtitleColor={hasGap ? gapColor : '#A8A8A8'}
+            icon={hasGap ? 'alert' : 'check'}
             accent="#FF8A4C"
             compact={compact}
+            onPress={onOpenClosure}
           />
         </View>
       </View>
@@ -1014,7 +1014,7 @@ function MissingMenu({
             icon="clipboard-text-clock-outline"
             accent="#3B3B3B"
             compact={compact}
-            onPress={onOpenMissing}
+            onPress={onOpenMissingHistory}
           />
         </View>
       </View>
@@ -1282,7 +1282,11 @@ export default function HomeScreen() {
                   compact={compact}
                   amountsVisible={amountsVisible}
                   summary={todaySummary}
+                  onOpenClosure={() => router.push('/closure' as never)}
                   onOpenMissing={() => router.push('/missing' as never)}
+                  onOpenMissingHistory={() =>
+                    router.push({ pathname: '/missing', params: { view: 'history' } } as never)
+                  }
                 />
               ) : (
                 <ProfileMenu compact={compact} />

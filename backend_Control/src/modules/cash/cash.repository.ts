@@ -9,9 +9,9 @@ export type CreateCashClosureInput = {
   mobileMoneySalesAmount: number;
   expensesAmount: number;
   physicalCashExpected: number;
-  physicalCashAmount: number;
+  physicalCashActual: number;
   cashGap: number;
-  note: string;
+  note?: string;
 };
 
 function toCashClosureRow(doc: any): CashClosureRow {
@@ -25,9 +25,9 @@ function toCashClosureRow(doc: any): CashClosureRow {
     mobileMoneySalesAmount: doc['mobileMoneySalesAmount'] as number,
     expensesAmount: doc['expensesAmount'] as number,
     physicalCashExpected: doc['physicalCashExpected'] as number,
-    physicalCashAmount: doc['physicalCashAmount'] as number,
+    physicalCashActual: doc['physicalCashActual'] as number,
     cashGap: doc['cashGap'] as number,
-    note: doc['note'] as string,
+    note: (doc['note'] ?? '') as string,
   };
 }
 
@@ -39,16 +39,17 @@ export async function createCashClosureRecord(input: CreateCashClosureInput): Pr
     mobileMoneySalesAmount: input.mobileMoneySalesAmount,
     expensesAmount: input.expensesAmount,
     physicalCashExpected: input.physicalCashExpected,
-    physicalCashAmount: input.physicalCashAmount,
+    physicalCashActual: input.physicalCashActual,
     cashGap: input.cashGap,
-    note: input.note,
   });
 
   await databases.createDocument(DATABASE_ID, COLLECTIONS.activityLogs, ID.unique(), {
     shopId: input.shopId,
     type: 'cash',
     actorName: 'Vendeuse',
-    message: `Cloture caisse : ecart ${input.cashGap} F`,
+    message: input.note
+      ? `Cloture caisse : ecart ${input.cashGap} F (${input.note})`
+      : `Cloture caisse : ecart ${input.cashGap} F`,
   });
 
   return toCashClosureRow(closureDoc);
@@ -61,6 +62,20 @@ export async function listTodayCashClosuresByShop(shopId: string): Promise<CashC
   const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.cashClosures, [
     Query.equal('shopId', shopId),
     Query.greaterThanEqual('$createdAt', startOfToday.toISOString()),
+    Query.orderDesc('$createdAt'),
+    Query.limit(50),
+  ]);
+
+  return response.documents.map(toCashClosureRow);
+}
+
+export async function listCashClosuresByBusinessDate(
+  shopId: string,
+  businessDate: string
+): Promise<CashClosureRow[]> {
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.cashClosures, [
+    Query.equal('shopId', shopId),
+    Query.equal('businessDate', businessDate),
     Query.orderDesc('$createdAt'),
     Query.limit(50),
   ]);

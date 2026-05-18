@@ -42,7 +42,7 @@ type CashClosureRow = BaseRow & {
   mobileMoneySalesAmount: number;
   expensesAmount: number;
   physicalCashExpected: number;
-  physicalCashAmount: number;
+  physicalCashActual: number;
   cashGap: number;
   note: string;
 };
@@ -134,6 +134,7 @@ export type CreateMissingInput = {
 };
 
 export type CreateCashClosureInput = {
+  businessDate?: string;
   physicalCashAmount: number;
   note?: string;
 };
@@ -377,10 +378,16 @@ export async function getAnalytics(
   }
 }
 
-export async function getTodaySummary(shopId = DEFAULT_SHOP_ID): Promise<TodaySummary> {
+export async function getTodaySummary(
+  date?: string,
+  shopId = DEFAULT_SHOP_ID
+): Promise<TodaySummary> {
   try {
+    const query = new URLSearchParams({ shopId });
+    if (date) query.set('date', date);
+
     const response = await requestApi<{ summary: TodaySummary }>(
-      `/api/summary/today?shopId=${encodeURIComponent(shopId)}`
+      `/api/summary/today?${query.toString()}`
     );
 
     return response.summary;

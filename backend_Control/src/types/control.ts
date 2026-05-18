@@ -88,7 +88,7 @@ export type CashClosureRow = {
   mobileMoneySalesAmount: number;
   expensesAmount: number;
   physicalCashExpected: number;
-  physicalCashAmount: number;
+  physicalCashActual: number;
   cashGap: number;
   note: string;
 };

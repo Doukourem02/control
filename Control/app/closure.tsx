@@ -32,6 +32,31 @@ function formatMoney(value: number) {
   return `${Math.round(value).toLocaleString('fr-FR')} F`;
 }
 
+function dateToKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateFromKey(dateStr: string) {
+  return new Date(dateStr + 'T12:00:00');
+}
+
+function formatBusinessDate(dateStr: string) {
+  return dateFromKey(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function shiftDateKey(dateStr: string, offset: number) {
+  const date = dateFromKey(dateStr);
+  date.setDate(date.getDate() + offset);
+  return dateToKey(date);
+}
+
 const emptySummary: TodaySummary = {
   cashSalesAmount: 0,
   mobileMoneySalesAmount: 0,
@@ -44,6 +69,8 @@ const emptySummary: TodaySummary = {
 
 export default function ClosureScreen() {
   const router = useRouter();
+  const todayKey = dateToKey(new Date());
+  const [businessDate, setBusinessDate] = useState(todayKey);
   const [summary, setSummary] = useState<TodaySummary>(emptySummary);
   const [physicalCashAmount, setPhysicalCashAmount] = useState('');
   const [note, setNote] = useState('');
@@ -61,17 +88,24 @@ export default function ClosureScreen() {
       setLoading(true);
     }
 
-    const nextSummary = await getTodaySummary();
+    const nextSummary = await getTodaySummary(businessDate);
     setSummary(nextSummary);
 
     if (!silent) {
       setLoading(false);
     }
-  }, []);
+  }, [businessDate]);
 
   useEffect(() => {
     loadSummary();
   }, [loadSummary]);
+
+  useEffect(() => {
+    setPhysicalCashAmount('');
+    setNote('');
+    setFormError('');
+    setSuccessMessage('');
+  }, [businessDate]);
 
   async function handleCreateClosure() {
     setFormError('');
@@ -91,6 +125,7 @@ export default function ClosureScreen() {
 
     try {
       const closure = await createCashClosure({
+        businessDate,
         physicalCashAmount: Math.round(parsedPhysicalCash),
         note: note.trim(),
       });
@@ -169,6 +204,57 @@ export default function ClosureScreen() {
               <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
                 Compare la caisse comptee avec le cash attendu.
               </Text>
+            </View>
+
+            <View
+              style={{
+                marginTop: 22,
+                minHeight: 52,
+                borderRadius: 20,
+                borderCurve: 'continuous',
+                backgroundColor: '#F7F7F7',
+                borderWidth: 1,
+                borderColor: '#EEEEEE',
+                paddingHorizontal: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Pressable
+                onPress={() => setBusinessDate((current) => shiftDateKey(current, -1))}
+                style={({ pressed }: { pressed: boolean }) => ({
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: pressed ? 0.62 : 1,
+                })}
+              >
+                <Feather name="chevron-left" size={22} color="#777777" />
+              </Pressable>
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '800', textAlign: 'center' }}
+              >
+                {formatBusinessDate(businessDate)}
+              </Text>
+              <Pressable
+                disabled={businessDate === todayKey}
+                onPress={() => setBusinessDate((current) => shiftDateKey(current, 1))}
+                style={({ pressed }: { pressed: boolean }) => ({
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: businessDate === todayKey ? 0.28 : pressed ? 0.62 : 1,
+                })}
+              >
+                <Feather name="chevron-right" size={22} color="#777777" />
+              </Pressable>
             </View>
 
             {loading ? (

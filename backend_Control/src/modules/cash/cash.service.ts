@@ -1,13 +1,29 @@
-import { listTodayExpensesByShop } from '../expenses/expenses.repository';
-import { listTodaySalesByShop } from '../sales/sales.repository';
+import { listExpensesInRange } from '../expenses/expenses.repository';
+import { listSalesInRange } from '../sales/sales.repository';
 import { parseAmount } from '../../utils/http';
-import { createCashClosureRecord, listTodayCashClosuresByShop } from './cash.repository';
+import { createCashClosureRecord, listCashClosuresByBusinessDate } from './cash.repository';
 
-export async function getTodaySummary(shopId: string) {
+function getBusinessDateKey(date?: string) {
+  const parsed = date ? new Date(`${date}T12:00:00`) : new Date();
+  const value = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+}
+
+function getBusinessDateRange(date?: string) {
+  const businessDate = getBusinessDateKey(date);
+  const from = new Date(`${businessDate}T00:00:00`);
+  const to = new Date(`${businessDate}T23:59:59.999`);
+
+  return { businessDate, from, to };
+}
+
+export async function getTodaySummary(shopId: string, date?: string) {
+  const { businessDate, from, to } = getBusinessDateRange(date);
   const [todaySales, todayExpenses, todayClosures] = await Promise.all([
-    listTodaySalesByShop(shopId),
-    listTodayExpensesByShop(shopId),
-    listTodayCashClosuresByShop(shopId),
+    listSalesInRange(shopId, from, to),
+    listExpensesInRange(shopId, from, to),
+    listCashClosuresByBusinessDate(shopId, businessDate),
   ]);
 
   const cashSalesAmount = todaySales
@@ -30,19 +46,19 @@ export async function getTodaySummary(shopId: string) {
 }
 
 export async function createCashClosure(body: Record<string, unknown>, shopId: string) {
-  const physicalCashAmount = Math.round(parseAmount(body.physicalCashAmount));
+  const physicalCashActual = Math.round(parseAmount(body.physicalCashAmount));
   const note = String(body.note ?? '').trim();
+  const requestedBusinessDate = typeof body.businessDate === 'string' ? body.businessDate : undefined;
 
-  if (!Number.isFinite(physicalCashAmount) || physicalCashAmount < 0) {
+  if (!Number.isFinite(physicalCashActual) || physicalCashActual < 0) {
     throw new Error('Le montant compte doit etre valide.');
   }
 
-  const now = new Date();
-  const businessDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const businessDate = getBusinessDateKey(requestedBusinessDate);
 
-  const summary = await getTodaySummary(shopId);
+  const summary = await getTodaySummary(shopId, businessDate);
   const physicalCashExpected = summary.physicalCashExpected;
-  const cashGap = physicalCashAmount - physicalCashExpected;
+  const cashGap = physicalCashActual - physicalCashExpected;
 
   return createCashClosureRecord({
     shopId,
@@ -51,7 +67,7 @@ export async function createCashClosure(body: Record<string, unknown>, shopId: s
     mobileMoneySalesAmount: summary.mobileMoneySalesAmount,
     expensesAmount: summary.expensesAmount,
     physicalCashExpected,
-    physicalCashAmount,
+    physicalCashActual,
     cashGap,
     note,
   });
