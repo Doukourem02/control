@@ -53,3 +53,15 @@ export async function listTodayExpensesByShop(shopId: string): Promise<ExpenseRo
 
   return response.documents.map(toExpenseRow);
 }
+
+export async function listExpensesInRange(shopId: string, from: Date, to: Date): Promise<ExpenseRow[]> {
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.expenses, [
+    Query.equal('shopId', shopId),
+    Query.greaterThanEqual('$createdAt', from.toISOString()),
+    Query.lessThanEqual('$createdAt', to.toISOString()),
+    Query.orderAsc('$createdAt'),
+    Query.limit(1000),
+  ]);
+
+  return response.documents.map(toExpenseRow);
+}

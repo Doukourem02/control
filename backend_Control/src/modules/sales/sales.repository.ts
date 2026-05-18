@@ -92,3 +92,15 @@ export async function listTodaySalesByShop(shopId: string): Promise<SaleRow[]> {
 
   return response.documents.map(toSaleRow);
 }
+
+export async function listSalesInRange(shopId: string, from: Date, to: Date): Promise<SaleRow[]> {
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.sales, [
+    Query.equal('shopId', shopId),
+    Query.greaterThanEqual('$createdAt', from.toISOString()),
+    Query.lessThanEqual('$createdAt', to.toISOString()),
+    Query.orderAsc('$createdAt'),
+    Query.limit(1000),
+  ]);
+
+  return response.documents.map(toSaleRow);
+}

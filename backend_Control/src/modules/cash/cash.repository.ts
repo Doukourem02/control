@@ -6,7 +6,9 @@ export type CreateCashClosureInput = {
   shopId: string;
   businessDate: string;
   cashSalesAmount: number;
-  expectedCashAmount: number;
+  mobileMoneySalesAmount: number;
+  expensesAmount: number;
+  physicalCashExpected: number;
   physicalCashAmount: number;
   cashGap: number;
   note: string;
@@ -19,7 +21,10 @@ function toCashClosureRow(doc: any): CashClosureRow {
     $updatedAt: doc.$updatedAt,
     shopId: doc['shopId'] as string,
     businessDate: doc['businessDate'] as string,
-    expectedCashAmount: doc['expectedCashAmount'] as number,
+    cashSalesAmount: doc['cashSalesAmount'] as number,
+    mobileMoneySalesAmount: doc['mobileMoneySalesAmount'] as number,
+    expensesAmount: doc['expensesAmount'] as number,
+    physicalCashExpected: doc['physicalCashExpected'] as number,
     physicalCashAmount: doc['physicalCashAmount'] as number,
     cashGap: doc['cashGap'] as number,
     note: doc['note'] as string,
@@ -31,7 +36,9 @@ export async function createCashClosureRecord(input: CreateCashClosureInput): Pr
     shopId: input.shopId,
     businessDate: input.businessDate,
     cashSalesAmount: input.cashSalesAmount,
-    expectedCashAmount: input.expectedCashAmount,
+    mobileMoneySalesAmount: input.mobileMoneySalesAmount,
+    expensesAmount: input.expensesAmount,
+    physicalCashExpected: input.physicalCashExpected,
     physicalCashAmount: input.physicalCashAmount,
     cashGap: input.cashGap,
     note: input.note,

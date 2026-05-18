@@ -41,14 +41,16 @@ export async function createCashClosure(body: Record<string, unknown>, shopId: s
   const businessDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   const summary = await getTodaySummary(shopId);
-  const expectedCashAmount = summary.physicalCashExpected;
-  const cashGap = physicalCashAmount - expectedCashAmount;
+  const physicalCashExpected = summary.physicalCashExpected;
+  const cashGap = physicalCashAmount - physicalCashExpected;
 
   return createCashClosureRecord({
     shopId,
     businessDate,
     cashSalesAmount: summary.cashSalesAmount,
-    expectedCashAmount,
+    mobileMoneySalesAmount: summary.mobileMoneySalesAmount,
+    expensesAmount: summary.expensesAmount,
+    physicalCashExpected,
     physicalCashAmount,
     cashGap,
     note,

@@ -84,20 +84,32 @@ export const Image: ComponentType<ImageProps>;
 export const ActivityIndicator: ComponentType<ActivityIndicatorProps>;
 export const KeyboardAvoidingView: ComponentType<KeyboardAvoidingViewProps>;
 
+type AnimatedValue = {
+  setValue: (value: number) => void;
+  interpolate: (config: {
+    inputRange: number[];
+    outputRange: (number | string)[];
+    extrapolate?: 'clamp' | 'extend' | 'identity';
+  }) => unknown;
+};
+
+type CompositeAnimation = {
+  start: (callback?: () => void) => void;
+};
+
 export const Animated: {
-  Value: new (value: number) => {
-    interpolate: (config: {
-      inputRange: number[];
-      outputRange: (number | string)[];
-      extrapolate?: 'clamp' | 'extend' | 'identity';
-    }) => unknown;
-  };
-  event: (
-    args: unknown[],
-    config?: {
-      useNativeDriver?: boolean;
-    },
-  ) => unknown;
+  Value: new (value: number) => AnimatedValue;
+  timing: (
+    value: AnimatedValue,
+    config: { toValue: number; duration?: number; useNativeDriver: boolean },
+  ) => CompositeAnimation;
+  spring: (
+    value: AnimatedValue,
+    config: { toValue: number; useNativeDriver: boolean; [key: string]: unknown },
+  ) => CompositeAnimation;
+  parallel: (animations: CompositeAnimation[]) => CompositeAnimation;
+  sequence: (animations: CompositeAnimation[]) => CompositeAnimation;
+  event: (args: unknown[], config?: { useNativeDriver?: boolean }) => unknown;
   ScrollView: ComponentType<ScrollViewProps>;
   View: ComponentType<ViewProps>;
 };

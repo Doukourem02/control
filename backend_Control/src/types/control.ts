@@ -84,7 +84,10 @@ export type CashClosureRow = {
   $updatedAt: string;
   shopId: string;
   businessDate: string;
-  expectedCashAmount: number;
+  cashSalesAmount: number;
+  mobileMoneySalesAmount: number;
+  expensesAmount: number;
+  physicalCashExpected: number;
   physicalCashAmount: number;
   cashGap: number;
   note: string;

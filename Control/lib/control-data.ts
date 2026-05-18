@@ -38,7 +38,10 @@ type ExpenseRow = BaseRow & {
 type CashClosureRow = BaseRow & {
   shopId: string;
   businessDate: string;
-  expectedCashAmount: number;
+  cashSalesAmount: number;
+  mobileMoneySalesAmount: number;
+  expensesAmount: number;
+  physicalCashExpected: number;
   physicalCashAmount: number;
   cashGap: number;
   note: string;
@@ -320,6 +323,57 @@ export async function getRecentStockMovements(
   } catch (error) {
     console.warn('Unable to load stock movements from CONTROL API.', getControlErrorMessage(error));
     return [];
+  }
+}
+
+export type AnalyticsType = 'sales' | 'expenses';
+
+export type ChartPoint = { date: string; amount: number };
+
+export type AnalyticsTransaction = {
+  id: string;
+  date: string;
+  label: string;
+  amount: number;
+  sub: string;
+};
+
+export type AnalyticsData = {
+  total: number;
+  previousTotal: number;
+  chartData: ChartPoint[];
+  transactions: AnalyticsTransaction[];
+};
+
+const emptyAnalytics: AnalyticsData = {
+  total: 0,
+  previousTotal: 0,
+  chartData: [],
+  transactions: [],
+};
+
+export async function getAnalytics(
+  type: AnalyticsType,
+  days: number,
+  date?: string,
+  shopId = DEFAULT_SHOP_ID
+): Promise<AnalyticsData> {
+  try {
+    const query = new URLSearchParams({
+      shopId,
+      type,
+      days: String(days),
+    });
+
+    if (date) query.set('date', date);
+
+    const response = await requestApi<{ analytics: AnalyticsData }>(
+      `/api/analytics?${query.toString()}`
+    );
+    return response.analytics;
+  } catch (error) {
+    console.warn('Unable to load analytics.', getControlErrorMessage(error));
+    return emptyAnalytics;
   }
 }
 

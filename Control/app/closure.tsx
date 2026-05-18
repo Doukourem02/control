@@ -20,7 +20,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 function parseAmount(value: string) {
-  const parsed = Number(value.replace(',', '.').trim());
+  const normalized = value.replace(',', '.').trim();
+  if (!normalized) return Number.NaN;
+
+  const parsed = Number(normalized);
 
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
@@ -48,9 +51,10 @@ export default function ClosureScreen() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const hasPhysicalCashInput = physicalCashAmount.trim().length > 0;
   const parsedPhysicalCash = parseAmount(physicalCashAmount);
-  const displayedPhysicalCash = Number.isNaN(parsedPhysicalCash) ? 0 : parsedPhysicalCash;
-  const cashGap = displayedPhysicalCash - summary.physicalCashExpected;
+  const canCalculateGap = hasPhysicalCashInput && !Number.isNaN(parsedPhysicalCash);
+  const cashGap = canCalculateGap ? parsedPhysicalCash - summary.physicalCashExpected : 0;
 
   const loadSummary = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!silent) {
@@ -72,6 +76,11 @@ export default function ClosureScreen() {
   async function handleCreateClosure() {
     setFormError('');
     setSuccessMessage('');
+
+    if (!hasPhysicalCashInput) {
+      setFormError('Renseigne le cash compte avant de cloturer.');
+      return;
+    }
 
     if (Number.isNaN(parsedPhysicalCash) || parsedPhysicalCash < 0) {
       setFormError('Le montant compte doit etre valide.');
@@ -280,33 +289,33 @@ export default function ClosureScreen() {
                 </View>
 
                 <View
-                  style={{
-                    minHeight: 82,
-                    borderRadius: 24,
-                    borderCurve: 'continuous',
-                    backgroundColor: cashGap === 0 ? '#F7F7F7' : '#FFF5F5',
-                    borderWidth: 1,
-                    borderColor: cashGap === 0 ? '#EFEFEF' : '#FFD7D9',
-                    padding: 18,
-                    justifyContent: 'space-between',
-                  }}
+	                  style={{
+	                    minHeight: 82,
+	                    borderRadius: 24,
+	                    borderCurve: 'continuous',
+	                    backgroundColor: !canCalculateGap || cashGap === 0 ? '#F7F7F7' : '#FFF5F5',
+	                    borderWidth: 1,
+	                    borderColor: !canCalculateGap || cashGap === 0 ? '#EFEFEF' : '#FFD7D9',
+	                    padding: 18,
+	                    justifyContent: 'space-between',
+	                  }}
                 >
                   <Text style={{ color: '#777777', fontSize: 14, fontWeight: '700' }}>
                     Ecart calcule
                   </Text>
-                  <Text
-                    selectable
-                    style={{
-                      color: cashGap === 0 ? '#111111' : '#E5484D',
-                      fontSize: 26,
-                      lineHeight: 31,
-                      fontWeight: '900',
-                      fontVariant: ['tabular-nums'],
-                    }}
-                  >
-                    {formatMoney(cashGap)}
-                  </Text>
-                </View>
+	                  <Text
+	                    selectable
+	                    style={{
+	                      color: !canCalculateGap ? '#A4A4A4' : cashGap === 0 ? '#111111' : '#E5484D',
+	                      fontSize: canCalculateGap ? 26 : 18,
+	                      lineHeight: 31,
+	                      fontWeight: canCalculateGap ? '900' : '700',
+	                      fontVariant: ['tabular-nums'],
+	                    }}
+	                  >
+	                    {canCalculateGap ? formatMoney(cashGap) : 'En attente du cash compte'}
+	                  </Text>
+	                </View>
 
                 {formError ? (
                   <Text selectable style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>
@@ -320,20 +329,20 @@ export default function ClosureScreen() {
                   </Text>
                 ) : null}
 
-                <Pressable
-                  onPress={handleCreateClosure}
-                  disabled={saving}
-                  style={({ pressed }: { pressed: boolean }) => ({
-                    height: 54,
-                    borderRadius: 20,
-                    borderCurve: 'continuous',
-                    backgroundColor: saving ? '#9FCAEF' : '#2A8DEB',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'row',
-                    gap: 9,
-                    opacity: pressed ? 0.76 : 1,
-                  })}
+	                <Pressable
+	                  onPress={handleCreateClosure}
+	                  disabled={saving || !canCalculateGap || parsedPhysicalCash < 0}
+	                  style={({ pressed }: { pressed: boolean }) => ({
+	                    height: 54,
+	                    borderRadius: 20,
+	                    borderCurve: 'continuous',
+	                    backgroundColor: saving || !canCalculateGap || parsedPhysicalCash < 0 ? '#9FCAEF' : '#2A8DEB',
+	                    alignItems: 'center',
+	                    justifyContent: 'center',
+	                    flexDirection: 'row',
+	                    gap: 9,
+	                    opacity: pressed && canCalculateGap ? 0.76 : 1,
+	                  })}
                 >
                   {saving ? (
                     <ActivityIndicator color="#FFFFFF" />
