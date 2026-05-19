@@ -348,12 +348,20 @@ export async function getCashClosures(
 }
 
 export async function getRecentStockMovements(
-  shopId = DEFAULT_SHOP_ID,
-  limit = 6
+  limit = 6,
+  date?: string,
+  shopId = DEFAULT_SHOP_ID
 ): Promise<StockMovementRow[]> {
   try {
+    const query = new URLSearchParams({
+      shopId,
+      limit: String(limit),
+    });
+
+    if (date) query.set('date', date);
+
     const response = await requestApi<{ movements: StockMovementRow[] }>(
-      `/api/stock-movements?shopId=${encodeURIComponent(shopId)}&limit=${limit}`
+      `/api/stock-movements?${query.toString()}`
     );
 
     return response.movements;

@@ -1,4 +1,4 @@
-import { Query } from 'node-appwrite';;
+import { Query } from 'node-appwrite';
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 import type { StockMovementRow } from '../../types/control';
 
@@ -19,16 +19,30 @@ function toStockMovementRow(doc: any): StockMovementRow {
   };
 }
 
-export async function listStockMovementsByShop(shopId: string, limit: number, type?: string): Promise<StockMovementRow[]> {
+export async function listStockMovementsByShop(
+  shopId: string,
+  limit: number,
+  type?: string,
+  from?: Date,
+  to?: Date
+): Promise<StockMovementRow[]> {
   const filters = [
     Query.equal('shopId', shopId),
-    Query.orderDesc('$createdAt'),
-    Query.limit(limit),
   ];
 
   if (type) {
     filters.push(Query.equal('type', type));
   }
+
+  if (from) {
+    filters.push(Query.greaterThanEqual('$createdAt', from.toISOString()));
+  }
+
+  if (to) {
+    filters.push(Query.lessThanEqual('$createdAt', to.toISOString()));
+  }
+
+  filters.push(Query.orderDesc('$createdAt'), Query.limit(limit));
 
   const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.stockMovements, filters);
 

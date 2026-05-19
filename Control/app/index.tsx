@@ -1,5 +1,13 @@
 import { SellerActionTile, type SellerAction } from '@/components/seller-action-tile';
-import { getAnalytics, getTodaySummary, type AnalyticsData, type AnalyticsType, type TodaySummary } from '@/lib/control-data';
+import {
+  getAnalytics,
+  getRecentStockMovements,
+  getTodaySummary,
+  type AnalyticsData,
+  type AnalyticsType,
+  type StockMovementRow,
+  type TodaySummary,
+} from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -162,16 +170,13 @@ function SettingsRow({
   icon,
   title,
   subtitle,
-  onPress,
 }: {
   icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
   title: string;
   subtitle: string;
-  onPress: () => void;
 }) {
   return (
     <Pressable
-      onPress={onPress}
       style={({ pressed }: { pressed: boolean }) => ({
         minHeight: 58,
         borderRadius: 22,
@@ -289,6 +294,40 @@ function formatTooltipDate(dateStr: string) {
 function formatReportDate(dateStr?: string) {
   const d = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function formatSectionDate(dateStr?: string) {
+  const d = dateStr ? new Date(dateStr + 'T12:00:00') : new Date();
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function formatStockMovementDate(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+
+  return d
+    .toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    .replace(',', ' à');
+}
+
+function getStockMovementLabel(type: StockMovementRow['type']) {
+  switch (type) {
+    case 'initial':
+      return 'Stock initial';
+    case 'supply':
+      return 'Approvisionnement';
+    case 'sale':
+      return 'Vente';
+    case 'missing':
+      return 'Manquant';
+    default:
+      return 'Ajustement';
+  }
 }
 
 function formatCalendarMonth(date: Date) {
@@ -506,6 +545,76 @@ function ReportChart({
 
 const emptyAnalytics: AnalyticsData = { total: 0, previousTotal: 0, chartData: [], transactions: [] };
 
+function StockMovementItem({
+  movement,
+}: {
+  movement: StockMovementRow;
+}) {
+  const isDecrease = movement.type === 'sale' || movement.type === 'missing';
+  const accent = isDecrease ? '#E5484D' : '#34C875';
+  const iconName: ComponentProps<typeof Feather>['name'] = isDecrease ? 'arrow-up-right' : 'arrow-down-left';
+  const signedQuantity = `${isDecrease ? '-' : '+'}${Math.abs(movement.quantity).toLocaleString('fr-FR')} ${movement.unit}`;
+  const details = [getStockMovementLabel(movement.type), formatStockMovementDate(movement.$createdAt)]
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        gap: 12,
+      }}
+    >
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: '#F7F7F7',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Feather name={iconName} size={20} color={accent} />
+      </View>
+
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>
+          {movement.productName}
+        </Text>
+        <Text numberOfLines={1} style={{ color: '#A4A4A4', fontSize: 12, marginTop: 1 }}>
+          {details}
+        </Text>
+      </View>
+
+      <Text style={{ color: accent, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
+        {signedQuantity}
+      </Text>
+    </View>
+  );
+}
+
+function ReportSectionTitle({
+  title,
+  date,
+}: {
+  title: string;
+  date: string;
+}) {
+  return (
+    <View style={{ marginBottom: 10 }}>
+      <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
+        {title}
+      </Text>
+      <Text style={{ color: '#A4A4A4', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+        {date}
+      </Text>
+    </View>
+  );
+}
+
 function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisible: boolean }) {
   const [type, setType] = useState<AnalyticsType>('sales');
   const [days] = useState(15);
@@ -513,13 +622,25 @@ function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisi
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12));
   const [dateFilterOpen, setDateFilterOpen] = useState(false);
   const [data, setData] = useState<AnalyticsData>(emptyAnalytics);
+  const [stockMovements, setStockMovements] = useState<StockMovementRow[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    let cancelled = false;
+
     setLoading(true);
-    getAnalytics(type, days, selectedDate).then((result) => {
+    Promise.all([
+      getAnalytics(type, days, selectedDate),
+      getRecentStockMovements(50, selectedDate),
+    ]).then(([result, movements]) => {
+      if (cancelled) return;
       setData(result);
+      setStockMovements(movements);
       setLoading(false);
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [type, days, selectedDate]);
 
   const trendPct =
@@ -532,6 +653,7 @@ function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisi
   const accent = type === 'sales' ? '#2A8DEB' : '#FF6B35';
   const historyAccent = type === 'sales' ? '#34C875' : '#E5484D';
   const reportDateLabel = formatReportDate(selectedDate);
+  const sectionDateLabel = formatSectionDate(selectedDate);
   const todayKey = dateToKey(new Date());
   const todayDate = dateFromKey(todayKey);
   const calendarDays = buildCalendarDays(calendarMonth);
@@ -811,9 +933,7 @@ function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisi
       {/* Historique transactions */}
       {!loading && data.transactions.length > 0 && (
         <View style={{ marginTop: compact ? 22 : 28 }}>
-          <Text style={{ color: '#111111', fontSize: 16, fontWeight: '700', marginBottom: 10 }}>
-            Historique du {reportDateLabel}
-          </Text>
+          <ReportSectionTitle title="Mouvements argent" date={sectionDateLabel} />
           <View
             style={{
               paddingVertical: 2,
@@ -860,7 +980,19 @@ function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisi
         </View>
       )}
 
-      {!loading && data.transactions.length === 0 && (
+      {!loading && stockMovements.length > 0 && (
+        <View style={{ marginTop: data.transactions.length > 0 ? 12 : compact ? 22 : 28 }}>
+          <ReportSectionTitle title="Mouvements stock" date={sectionDateLabel} />
+
+          <View style={{ paddingVertical: 2 }}>
+            {stockMovements.map((movement) => (
+              <StockMovementItem key={movement.$id} movement={movement} />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {!loading && data.transactions.length === 0 && stockMovements.length === 0 && (
         <View style={{ marginTop: 40, alignItems: 'center' }}>
           <Text style={{ color: '#BBBBBB', fontSize: 15 }}>Aucune donnée pour cette date</Text>
         </View>
@@ -1028,38 +1160,18 @@ function MissingMenu({
   );
 }
 
-function ProfileMenu({
-  compact,
-  onOpenShop,
-  onOpenTeam,
-  onOpenPreferences,
-}: {
-  compact: boolean;
-  onOpenShop: () => void;
-  onOpenTeam: () => void;
-  onOpenPreferences: () => void;
-}) {
+function ProfileMenu({ compact }: { compact: boolean }) {
   return (
-    <View style={{ marginTop: compact ? 24 : 34, marginBottom: compact ? 46 : 62, gap: 13 }}>
+    <View style={{ marginTop: compact ? 24 : 34, marginBottom: compact ? 46 : 62, gap: 18 }}>
       <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Réglages</Text>
-      <SettingsRow
-        icon="store"
-        title="Boutique"
-        subtitle="Informations et horaires"
-        onPress={onOpenShop}
-      />
-      <SettingsRow
-        icon="account-group"
-        title="Équipe"
-        subtitle="Vendeurs et permissions"
-        onPress={onOpenTeam}
-      />
-      <SettingsRow
-        icon="tune"
-        title="Préférences"
-        subtitle="Caisse, alertes et affichage"
-        onPress={onOpenPreferences}
-      />
+      <View style={{ gap: 13 }}>
+        <SettingsRow icon="store" title="Boutique" subtitle="Nom, contact, adresse, horaires" />
+        <SettingsRow icon="cash-register" title="Caisse" subtitle="Devise, paiements, heure de clôture" />
+        <SettingsRow icon="account-group" title="Équipe" subtitle="Vendeuse, rôle, accès autorisés" />
+        <SettingsRow icon="bell-outline" title="Alertes" subtitle="Stock faible, clôture oubliée, écarts" />
+        <SettingsRow icon="eye-outline" title="Affichage" subtitle="Montants visibles, langue, unités" />
+        <SettingsRow icon="database-outline" title="Données" subtitle="Sauvegarde, export, historique" />
+      </View>
     </View>
   );
 }
@@ -1325,12 +1437,7 @@ export default function HomeScreen() {
                   }
                 />
               ) : (
-                <ProfileMenu
-                  compact={compact}
-                  onOpenShop={() => router.push('/shop-settings' as never)}
-                  onOpenTeam={() => router.push('/team-settings' as never)}
-                  onOpenPreferences={() => router.push('/preferences' as never)}
-                />
+                <ProfileMenu compact={compact} />
               )}
             </Animated.View>
           </View>

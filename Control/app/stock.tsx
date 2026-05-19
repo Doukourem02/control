@@ -6,11 +6,9 @@ import {
   getCategories,
   getControlErrorMessage,
   getProducts,
-  getRecentStockMovements,
   type CategoryRow,
   type ProductRow,
   type ProductUnit,
-  type StockMovementRow,
 } from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -46,66 +44,6 @@ function parseAmount(value: string) {
   const parsed = Number(normalized);
 
   return Number.isFinite(parsed) ? parsed : Number.NaN;
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
-}
-
-function StockMovementItem({ movement }: { movement: StockMovementRow }) {
-  const isOut = movement.type === 'sale' || movement.type === 'missing';
-  const color = isOut ? '#E5484D' : '#34C875';
-  const label =
-    movement.type === 'sale'
-      ? 'Vente'
-      : movement.type === 'missing'
-        ? 'Manquant'
-        : movement.type === 'supply'
-          ? 'Approvisionnement'
-          : movement.type === 'initial'
-            ? 'Stock initial'
-            : 'Ajustement';
-
-  return (
-    <View
-      style={{
-        minHeight: 64,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        paddingVertical: 10,
-      }}
-    >
-      <View
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: '#F7F7F7',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Feather name={isOut ? 'arrow-up-right' : 'arrow-down-left'} size={19} color={color} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>
-          {movement.productName}
-        </Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, color: '#9A9A9A', fontSize: 12 }}>
-          {label} · {formatDateTime(movement.$createdAt)}
-        </Text>
-      </View>
-      <Text style={{ color, fontSize: 14, fontWeight: '900' }}>
-        {isOut ? '-' : '+'}{movement.quantity} {movement.unit}
-      </Text>
-    </View>
-  );
 }
 
 function Field({
@@ -151,7 +89,6 @@ function Field({
 export default function StockScreen() {
   const router = useRouter();
   const [products, setProducts] = useState<ProductRow[]>([]);
-  const [movements, setMovements] = useState<StockMovementRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -179,15 +116,13 @@ export default function StockScreen() {
   const selectedCategory = categories.find((c) => c.$id === selectedCategoryId);
   const lowStockCount = products.filter((product) => product.quantity > 0 && product.quantity <= 5).length;
   const loadProducts = useCallback(async ({ silent: _silent = false }: { silent?: boolean } = {}) => {
-    const [nextProducts, nextCategories, nextMovements] = await Promise.all([
+    const [nextProducts, nextCategories] = await Promise.all([
       getProducts(),
       getCategories(),
-      getRecentStockMovements(DEFAULT_SHOP_ID, 8),
     ]);
 
     setProducts(nextProducts);
     setCategories(nextCategories);
-    setMovements(nextMovements);
     setSelectedProductId((current) =>
       nextProducts.some((product: ProductRow) => product.$id === current) ? current : nextProducts[0]?.$id || ''
     );
@@ -754,35 +689,6 @@ export default function StockScreen() {
                   {supplyMode === 'existing' ? 'Approvisionner' : 'Enregistrer'}
                 </Text>
               </Pressable>
-            </View>
-
-            <View style={{ marginTop: 30, gap: 10 }}>
-              <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>Journal stock</Text>
-              {movements.length === 0 ? (
-                <View
-                  style={{
-                    minHeight: 74,
-                    borderRadius: 22,
-                    borderCurve: 'continuous',
-                    backgroundColor: '#F7F7F7',
-                    borderWidth: 1,
-                    borderColor: '#EFEFEF',
-                    padding: 18,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
-                    Aucun mouvement stock
-                  </Text>
-                  <Text style={{ marginTop: 5, color: '#9A9A9A', fontSize: 14 }}>
-                    Les ventes, manquants et approvisionnements apparaitront ici.
-                  </Text>
-                </View>
-              ) : (
-                movements.map((movement) => (
-                  <StockMovementItem key={movement.$id} movement={movement} />
-                ))
-              )}
             </View>
 
           </View>

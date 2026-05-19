@@ -7,7 +7,8 @@ export async function listStockMovements(request: Request, response: Response) {
   const movements = await getStockMovements(
     getShopId(request),
     request.query.limit,
-    request.query.type
+    request.query.type,
+    request.query.date
   );
 
   response.json({ movements });
