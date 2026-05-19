@@ -1,7 +1,11 @@
 import { listExpensesInRange } from '../expenses/expenses.repository';
 import { listSalesInRange } from '../sales/sales.repository';
 import { parseAmount } from '../../utils/http';
-import { createCashClosureRecord, listCashClosuresByBusinessDate } from './cash.repository';
+import {
+  createCashClosureRecord,
+  listCashClosuresByBusinessDate,
+  listCashClosuresByShop,
+} from './cash.repository';
 
 function getBusinessDateKey(date?: string) {
   const parsed = date ? new Date(`${date}T12:00:00`) : new Date();
@@ -42,7 +46,19 @@ export async function getTodaySummary(shopId: string, date?: string) {
     salesCount: todaySales.length,
     expensesCount: todayExpenses.length,
     latestCashGap: todayClosures[0]?.cashGap ?? 0,
+    closureCount: todayClosures.length,
+    isClosed: todayClosures.length > 0,
   };
+}
+
+export async function getCashClosures(shopId: string, rawLimit: unknown, date?: string) {
+  const limit = Math.max(1, Math.min(100, Number(rawLimit ?? 30)));
+
+  if (date) {
+    return listCashClosuresByBusinessDate(shopId, getBusinessDateKey(date));
+  }
+
+  return listCashClosuresByShop(shopId, limit);
 }
 
 export async function createCashClosure(body: Record<string, unknown>, shopId: string) {

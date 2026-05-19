@@ -162,13 +162,16 @@ function SettingsRow({
   icon,
   title,
   subtitle,
+  onPress,
 }: {
   icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
   title: string;
   subtitle: string;
+  onPress: () => void;
 }) {
   return (
     <Pressable
+      onPress={onPress}
       style={({ pressed }: { pressed: boolean }) => ({
         minHeight: 58,
         borderRadius: 22,
@@ -809,7 +812,7 @@ function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisi
       {!loading && data.transactions.length > 0 && (
         <View style={{ marginTop: compact ? 22 : 28 }}>
           <Text style={{ color: '#111111', fontSize: 16, fontWeight: '700', marginBottom: 10 }}>
-            Historique
+            Historique du {reportDateLabel}
           </Text>
           <View
             style={{
@@ -859,7 +862,7 @@ function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisi
 
       {!loading && data.transactions.length === 0 && (
         <View style={{ marginTop: 40, alignItems: 'center' }}>
-          <Text style={{ color: '#BBBBBB', fontSize: 15 }}>Aucune donnée pour cette période</Text>
+          <Text style={{ color: '#BBBBBB', fontSize: 15 }}>Aucune donnée pour cette date</Text>
         </View>
       )}
     </ScrollView>
@@ -954,14 +957,12 @@ function MissingMenu({
   compact,
   amountsVisible,
   summary,
-  onOpenClosure,
   onOpenMissing,
   onOpenMissingHistory,
 }: {
   compact: boolean;
   amountsVisible: boolean;
   summary: TodaySummary;
-  onOpenClosure: () => void;
   onOpenMissing: () => void;
   onOpenMissingHistory: () => void;
 }) {
@@ -972,7 +973,14 @@ function MissingMenu({
   const latestGapValue = amountsVisible ? formatMoney(summary.latestCashGap) : hiddenValue;
 
   return (
-    <View style={{ marginTop: compact ? 24 : 34, marginBottom: compact ? 46 : 62, gap: 28 }}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{
+        paddingTop: compact ? 24 : 34,
+        paddingBottom: compact ? 104 : 118,
+        gap: 26,
+      }}
+    >
       <View style={{ gap: 14 }}>
         <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Contrôle caisse</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 }}>
@@ -983,7 +991,6 @@ function MissingMenu({
             icon="cash"
             accent="#4C9BFF"
             compact={compact}
-            onPress={onOpenClosure}
           />
           <EcartsTile
             title="Dernier écart"
@@ -992,7 +999,6 @@ function MissingMenu({
             icon={hasGap ? 'alert' : 'check'}
             accent="#FF8A4C"
             compact={compact}
-            onPress={onOpenClosure}
           />
         </View>
       </View>
@@ -1001,34 +1007,59 @@ function MissingMenu({
         <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Actions</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 }}>
           <EcartsTile
-            title="Déclarer"
-            subtitle="Perte ou casse"
-            icon="alert-outline"
-            accent="#B94DFF"
-            compact={compact}
-            onPress={onOpenMissing}
-          />
-          <EcartsTile
             title="Historique"
-            subtitle="Voir les écarts"
-            icon="clipboard-text-clock-outline"
+            subtitle="Manquants"
+            icon="history"
             accent="#3B3B3B"
             compact={compact}
             onPress={onOpenMissingHistory}
           />
+          <EcartsTile
+            title="Manquant"
+            subtitle="Manquant stock"
+            icon="alert-outline"
+            accent="#E5484D"
+            compact={compact}
+            onPress={onOpenMissing}
+          />
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
-function ProfileMenu({ compact }: { compact: boolean }) {
+function ProfileMenu({
+  compact,
+  onOpenShop,
+  onOpenTeam,
+  onOpenPreferences,
+}: {
+  compact: boolean;
+  onOpenShop: () => void;
+  onOpenTeam: () => void;
+  onOpenPreferences: () => void;
+}) {
   return (
     <View style={{ marginTop: compact ? 24 : 34, marginBottom: compact ? 46 : 62, gap: 13 }}>
       <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Réglages</Text>
-      <SettingsRow icon="store" title="Boutique" subtitle="Informations et horaires" />
-      <SettingsRow icon="account-group" title="Équipe" subtitle="Vendeurs et permissions" />
-      <SettingsRow icon="tune" title="Préférences" subtitle="Caisse, alertes et affichage" />
+      <SettingsRow
+        icon="store"
+        title="Boutique"
+        subtitle="Informations et horaires"
+        onPress={onOpenShop}
+      />
+      <SettingsRow
+        icon="account-group"
+        title="Équipe"
+        subtitle="Vendeurs et permissions"
+        onPress={onOpenTeam}
+      />
+      <SettingsRow
+        icon="tune"
+        title="Préférences"
+        subtitle="Caisse, alertes et affichage"
+        onPress={onOpenPreferences}
+      />
     </View>
   );
 }
@@ -1045,6 +1076,8 @@ export default function HomeScreen() {
     salesCount: 0,
     expensesCount: 0,
     latestCashGap: 0,
+    closureCount: 0,
+    isClosed: false,
   });
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTranslateY = useRef(new Animated.Value(0)).current;
@@ -1062,7 +1095,11 @@ export default function HomeScreen() {
     ? `${todaySummary.salesCount} vente${todaySummary.salesCount > 1 ? 's' : ''} · ${
         todaySummary.expensesCount
       } sortie${todaySummary.expensesCount > 1 ? 's' : ''} · ${
-        todaySummary.latestCashGap === 0 ? 'aucun écart' : `${formatMoney(todaySummary.latestCashGap)} écart`
+        todaySummary.isClosed
+          ? todaySummary.latestCashGap === 0
+            ? 'cloturee'
+            : `${formatMoney(todaySummary.latestCashGap)} ecart`
+          : 'a cloturer'
       }`
     : 'Détails de caisse masqués';
   const headerTitle =
@@ -1282,14 +1319,18 @@ export default function HomeScreen() {
                   compact={compact}
                   amountsVisible={amountsVisible}
                   summary={todaySummary}
-                  onOpenClosure={() => router.push('/closure' as never)}
                   onOpenMissing={() => router.push('/missing' as never)}
                   onOpenMissingHistory={() =>
                     router.push({ pathname: '/missing', params: { view: 'history' } } as never)
                   }
                 />
               ) : (
-                <ProfileMenu compact={compact} />
+                <ProfileMenu
+                  compact={compact}
+                  onOpenShop={() => router.push('/shop-settings' as never)}
+                  onOpenTeam={() => router.push('/team-settings' as never)}
+                  onOpenPreferences={() => router.push('/preferences' as never)}
+                />
               )}
             </Animated.View>
           </View>

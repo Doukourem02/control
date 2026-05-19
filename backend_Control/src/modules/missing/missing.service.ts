@@ -1,9 +1,19 @@
 import { missingReasons, type MissingReason } from '../../types/control';
 import { parseAmount } from '../../utils/http';
-import { createMissingRecord, listRecentMissingsByShop } from './missing.repository';
+import { createMissingRecord, listMissingsInRange, listRecentMissingsByShop } from './missing.repository';
 
 function isMissingReason(value: unknown): value is MissingReason {
   return typeof value === 'string' && missingReasons.includes(value as MissingReason);
+}
+
+function getBusinessDateRange(date: string) {
+  const parsed = new Date(`${date}T12:00:00`);
+  const value = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  const key = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+  const from = new Date(`${key}T00:00:00`);
+  const to = new Date(`${key}T23:59:59.999`);
+
+  return { from, to };
 }
 
 export async function createMissing(body: Record<string, unknown>, shopId: string) {
@@ -27,8 +37,13 @@ export async function createMissing(body: Record<string, unknown>, shopId: strin
   return createMissingRecord({ shopId, productId, quantity, reason, note });
 }
 
-export async function getMissings(shopId: string, rawLimit: unknown) {
+export async function getMissings(shopId: string, rawLimit: unknown, date?: unknown) {
   const limit = Math.max(1, Math.min(50, Number(rawLimit ?? 10)));
+
+  if (typeof date === 'string' && date.trim()) {
+    const { from, to } = getBusinessDateRange(date);
+    return listMissingsInRange(shopId, from, to);
+  }
 
   return listRecentMissingsByShop(shopId, limit);
 }

@@ -32,13 +32,20 @@ function getRange(days: number, date?: string): { from: Date; to: Date } {
   return { from, to };
 }
 
-function getPreviousRange(days: number, date?: string): { from: Date; to: Date } {
-  const to = getAnchorDate(date);
-  to.setHours(23, 59, 59, 999);
-  to.setDate(to.getDate() - days);
-  const from = new Date(to);
+function getDayRange(date?: string): { from: Date; to: Date } {
+  const from = getAnchorDate(date);
   from.setHours(0, 0, 0, 0);
-  from.setDate(from.getDate() - (days - 1));
+  const to = new Date(from);
+  to.setHours(23, 59, 59, 999);
+  return { from, to };
+}
+
+function getPreviousDayRange(date?: string): { from: Date; to: Date } {
+  const from = getAnchorDate(date);
+  from.setDate(from.getDate() - 1);
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(from);
+  to.setHours(23, 59, 59, 999);
   return { from, to };
 }
 
@@ -65,24 +72,26 @@ export async function getAnalytics(
   date?: string
 ): Promise<AnalyticsData> {
   const { from, to } = getRange(days, date);
-  const { from: prevFrom, to: prevTo } = getPreviousRange(days, date);
+  const { from: dayFrom, to: dayTo } = getDayRange(date);
+  const { from: prevFrom, to: prevTo } = getPreviousDayRange(date);
 
   if (type === 'sales') {
-    const [current, previous] = await Promise.all([
+    const [rangeSales, selectedDaySales, previousDaySales] = await Promise.all([
       listSalesInRange(shopId, from, to),
+      listSalesInRange(shopId, dayFrom, dayTo),
       listSalesInRange(shopId, prevFrom, prevTo),
     ]);
 
-    const total = current.reduce((sum, s) => sum + s.totalAmount, 0);
-    const previousTotal = previous.reduce((sum, s) => sum + s.totalAmount, 0);
+    const total = selectedDaySales.reduce((sum, s) => sum + s.totalAmount, 0);
+    const previousTotal = previousDaySales.reduce((sum, s) => sum + s.totalAmount, 0);
 
     const amountsByDate = new Map<string, number>();
-    for (const sale of current) {
+    for (const sale of rangeSales) {
       const key = dateKey(sale.$createdAt);
       amountsByDate.set(key, (amountsByDate.get(key) ?? 0) + sale.totalAmount);
     }
 
-    const transactions: AnalyticsTransaction[] = [...current]
+    const transactions: AnalyticsTransaction[] = [...selectedDaySales]
       .reverse()
       .slice(0, 15)
       .map((s) => ({
@@ -95,21 +104,22 @@ export async function getAnalytics(
 
     return { total, previousTotal, chartData: buildChartData(days, amountsByDate, date), transactions };
   } else {
-    const [current, previous] = await Promise.all([
+    const [rangeExpenses, selectedDayExpenses, previousDayExpenses] = await Promise.all([
       listExpensesInRange(shopId, from, to),
+      listExpensesInRange(shopId, dayFrom, dayTo),
       listExpensesInRange(shopId, prevFrom, prevTo),
     ]);
 
-    const total = current.reduce((sum, e) => sum + e.amount, 0);
-    const previousTotal = previous.reduce((sum, e) => sum + e.amount, 0);
+    const total = selectedDayExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const previousTotal = previousDayExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     const amountsByDate = new Map<string, number>();
-    for (const expense of current) {
+    for (const expense of rangeExpenses) {
       const key = dateKey(expense.$createdAt);
       amountsByDate.set(key, (amountsByDate.get(key) ?? 0) + expense.amount);
     }
 
-    const transactions: AnalyticsTransaction[] = [...current]
+    const transactions: AnalyticsTransaction[] = [...selectedDayExpenses]
       .reverse()
       .slice(0, 15)
       .map((e) => ({

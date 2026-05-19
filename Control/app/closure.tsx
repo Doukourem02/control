@@ -65,6 +65,8 @@ const emptySummary: TodaySummary = {
   salesCount: 0,
   expensesCount: 0,
   latestCashGap: 0,
+  closureCount: 0,
+  isClosed: false,
 };
 
 export default function ClosureScreen() {
@@ -82,6 +84,16 @@ export default function ClosureScreen() {
   const parsedPhysicalCash = parseAmount(physicalCashAmount);
   const canCalculateGap = hasPhysicalCashInput && !Number.isNaN(parsedPhysicalCash);
   const cashGap = canCalculateGap ? parsedPhysicalCash - summary.physicalCashExpected : 0;
+  const closureStatusText = summary.isClosed
+    ? summary.latestCashGap === 0
+      ? 'Journee deja cloturee sans ecart.'
+      : `Journee deja cloturee avec un ecart de ${formatMoney(summary.latestCashGap)}.`
+    : 'Journee ouverte : compte le cash pour cloturer.';
+  const closureStatusColor = summary.isClosed
+    ? summary.latestCashGap === 0
+      ? '#34C875'
+      : '#E5484D'
+    : '#FF8A4C';
 
   const loadSummary = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!silent) {
@@ -132,8 +144,8 @@ export default function ClosureScreen() {
 
       setSuccessMessage(
         closure.cashGap === 0
-          ? 'Cloture enregistree : caisse equilibree.'
-          : `Cloture enregistree : ecart ${formatMoney(closure.cashGap)}.`
+          ? `Caisse cloturee : ${formatMoney(closure.physicalCashActual)} comptes, aucun ecart.`
+          : `Caisse cloturee : ecart ${formatMoney(closure.cashGap)}.`
       );
       await loadSummary({ silent: true });
     } catch (error) {
@@ -202,7 +214,7 @@ export default function ClosureScreen() {
                 Cloture
               </Text>
               <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
-                Compare la caisse comptee avec le cash attendu.
+                Compte le cash present dans la caisse.
               </Text>
             </View>
 
@@ -256,6 +268,53 @@ export default function ClosureScreen() {
                 <Feather name="chevron-right" size={22} color="#777777" />
               </Pressable>
             </View>
+
+            <View
+              style={{
+                marginTop: 12,
+                minHeight: 54,
+                borderRadius: 20,
+                borderCurve: 'continuous',
+                backgroundColor: '#F7F7F7',
+                borderWidth: 1,
+                borderColor: '#EEEEEE',
+                paddingHorizontal: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <View
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  backgroundColor: closureStatusColor,
+                }}
+              />
+              <Text numberOfLines={2} style={{ flex: 1, color: '#777777', fontSize: 13, fontWeight: '700' }}>
+                {closureStatusText}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={() => router.push('/closure-history' as never)}
+              style={({ pressed }: { pressed: boolean }) => ({
+                alignSelf: 'flex-start',
+                marginTop: 12,
+                minHeight: 34,
+                borderRadius: 17,
+                backgroundColor: '#F7F7F7',
+                paddingHorizontal: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                opacity: pressed ? 0.64 : 1,
+              })}
+            >
+              <Feather name="clock" size={16} color="#777777" />
+              <Text style={{ color: '#111111', fontSize: 13, fontWeight: '800' }}>Voir les clotures</Text>
+            </Pressable>
 
             {loading ? (
               <View style={{ paddingVertical: 34, alignItems: 'center' }}>

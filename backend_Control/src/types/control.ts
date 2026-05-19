@@ -138,4 +138,6 @@ export type TodaySummary = {
   salesCount: number;
   expensesCount: number;
   latestCashGap: number;
+  closureCount: number;
+  isClosed: boolean;
 };

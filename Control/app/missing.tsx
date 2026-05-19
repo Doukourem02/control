@@ -44,6 +44,31 @@ function parseQuantity(value: string) {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
+function dateToKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateFromKey(dateStr: string) {
+  return new Date(dateStr + 'T12:00:00');
+}
+
+function shiftDateKey(dateStr: string, offset: number) {
+  const date = dateFromKey(dateStr);
+  date.setDate(date.getDate() + offset);
+  return dateToKey(date);
+}
+
+function formatBusinessDate(dateStr: string) {
+  return dateFromKey(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 function ProductOption({
   product,
   selected,
@@ -119,6 +144,8 @@ export default function MissingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ view?: string }>();
   const historyOnly = params.view === 'history';
+  const todayKey = dateToKey(new Date());
+  const [selectedDate, setSelectedDate] = useState(todayKey);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [recentMissings, setRecentMissings] = useState<MissingRow[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
@@ -136,13 +163,13 @@ export default function MissingScreen() {
   );
   const parsedQuantity = parseQuantity(quantity);
 
-  const loadData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
-    if (!silent) setLoading(true);
+	  const loadData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+	    if (!silent) setLoading(true);
 
-    const [nextProducts, nextMissings] = await Promise.all([
-      getProducts(),
-      getRecentMissings(),
-    ]);
+	    const [nextProducts, nextMissings] = await Promise.all([
+	      getProducts(),
+	      getRecentMissings(50, historyOnly ? selectedDate : undefined),
+	    ]);
 
     setProducts(nextProducts);
     setRecentMissings(nextMissings);
@@ -150,8 +177,8 @@ export default function MissingScreen() {
       nextProducts.some((p) => p.$id === current) ? current : nextProducts[0]?.$id || ''
     );
 
-    if (!silent) setLoading(false);
-  }, []);
+	    if (!silent) setLoading(false);
+	  }, [historyOnly, selectedDate]);
 
   useEffect(() => {
     loadData();
@@ -189,7 +216,7 @@ export default function MissingScreen() {
       setQuantity('');
       setNote('');
       setSuccessMessage(
-        `Manquant enregistre : ${parsedQuantity} ${selectedProduct.unit} de ${selectedProduct.name}.`
+        `Manquant enregistre : ${selectedProduct.name} - ${parsedQuantity} ${selectedProduct.unit}.`
       );
       await loadData({ silent: true });
     } catch (error) {
@@ -259,12 +286,65 @@ export default function MissingScreen() {
               </Text>
               <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
                 {historyOnly
-                  ? 'Pertes et manquants declares'
+                  ? 'Retrouve les pertes et casses par date.'
                   : selectedProduct
-                    ? `${selectedProduct.name} selectionne`
-                    : 'Selectionne un produit'}
+                    ? `Declare une perte ou casse pour ${selectedProduct.name}.`
+                    : 'Declare une perte, casse ou erreur de stock.'}
               </Text>
             </View>
+
+            {historyOnly ? (
+              <View
+                style={{
+                  marginTop: 22,
+                  minHeight: 52,
+                  borderRadius: 20,
+                  borderCurve: 'continuous',
+                  backgroundColor: '#F7F7F7',
+                  borderWidth: 1,
+                  borderColor: '#EEEEEE',
+                  paddingHorizontal: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Pressable
+                  onPress={() => setSelectedDate((current) => shiftDateKey(current, -1))}
+                  style={({ pressed }: { pressed: boolean }) => ({
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: pressed ? 0.62 : 1,
+                  })}
+                >
+                  <Feather name="chevron-left" size={22} color="#777777" />
+                </Pressable>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '800', textAlign: 'center' }}
+                >
+                  {formatBusinessDate(selectedDate)}
+                </Text>
+                <Pressable
+                  disabled={selectedDate === todayKey}
+                  onPress={() => setSelectedDate((current) => shiftDateKey(current, 1))}
+                  style={({ pressed }: { pressed: boolean }) => ({
+                    width: 38,
+                    height: 38,
+                    borderRadius: 19,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: selectedDate === todayKey ? 0.28 : pressed ? 0.62 : 1,
+                  })}
+                >
+                  <Feather name="chevron-right" size={22} color="#777777" />
+                </Pressable>
+              </View>
+            ) : null}
 
             {!historyOnly ? (
               <>
@@ -429,41 +509,43 @@ export default function MissingScreen() {
               </>
             ) : null}
 
-            <View style={{ marginTop: historyOnly ? 26 : 30, gap: 13 }}>
-              <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>
-                Historique manquants
-              </Text>
+            {historyOnly ? (
+              <View style={{ marginTop: 26, gap: 13 }}>
+                <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>
+                  Historique du {formatBusinessDate(selectedDate)}
+                </Text>
 
-              {loading ? (
-                <View style={{ paddingVertical: 22, alignItems: 'center' }}>
-                  <ActivityIndicator color="#E5484D" />
-                </View>
-              ) : recentMissings.length === 0 ? (
-                <View
-                  style={{
-                    minHeight: 78,
-                    borderRadius: 22,
-                    borderCurve: 'continuous',
-                    backgroundColor: '#F7F7F7',
-                    borderWidth: 1,
-                    borderColor: '#EFEFEF',
-                    padding: 18,
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
-                    Aucun manquant enregistre
-                  </Text>
-                  <Text style={{ marginTop: 5, color: '#9A9A9A', fontSize: 14 }}>
-                    Les pertes et manquants apparaitront ici.
-                  </Text>
-                </View>
-              ) : (
-                recentMissings.map((missing) => (
-                  <MissingItem key={missing.$id} missing={missing} />
-                ))
-              )}
-            </View>
+                {loading ? (
+                  <View style={{ paddingVertical: 22, alignItems: 'center' }}>
+                    <ActivityIndicator color="#E5484D" />
+                  </View>
+                ) : recentMissings.length === 0 ? (
+                  <View
+                    style={{
+                      minHeight: 78,
+                      borderRadius: 22,
+                      borderCurve: 'continuous',
+                      backgroundColor: '#F7F7F7',
+                      borderWidth: 1,
+                      borderColor: '#EFEFEF',
+                      padding: 18,
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
+                      Aucun manquant enregistre
+                    </Text>
+                    <Text style={{ marginTop: 5, color: '#9A9A9A', fontSize: 14 }}>
+                      Les pertes et manquants de cette date apparaitront ici.
+                    </Text>
+                  </View>
+                ) : (
+                  recentMissings.map((missing) => (
+                    <MissingItem key={missing.$id} missing={missing} />
+                  ))
+                )}
+              </View>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

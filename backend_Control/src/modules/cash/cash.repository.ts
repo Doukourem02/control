@@ -82,3 +82,13 @@ export async function listCashClosuresByBusinessDate(
 
   return response.documents.map(toCashClosureRow);
 }
+
+export async function listCashClosuresByShop(shopId: string, limit: number): Promise<CashClosureRow[]> {
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.cashClosures, [
+    Query.equal('shopId', shopId),
+    Query.orderDesc('$createdAt'),
+    Query.limit(limit),
+  ]);
+
+  return response.documents.map(toCashClosureRow);
+}

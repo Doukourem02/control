@@ -4,7 +4,7 @@ import { getShopId } from '../../utils/http';
 import { createMissing, getMissings } from './missing.service';
 
 export async function getMissingsController(request: Request, response: Response) {
-  const missings = await getMissings(getShopId(request), request.query.limit);
+  const missings = await getMissings(getShopId(request), request.query.limit, request.query.date);
 
   response.json({ missings });
 }

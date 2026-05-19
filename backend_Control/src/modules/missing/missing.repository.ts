@@ -84,6 +84,18 @@ export async function listRecentMissingsByShop(shopId: string, limit: number): P
   return response.documents.map(toMissingRow);
 }
 
+export async function listMissingsInRange(shopId: string, from: Date, to: Date): Promise<MissingRow[]> {
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.missings, [
+    Query.equal('shopId', shopId),
+    Query.greaterThanEqual('$createdAt', from.toISOString()),
+    Query.lessThanEqual('$createdAt', to.toISOString()),
+    Query.orderDesc('$createdAt'),
+    Query.limit(200),
+  ]);
+
+  return response.documents.map(toMissingRow);
+}
+
 export async function listTodayMissingsByShop(shopId: string): Promise<MissingRow[]> {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);

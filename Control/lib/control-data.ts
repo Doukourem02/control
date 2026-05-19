@@ -35,7 +35,7 @@ type ExpenseRow = BaseRow & {
   note: string;
 };
 
-type CashClosureRow = BaseRow & {
+export type CashClosureRow = BaseRow & {
   shopId: string;
   businessDate: string;
   cashSalesAmount: number;
@@ -147,6 +147,8 @@ export type TodaySummary = {
   salesCount: number;
   expensesCount: number;
   latestCashGap: number;
+  closureCount: number;
+  isClosed: boolean;
 };
 
 class ApiResponseError extends Error {}
@@ -164,6 +166,8 @@ const emptyTodaySummary: TodaySummary = {
   salesCount: 0,
   expensesCount: 0,
   latestCashGap: 0,
+  closureCount: 0,
+  isClosed: false,
 };
 
 export function getControlErrorMessage(error: unknown) {
@@ -268,12 +272,20 @@ export async function createMissing(input: CreateMissingInput, shopId = DEFAULT_
 }
 
 export async function getRecentMissings(
-  shopId = DEFAULT_SHOP_ID,
-  limit = 10
+  limit = 10,
+  date?: string,
+  shopId = DEFAULT_SHOP_ID
 ): Promise<MissingRow[]> {
   try {
+    const query = new URLSearchParams({
+      shopId,
+      limit: String(limit),
+    });
+
+    if (date) query.set('date', date);
+
     const response = await requestApi<{ missings: MissingRow[] }>(
-      `/api/missings?shopId=${encodeURIComponent(shopId)}&limit=${limit}`
+      `/api/missings?${query.toString()}`
     );
 
     return response.missings;
@@ -302,13 +314,37 @@ export async function getActivityLogs(
 export async function createCashClosure(
   input: CreateCashClosureInput,
   shopId = DEFAULT_SHOP_ID
-) {
+): Promise<CashClosureRow> {
   const response = await requestApi<{ closure: CashClosureRow }>('/api/cash-closures', {
     method: 'POST',
     body: JSON.stringify({ ...input, shopId }),
   });
 
   return response.closure;
+}
+
+export async function getCashClosures(
+  limit = 30,
+  date?: string,
+  shopId = DEFAULT_SHOP_ID
+): Promise<CashClosureRow[]> {
+  try {
+    const query = new URLSearchParams({
+      shopId,
+      limit: String(limit),
+    });
+
+    if (date) query.set('date', date);
+
+    const response = await requestApi<{ closures: CashClosureRow[] }>(
+      `/api/cash-closures?${query.toString()}`
+    );
+
+    return response.closures;
+  } catch (error) {
+    console.warn('Unable to load cash closures from CONTROL API.', getControlErrorMessage(error));
+    return [];
+  }
 }
 
 export async function getRecentStockMovements(
