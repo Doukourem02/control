@@ -6,6 +6,7 @@ import {
   type ControlAuthSession,
 } from '@/lib/control-auth-storage';
 import {
+  ControlApiError,
   createApiError,
   createNetworkError,
   getControlErrorMessage,
@@ -84,6 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(nextSession);
     } catch (error) {
       logControlError('refresh-session', error);
+
+      if (error instanceof ControlApiError && error.status === 0) {
+        // Network unreachable — keep the cached session, don't force logout
+        setSession(storedSession);
+        return;
+      }
+
       await clearStoredAuthSession();
       setSession(null);
     }

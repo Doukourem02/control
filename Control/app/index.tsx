@@ -26,7 +26,6 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import {
@@ -1460,6 +1459,22 @@ function formatDayLabel(key: string): string {
   return `${d}/${m}/${y}`;
 }
 
+async function shareExportFile(path: string, options: { mimeType: string; dialogTitle: string }) {
+  try {
+    const sharing = await import('expo-sharing');
+    const available = await sharing.isAvailableAsync();
+
+    if (available) {
+      await sharing.shareAsync(path, options);
+      return;
+    }
+  } catch {
+    // The current development build may not include ExpoSharing yet.
+  }
+
+  throw new Error('Partage indisponible dans ce build. Rebuild le development build pour activer expo-sharing.');
+}
+
 function DataSettingsModal({
   visible,
   compact,
@@ -1489,9 +1504,9 @@ function DataSettingsModal({
       const { data, filename } = await exportDailyReport(pdfDate);
       const path = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.writeAsStringAsync(path, data, { encoding: FileSystem.EncodingType.Base64 });
-      await Sharing.shareAsync(path, { mimeType: 'application/pdf', dialogTitle: 'Partager le bilan PDF' });
-    } catch {
-      showFeedback('Erreur lors de la génération du PDF.');
+      await shareExportFile(path, { mimeType: 'application/pdf', dialogTitle: 'Partager le bilan PDF' });
+    } catch (error) {
+      showFeedback(getControlErrorMessage(error));
     } finally {
       setPdfLoading(false);
     }
@@ -1508,9 +1523,9 @@ function DataSettingsModal({
       const { data, filename } = await exportHistoryCSV(csvFrom, csvTo);
       const path = `${FileSystem.cacheDirectory}${filename}`;
       await FileSystem.writeAsStringAsync(path, data, { encoding: FileSystem.EncodingType.Base64 });
-      await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Partager l\'historique CSV' });
-    } catch {
-      showFeedback('Erreur lors de la génération du CSV.');
+      await shareExportFile(path, { mimeType: 'text/csv', dialogTitle: "Partager l'historique CSV" });
+    } catch (error) {
+      showFeedback(getControlErrorMessage(error));
     } finally {
       setCsvLoading(false);
     }
