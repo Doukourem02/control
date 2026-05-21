@@ -1,6 +1,7 @@
-import { ID, Query } from 'node-appwrite';
+import { AppwriteException, ID, Query } from 'node-appwrite';
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 import type { CategoryRow } from '../../types/control';
+import { userError } from '../../utils/http';
 
 function toCategoryRow(doc: any): CategoryRow {
   return {
@@ -34,10 +35,20 @@ export async function createCategoryRecord(shopId: string, name: string, emoji: 
 }
 
 export async function deleteCategoryRecord(categoryId: string, shopId: string): Promise<void> {
-  const doc = await databases.getDocument(DATABASE_ID, COLLECTIONS.categories, categoryId);
+  let doc;
+
+  try {
+    doc = await databases.getDocument(DATABASE_ID, COLLECTIONS.categories, categoryId);
+  } catch (error) {
+    if (error instanceof AppwriteException && error.code === 404) {
+      throw userError('Categorie introuvable pour cette boutique.', 404, 'CATEGORY_NOT_FOUND');
+    }
+
+    throw error;
+  }
 
   if (doc.shopId !== shopId) {
-    throw new Error('Categorie introuvable pour cette boutique.');
+    throw userError('Categorie introuvable pour cette boutique.', 404, 'CATEGORY_NOT_FOUND');
   }
 
   await databases.deleteDocument(DATABASE_ID, COLLECTIONS.categories, categoryId);

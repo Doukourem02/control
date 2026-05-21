@@ -1,6 +1,6 @@
 import { listExpensesInRange } from '../expenses/expenses.repository';
 import { listSalesInRange } from '../sales/sales.repository';
-import { parseAmount } from '../../utils/http';
+import { parseAmount, userError } from '../../utils/http';
 import {
   createCashClosureRecord,
   listCashClosuresByBusinessDate,
@@ -67,7 +67,7 @@ export async function createCashClosure(body: Record<string, unknown>, shopId: s
   const requestedBusinessDate = typeof body.businessDate === 'string' ? body.businessDate : undefined;
 
   if (!Number.isFinite(physicalCashActual) || physicalCashActual < 0) {
-    throw new Error('Le montant compte doit etre valide.');
+    throw userError('Le montant compte doit etre valide.', 400, 'CASH_AMOUNT_INVALID');
   }
 
   const businessDate = getBusinessDateKey(requestedBusinessDate);

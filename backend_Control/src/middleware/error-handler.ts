@@ -8,8 +8,25 @@ export function errorHandler(
   response: Response,
   _next: NextFunction
 ) {
-  const message = error instanceof Error ? error.message : 'Erreur backend inconnue.';
-  const statusCode = error instanceof HttpError ? error.statusCode : 400;
+  const isHttpError = error instanceof HttpError;
+  const statusCode = isHttpError ? error.statusCode : 500;
+  const type = isHttpError ? error.kind : 'dev';
+  const code = isHttpError ? error.code : 'INTERNAL_ERROR';
+  const message =
+    isHttpError && error.kind === 'user'
+      ? error.message
+      : 'Un probleme technique est survenu. Reessaie dans un instant.';
 
-  response.status(statusCode).json({ message });
+  if (!isHttpError || error.kind === 'dev') {
+    console.error('[CONTROL_API_ERROR]', error);
+  }
+
+  response.status(statusCode).json({
+    message,
+    error: {
+      type,
+      code,
+      message,
+    },
+  });
 }

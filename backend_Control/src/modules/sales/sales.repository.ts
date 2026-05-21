@@ -1,6 +1,7 @@
-import { ID, Query, type Models } from 'node-appwrite';
+import { AppwriteException, ID, Query, type Models } from 'node-appwrite';
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 import type { PaymentMethod, SaleRow } from '../../types/control';
+import { userError } from '../../utils/http';
 
 export type CreateSaleInput = {
   shopId: string;
@@ -27,16 +28,26 @@ function toSaleRow(doc: any): SaleRow {
 }
 
 export async function createSaleRecord(input: CreateSaleInput): Promise<SaleRow> {
-  const productDoc = await databases.getDocument(DATABASE_ID, COLLECTIONS.products, input.productId);
+  let productDoc;
+
+  try {
+    productDoc = await databases.getDocument(DATABASE_ID, COLLECTIONS.products, input.productId);
+  } catch (error) {
+    if (error instanceof AppwriteException && error.code === 404) {
+      throw userError('Produit introuvable.', 404, 'PRODUCT_NOT_FOUND');
+    }
+
+    throw error;
+  }
 
   if (productDoc['shopId'] !== input.shopId) {
-    throw new Error('Produit introuvable.');
+    throw userError('Produit introuvable.', 404, 'PRODUCT_NOT_FOUND');
   }
 
   const currentQuantity = productDoc['quantity'] as number;
 
   if (input.quantity > currentQuantity) {
-    throw new Error('Stock insuffisant pour cette vente.');
+    throw userError('Stock insuffisant pour cette vente.', 409, 'STOCK_INSUFFICIENT');
   }
 
   const totalAmount = input.totalAmount != null

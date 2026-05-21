@@ -1,5 +1,5 @@
 import { productUnits, type ProductUnit } from '../../types/control';
-import { parseAmount } from '../../utils/http';
+import { parseAmount, userError } from '../../utils/http';
 import { listProductsByShop, saveProductSupply } from './products.repository';
 
 function isProductUnit(value: unknown): value is ProductUnit {
@@ -21,23 +21,23 @@ export async function createOrSupplyProduct(body: Record<string, unknown>, shopI
   const unit = body.unit;
 
   if (!productId && (!name || !category)) {
-    throw new Error('Renseigne le nom et la categorie.');
+    throw userError('Renseigne le nom et la categorie.', 400, 'PRODUCT_NAME_CATEGORY_REQUIRED');
   }
 
   if (!Number.isFinite(quantity) || quantity <= 0) {
-    throw new Error('La quantite doit etre superieure a 0.');
+    throw userError('La quantite doit etre superieure a 0.', 400, 'QUANTITY_INVALID');
   }
 
   if (!Number.isFinite(purchaseTotal) || purchaseTotal < 0) {
-    throw new Error('Le cout achat total doit etre valide.');
+    throw userError('Le cout achat total doit etre valide.', 400, 'PURCHASE_TOTAL_INVALID');
   }
 
   if (!Number.isFinite(sellingUnitPrice) || sellingUnitPrice <= 0) {
-    throw new Error('Le prix de vente par unite doit etre superieur a 0.');
+    throw userError('Le prix de vente par unite doit etre superieur a 0.', 400, 'SELLING_PRICE_INVALID');
   }
 
   if (!productId && !isProductUnit(unit)) {
-    throw new Error('Selectionne une unite valide.');
+    throw userError('Selectionne une unite valide.', 400, 'UNIT_INVALID');
   }
 
   const product = await saveProductSupply({

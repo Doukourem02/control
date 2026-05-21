@@ -1,10 +1,11 @@
 import type { Request, Response } from 'express';
 
 import { getOrCreateCurrentShop, updateCurrentShop } from './shops.service';
+import { sendError } from '../../utils/http';
 
 export async function getCurrentShop(request: Request, response: Response) {
   if (!request.auth) {
-    response.status(401).json({ message: 'Session requise.' });
+    sendError(response, 401, 'Session requise.', 'AUTH_REQUIRED');
     return;
   }
 
@@ -15,7 +16,7 @@ export async function getCurrentShop(request: Request, response: Response) {
 
 export async function updateCurrentShopSettings(request: Request, response: Response) {
   if (!request.auth) {
-    response.status(401).json({ message: 'Session requise.' });
+    sendError(response, 401, 'Session requise.', 'AUTH_REQUIRED');
     return;
   }
 

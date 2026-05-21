@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { createOAuthSession, getCurrentUser, getOAuthUrl, loginUser, logoutUser, registerUser } from './users.service';
+import { sendError } from '../../utils/http';
 
 function getBearerToken(request: Request) {
   const header = request.headers.authorization ?? '';
@@ -26,7 +27,7 @@ export async function me(request: Request, response: Response) {
   const sessionSecret = getBearerToken(request);
 
   if (!sessionSecret) {
-    response.status(401).json({ message: 'Session requise.' });
+    sendError(response, 401, 'Session requise.', 'AUTH_REQUIRED');
     return;
   }
 

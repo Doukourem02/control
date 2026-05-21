@@ -1,4 +1,4 @@
-import { HttpError } from '../../utils/http';
+import { userError } from '../../utils/http';
 import { createShopForUser, getShopById, updateShopById, type UpdateShopInput } from './shops.repository';
 
 export async function getOrCreateCurrentShop(userId: string, ownerName: string) {
@@ -16,7 +16,7 @@ function readOptionalText(value: unknown, maxLength: number) {
   const text = String(value ?? '').trim();
 
   if (text.length > maxLength) {
-    throw new HttpError(`Ce champ ne doit pas depasser ${maxLength} caracteres.`, 400);
+    throw userError(`Ce champ ne doit pas depasser ${maxLength} caracteres.`, 400, 'FIELD_TOO_LONG');
   }
 
   return text;
@@ -29,7 +29,7 @@ export async function updateCurrentShop(userId: string, body: Record<string, unk
   const openingHours = readOptionalText(body.openingHours, 80);
 
   if (typeof name !== 'undefined' && name.length < 2) {
-    throw new HttpError('Donne un nom de boutique plus complet.', 400);
+    throw userError('Donne un nom de boutique plus complet.', 400, 'SHOP_NAME_TOO_SHORT');
   }
 
   const input: UpdateShopInput = {};

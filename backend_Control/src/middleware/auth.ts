@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 
 import { createSessionAccount } from '../config/appwrite';
 import { getOrCreateCurrentShop } from '../modules/shops/shops.service';
+import { sendError } from '../utils/http';
 
 function getBearerToken(request: Request) {
   const header = request.headers.authorization ?? '';
@@ -17,7 +18,7 @@ export async function requireAuth(request: Request, response: Response, next: Ne
   const sessionSecret = getBearerToken(request);
 
   if (!sessionSecret) {
-    response.status(401).json({ message: 'Connecte-toi pour continuer.' });
+    sendError(response, 401, 'Connecte-toi pour continuer.', 'AUTH_REQUIRED');
     return;
   }
 
@@ -36,6 +37,6 @@ export async function requireAuth(request: Request, response: Response, next: Ne
 
     next();
   } catch {
-    response.status(401).json({ message: 'Session expiree ou invalide.' });
+    sendError(response, 401, 'Session expiree ou invalide.', 'AUTH_SESSION_EXPIRED');
   }
 }

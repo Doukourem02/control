@@ -5,6 +5,12 @@ import {
   saveStoredAuthSession,
   type ControlAuthSession,
 } from '@/lib/control-auth-storage';
+import {
+  createApiError,
+  createNetworkError,
+  getControlErrorMessage,
+  logControlError,
+} from '@/lib/control-errors';
 import * as WebBrowser from 'expo-web-browser';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
@@ -31,26 +37,23 @@ const backendBaseUrl = (process.env.EXPO_PUBLIC_CONTROL_API_URL ?? 'http://local
   ''
 );
 
-function getErrorMessage(error: unknown) {
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message);
+async function authRequest(path: string, options: RequestInit = {}) {
+  let response: Response;
+
+  try {
+    response = await fetch(`${backendBaseUrl}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+  } catch (error) {
+    throw createNetworkError(error);
   }
 
-  return 'Erreur inconnue.';
-}
-
-async function authRequest(path: string, options: RequestInit = {}) {
-  const response = await fetch(`${backendBaseUrl}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(body?.message ?? 'Impossible de contacter CONTROL.');
+    throw await createApiError(response, 'Impossible de contacter CONTROL.');
   }
 
   return response.json() as Promise<ControlAuthSession>;
@@ -77,7 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await saveStoredAuthSession(nextSession);
       setSession(nextSession);
-    } catch {
+    } catch (error) {
+      logControlError('refresh-session', error);
       await clearStoredAuthSession();
       setSession(null);
     }
@@ -132,13 +136,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const redirectUri = 'appwrite-callback-6a099f2e000a6c4556d8://auth/callback';
 
-    const urlResponse = await fetch(
-      `${backendBaseUrl}/api/auth/oauth/${provider}/url?success=${encodeURIComponent(redirectUri)}&failure=${encodeURIComponent(redirectUri + '?error=oauth_failed')}`
-    );
+    let urlResponse: Response;
+
+    try {
+      urlResponse = await fetch(
+        `${backendBaseUrl}/api/auth/oauth/${provider}/url?success=${encodeURIComponent(redirectUri)}&failure=${encodeURIComponent(redirectUri + '?error=oauth_failed')}`
+      );
+    } catch (error) {
+      throw createNetworkError(error);
+    }
 
     if (!urlResponse.ok) {
-      const body = (await urlResponse.json().catch(() => null)) as { message?: string } | null;
-      throw new Error(body?.message ?? "Impossible d'obtenir l'URL OAuth.");
+      throw await createApiError(urlResponse, "Impossible d'obtenir l'URL OAuth.");
     }
 
     const { url } = (await urlResponse.json()) as { url: string };
@@ -186,4 +195,4 @@ export function useControlAuth() {
   return context;
 }
 
-export { getErrorMessage as getAuthErrorMessage };
+export { getControlErrorMessage as getAuthErrorMessage };

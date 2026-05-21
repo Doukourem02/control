@@ -1,5 +1,5 @@
 import { missingReasons, type MissingReason } from '../../types/control';
-import { parseAmount } from '../../utils/http';
+import { parseAmount, userError } from '../../utils/http';
 import { createMissingRecord, listMissingsInRange, listRecentMissingsByShop } from './missing.repository';
 
 function isMissingReason(value: unknown): value is MissingReason {
@@ -23,15 +23,15 @@ export async function createMissing(body: Record<string, unknown>, shopId: strin
   const note = String(body.note ?? '').trim();
 
   if (!productId) {
-    throw new Error('Selectionne un produit.');
+    throw userError('Selectionne un produit.', 400, 'PRODUCT_REQUIRED');
   }
 
   if (!Number.isFinite(quantity) || quantity <= 0) {
-    throw new Error('La quantite doit etre superieure a 0.');
+    throw userError('La quantite doit etre superieure a 0.', 400, 'QUANTITY_INVALID');
   }
 
   if (!isMissingReason(reason)) {
-    throw new Error('Selectionne une raison valide.');
+    throw userError('Selectionne une raison valide.', 400, 'MISSING_REASON_INVALID');
   }
 
   return createMissingRecord({ shopId, productId, quantity, reason, note });

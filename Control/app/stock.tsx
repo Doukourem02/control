@@ -9,6 +9,7 @@ import {
   type ProductRow,
   type ProductUnit,
 } from '@/lib/control-data';
+import { logControlError } from '@/lib/control-errors';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -230,7 +231,7 @@ export default function StockScreen() {
       setProducts(prevProducts);
       setSelectedProductId(prevProducts[0]?.$id || '');
       const message = getControlErrorMessage(error);
-      console.warn('Unable to create product.', message);
+      logControlError('create-product', error);
       setFormError(message);
     } finally {
       setSaving(false);
