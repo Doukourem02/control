@@ -22,6 +22,8 @@ const userMessagesByCode: Record<string, string> = {
   AUTH_NAME_REQUIRED: 'Renseigne le nom de la boutique ou du proprietaire.',
   AUTH_OAUTH_FAILED: 'Connexion sociale echouee. Reessaie ou utilise email/mot de passe.',
   AUTH_PASSWORD_TOO_SHORT: 'Le mot de passe doit contenir au moins 8 caracteres.',
+  AUTH_RECOVERY_TOKEN_INVALID: 'Lien de recuperation invalide ou expire.',
+  AUTH_RECOVERY_URL_REQUIRED: 'Lien de recuperation invalide.',
   AUTH_REQUIRED: 'Connecte-toi pour continuer.',
   AUTH_SESSION_EXPIRED: defaultSessionMessage,
   CASH_AMOUNT_INVALID: 'Le montant compte doit etre valide.',

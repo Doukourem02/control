@@ -14,10 +14,8 @@ type AuthInput = {
   name?: unknown;
 };
 
-function readCredentials(input: AuthInput) {
-  const email = String(input.email ?? '').trim().toLowerCase();
-  const password = String(input.password ?? '');
-  const name = String(input.name ?? '').trim();
+function readEmail(value: unknown) {
+  const email = String(value ?? '').trim().toLowerCase();
 
   if (!email) {
     throw userError('Renseigne ton email.', 400, 'AUTH_EMAIL_REQUIRED');
@@ -26,6 +24,14 @@ function readCredentials(input: AuthInput) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw userError('Adresse email invalide.', 400, 'AUTH_EMAIL_INVALID');
   }
+
+  return email;
+}
+
+function readCredentials(input: AuthInput) {
+  const email = readEmail(input.email);
+  const password = String(input.password ?? '');
+  const name = String(input.name ?? '').trim();
 
   if (password.length < 8) {
     throw userError('Le mot de passe doit contenir au moins 8 caracteres.', 400, 'AUTH_PASSWORD_TOO_SHORT');
@@ -107,6 +113,57 @@ export async function getCurrentUser(sessionSecret: string) {
 export async function logoutUser(sessionSecret: string) {
   const account = createSessionAccount(sessionSecret);
   await account.deleteSession({ sessionId: 'current' });
+}
+
+export async function requestPasswordRecovery(input: { email: unknown; redirectUrl: unknown }) {
+  const email = readEmail(input.email);
+  const redirectUrl = String(input.redirectUrl ?? '').trim();
+
+  if (!redirectUrl) {
+    throw userError('Lien de recuperation invalide.', 400, 'AUTH_RECOVERY_URL_REQUIRED');
+  }
+
+  const existingUsers = await users.list({
+    queries: [Query.equal('email', email), Query.limit(1)],
+  });
+
+  if (existingUsers.total === 0) {
+    return { ok: true };
+  }
+
+  try {
+    await adminAccount.createRecovery({ email, url: redirectUrl });
+  } catch {
+    throw devError('Impossible de demarrer la recuperation du mot de passe.', 502, 'AUTH_RECOVERY_CREATE_FAILED');
+  }
+
+  return { ok: true };
+}
+
+export async function confirmPasswordRecovery(input: {
+  userId: unknown;
+  secret: unknown;
+  password: unknown;
+}) {
+  const userId = String(input.userId ?? '').trim();
+  const secret = String(input.secret ?? '').trim();
+  const password = String(input.password ?? '');
+
+  if (!userId || !secret) {
+    throw userError('Lien de recuperation invalide ou expire.', 400, 'AUTH_RECOVERY_TOKEN_INVALID');
+  }
+
+  if (password.length < 8) {
+    throw userError('Le mot de passe doit contenir au moins 8 caracteres.', 400, 'AUTH_PASSWORD_TOO_SHORT');
+  }
+
+  try {
+    await adminAccount.updateRecovery({ userId, secret, password });
+  } catch {
+    throw userError('Lien de recuperation invalide ou expire.', 400, 'AUTH_RECOVERY_TOKEN_INVALID');
+  }
+
+  return { ok: true };
 }
 
 export async function getOAuthUrl(provider: string, successUrl: string, failureUrl: string) {

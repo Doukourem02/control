@@ -15,8 +15,10 @@
 - [x] Middleware d'authentification sur le backend (session Appwrite)
 - [x] Protection de toutes les routes API métier
 - [x] Gestion du token côté app (stockage sécurisé, restauration de session, logout)
-- [ ] Mot de passe oublié / récupération de compte
-- [ ] Connexion sociale optionnelle : Google / Apple / Facebook / X
+- [x] Mot de passe oublié / récupération de compte
+- [x] Connexion sociale Google
+- [ ] Connexion sociale optionnelle : Apple / Facebook / X
+- [x] Erreurs d'authentification personnalisées côté app (compte absent, mauvais mot de passe, session expirée)
 
 #### Critères de validation — Authentification
 
@@ -45,7 +47,7 @@
 
 ### Écrans Settings (actuellement tous morts)
 
-- [ ] **Boutique** — modifier nom, contact, adresse, horaires
+- [x] **Boutique** — modifier nom, contact, adresse, horaires
 - [ ] **Caisse** — configurer devise, modes de paiement, heure de clôture par défaut
 - [ ] **Équipe** — inviter des vendeurs, définir les rôles (propriétaire / vendeur), gérer les accès
 - [ ] **Alertes** — activer/désactiver alertes stock faible, rappel clôture oubliée, écarts de caisse
@@ -147,13 +149,13 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 - [x] Monter les routes `users` et `shops` dans `app.ts`
 - [x] Remplacer tous les usages métier de `DEFAULT_SHOP_ID` par le `shopId` issu de la session
 - [x] Protéger les routes produits, stock, ventes, dépenses, caisse, écarts, activité, analytics et catégories
-- [ ] Afficher une erreur claire côté app quand l'API refuse une action
+- [x] Afficher une erreur claire côté app quand l'API refuse une action
 - [x] Ajouter / documenter la collection Appwrite `shops`
 
 ### Sprint 2 — Réglages utiles
 
-- [ ] Brancher la navigation des 6 lignes du `ProfileMenu`
-- [ ] Implémenter les réglages Boutique
+- [ ] Brancher / finaliser les sections du profil réglages
+- [x] Implémenter les réglages Boutique
 - [ ] Implémenter les réglages Caisse
 - [ ] Implémenter les réglages Affichage
 - [ ] Préparer la structure des réglages Alertes, Équipe et Données sans forcément tout finaliser
@@ -172,8 +174,8 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 
 | Priorité | Tâches totales | Restantes | Statut |
 | -------- | ------------- | --------- | ------ |
-| P0 | 14 | 3 | Bloquant production |
-| P1 | 15 | 13 | Réclamé en premier |
+| P0 | 16 | 1 | Bloquant production |
+| P1 | 15 | 12 | Réclamé en premier |
 | P2 | 15 | 15 | Différenciants |
 | P3 | 16 | 16 | Long terme |
-| **Total** | **60** | **47** | |
+| **Total** | **62** | **44** | |

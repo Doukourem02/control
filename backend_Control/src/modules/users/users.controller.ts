@@ -1,6 +1,15 @@
 import type { Request, Response } from 'express';
 
-import { createOAuthSession, getCurrentUser, getOAuthUrl, loginUser, logoutUser, registerUser } from './users.service';
+import {
+  confirmPasswordRecovery,
+  createOAuthSession,
+  getCurrentUser,
+  getOAuthUrl,
+  loginUser,
+  logoutUser,
+  registerUser,
+  requestPasswordRecovery,
+} from './users.service';
 import { sendError } from '../../utils/http';
 
 function getBearerToken(request: Request) {
@@ -43,6 +52,16 @@ export async function logout(request: Request, response: Response) {
   }
 
   response.json({ ok: true });
+}
+
+export async function recoverPassword(request: Request, response: Response) {
+  const result = await requestPasswordRecovery(request.body);
+  response.json(result);
+}
+
+export async function resetPassword(request: Request, response: Response) {
+  const result = await confirmPasswordRecovery(request.body);
+  response.json(result);
 }
 
 export async function oauthUrl(request: Request, response: Response) {

@@ -1,7 +1,7 @@
 import { getAuthErrorMessage, useControlAuth } from '@/lib/control-auth';
 import Feather from '@expo/vector-icons/Feather';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'recover' | 'reset';
 
 function GoogleLogo({ size = 26 }: { size?: number }) {
   return (
@@ -41,46 +41,42 @@ function GoogleLogo({ size = 26 }: { size?: number }) {
   );
 }
 
-function XLogo({ size = 30 }: { size?: number }) {
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: '#050505',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Text
-        style={{
-          color: '#FFFFFF',
-          fontSize: size * 0.58,
-          lineHeight: size * 0.62,
-          fontWeight: '500',
-        }}
-      >
-        X
-      </Text>
-    </View>
-  );
-}
-
 export default function AuthScreen() {
-  const { signIn, signUp, signInWithOAuth } = useControlAuth();
+  const { signIn, signUp, signInWithOAuth, requestPasswordRecovery, completePasswordRecovery } =
+    useControlAuth();
+  const params = useLocalSearchParams<{ mode?: string; userId?: string; secret?: string }>();
   const { height } = useWindowDimensions();
   const [mode, setMode] = useState<AuthMode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [socialMessage, setSocialMessage] = useState('');
 
   const isRegister = mode === 'register';
+  const isRecover = mode === 'recover';
+  const isReset = mode === 'reset';
   const compact = height < 760;
+  const screenTitle = isReset
+    ? 'Nouveau mot de passe'
+    : isRecover
+      ? 'Mot de passe oublié'
+      : isRegister
+        ? 'Créer un compte'
+        : 'Connexion';
+
+  useEffect(() => {
+    if (params.mode === 'reset' && params.userId && params.secret) {
+      setMode('reset');
+      setPassword('');
+      setPasswordConfirm('');
+      setErrorMessage('');
+      setSocialMessage('');
+    }
+  }, [params.mode, params.secret, params.userId]);
 
   async function handleSubmit() {
     setErrorMessage('');
@@ -88,7 +84,29 @@ export default function AuthScreen() {
     setSaving(true);
 
     try {
-      if (isRegister) {
+      if (isReset) {
+        if (!params.userId || !params.secret) {
+          throw new Error('Lien de recuperation invalide ou expire.');
+        }
+
+        if (password !== passwordConfirm) {
+          throw new Error('Les deux mots de passe ne correspondent pas.');
+        }
+
+        await completePasswordRecovery({
+          userId: params.userId,
+          secret: params.secret,
+          password,
+        });
+        setMode('login');
+        setPassword('');
+        setPasswordConfirm('');
+        setSocialMessage('Mot de passe mis a jour. Tu peux te connecter.');
+      } else if (isRecover) {
+        await requestPasswordRecovery(email);
+        setMode('login');
+        setSocialMessage('Si un compte existe avec cet email, un lien de recuperation a ete envoye.');
+      } else if (isRegister) {
         await signUp({ name, email, password });
       } else {
         await signIn({ email, password });
@@ -103,7 +121,25 @@ export default function AuthScreen() {
   function toggleMode() {
     setErrorMessage('');
     setSocialMessage('');
+    setPassword('');
+    setPasswordConfirm('');
     setMode((current) => (current === 'login' ? 'register' : 'login'));
+  }
+
+  function openRecovery() {
+    setErrorMessage('');
+    setSocialMessage('');
+    setPassword('');
+    setPasswordConfirm('');
+    setMode('recover');
+  }
+
+  function backToLogin() {
+    setErrorMessage('');
+    setSocialMessage('');
+    setPassword('');
+    setPasswordConfirm('');
+    setMode('login');
   }
 
   async function handleSocialPress(provider: 'google' | 'facebook' | 'twitter' | 'apple') {
@@ -154,18 +190,26 @@ export default function AuthScreen() {
                     fontWeight: '900',
                   }}
                 >
-                  {isRegister ? 'Créer un compte' : 'Connexion'}
+                  {screenTitle}
                 </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 5, rowGap: 2 }}>
-                  <Text style={{ color: '#646464', fontSize: 15 }}>
-                    {isRegister ? 'Déjà inscrit ?' : 'Nouveau sur CONTROL ?'}
-                  </Text>
-                  <Pressable onPress={toggleMode} disabled={saving} hitSlop={8}>
+                {!isRecover && !isReset ? (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 5, rowGap: 2 }}>
+                    <Text style={{ color: '#646464', fontSize: 15 }}>
+                      {isRegister ? 'Déjà inscrit ?' : 'Nouveau sur CONTROL ?'}
+                    </Text>
+                    <Pressable onPress={toggleMode} disabled={saving} hitSlop={8}>
+                      <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
+                        {isRegister ? 'Se connecter' : 'Créer une boutique'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable onPress={backToLogin} disabled={saving} hitSlop={8}>
                     <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
-                      {isRegister ? 'Se connecter' : 'Créer une boutique'}
+                      Retour a la connexion
                     </Text>
                   </Pressable>
-                </View>
+                )}
               </View>
 
               <View style={{ gap: 12 }}>
@@ -194,61 +238,91 @@ export default function AuthScreen() {
                   </View>
                 ) : null}
 
-                <View
-                  style={{
-                    height: 54,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
-                    borderRadius: 14,
-                    borderCurve: 'continuous',
-                    backgroundColor: '#F5F5F5',
-                    paddingHorizontal: 16,
-                  }}
-                >
-                  <Feather name="mail" size={21} color="#292929" />
-                  <TextInput
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Adresse email"
-                    placeholderTextColor="#8A8A8A"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    textContentType="emailAddress"
-                    style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
-                  />
-                </View>
+                {!isReset ? (
+                  <View
+                    style={{
+                      height: 54,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      borderRadius: 14,
+                      borderCurve: 'continuous',
+                      backgroundColor: '#F5F5F5',
+                      paddingHorizontal: 16,
+                    }}
+                  >
+                    <Feather name="mail" size={21} color="#292929" />
+                    <TextInput
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="Adresse email"
+                      placeholderTextColor="#8A8A8A"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      textContentType="emailAddress"
+                      style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                    />
+                  </View>
+                ) : null}
 
-                <View
-                  style={{
-                    height: 54,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
-                    borderRadius: 14,
-                    borderCurve: 'continuous',
-                    backgroundColor: '#F5F5F5',
-                    paddingHorizontal: 16,
-                  }}
-                >
-                  <Feather name="lock" size={21} color="#292929" />
-                  <TextInput
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Mot de passe"
-                    placeholderTextColor="#8A8A8A"
-                    secureTextEntry={!passwordVisible}
-                    textContentType={isRegister ? 'newPassword' : 'password'}
-                    style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
-                  />
-                  <Pressable onPress={() => setPasswordVisible((current) => !current)} hitSlop={10}>
-                    <Feather name={passwordVisible ? 'eye-off' : 'eye'} size={21} color="#8A8A8A" />
-                  </Pressable>
-                </View>
+                {!isRecover ? (
+                  <View
+                    style={{
+                      height: 54,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      borderRadius: 14,
+                      borderCurve: 'continuous',
+                      backgroundColor: '#F5F5F5',
+                      paddingHorizontal: 16,
+                    }}
+                  >
+                    <Feather name="lock" size={21} color="#292929" />
+                    <TextInput
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder={isReset ? 'Nouveau mot de passe' : 'Mot de passe'}
+                      placeholderTextColor="#8A8A8A"
+                      secureTextEntry={!passwordVisible}
+                      textContentType={isRegister || isReset ? 'newPassword' : 'password'}
+                      style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                    />
+                    <Pressable onPress={() => setPasswordVisible((current) => !current)} hitSlop={10}>
+                      <Feather name={passwordVisible ? 'eye-off' : 'eye'} size={21} color="#8A8A8A" />
+                    </Pressable>
+                  </View>
+                ) : null}
 
-                {!isRegister ? (
-                  <Pressable disabled={saving} hitSlop={8}>
+                {isReset ? (
+                  <View
+                    style={{
+                      height: 54,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      borderRadius: 14,
+                      borderCurve: 'continuous',
+                      backgroundColor: '#F5F5F5',
+                      paddingHorizontal: 16,
+                    }}
+                  >
+                    <Feather name="lock" size={21} color="#292929" />
+                    <TextInput
+                      value={passwordConfirm}
+                      onChangeText={setPasswordConfirm}
+                      placeholder="Confirmer le mot de passe"
+                      placeholderTextColor="#8A8A8A"
+                      secureTextEntry={!passwordVisible}
+                      textContentType="newPassword"
+                      style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                    />
+                  </View>
+                ) : null}
+
+                {!isRegister && !isRecover && !isReset ? (
+                  <Pressable onPress={openRecovery} disabled={saving} hitSlop={8}>
                     <Text style={{ color: '#252525', fontSize: 14, fontWeight: '700' }}>
                       Mot de passe oublié ?
                     </Text>
@@ -258,6 +332,11 @@ export default function AuthScreen() {
                 {errorMessage ? (
                   <Text selectable style={{ color: '#B42318', fontSize: 14, fontWeight: '700' }}>
                     {errorMessage}
+                  </Text>
+                ) : null}
+                {socialMessage ? (
+                  <Text selectable style={{ color: '#08784F', fontSize: 14, fontWeight: '700' }}>
+                    {socialMessage}
                   </Text>
                 ) : null}
               </View>
@@ -278,12 +357,19 @@ export default function AuthScreen() {
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>
-                    {isRegister ? 'Créer le compte' : 'Se connecter'}
+                    {isReset
+                      ? 'Mettre a jour'
+                      : isRecover
+                        ? 'Envoyer le lien'
+                        : isRegister
+                          ? 'Créer le compte'
+                          : 'Se connecter'}
                   </Text>
                 )}
               </Pressable>
 
-              <View style={{ gap: 14 }}>
+              {!isRecover && !isReset ? (
+                <View style={{ gap: 14 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View style={{ flex: 1, height: 1, backgroundColor: '#E5E5E5' }} />
                   <Text style={{ color: '#8A8A8A', fontSize: 13, fontWeight: '700' }}>ou</Text>
@@ -299,7 +385,7 @@ export default function AuthScreen() {
                     fontWeight: '700',
                   }}
                 >
-                  Continuer avec un compte social
+                  Continuer avec Google
                 </Text>
 
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
@@ -319,61 +405,9 @@ export default function AuthScreen() {
                     <GoogleLogo size={27} />
                   </Pressable>
 
-                  <Pressable
-                    onPress={() => handleSocialPress('facebook')}
-                    style={({ pressed }: { pressed: boolean }) => ({
-                      flex: 1,
-                      height: 54,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 15,
-                      borderCurve: 'continuous',
-                      backgroundColor: '#F7F7F7',
-                      opacity: pressed ? 0.7 : 1,
-                    })}
-                  >
-                    <MaterialCommunityIcons name="facebook" size={27} color="#1877F2" />
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => handleSocialPress('twitter')}
-                    style={({ pressed }: { pressed: boolean }) => ({
-                      flex: 1,
-                      height: 54,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 15,
-                      borderCurve: 'continuous',
-                      backgroundColor: '#F7F7F7',
-                      opacity: pressed ? 0.7 : 1,
-                    })}
-                  >
-                    <XLogo size={30} />
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => handleSocialPress('apple')}
-                    style={({ pressed }: { pressed: boolean }) => ({
-                      flex: 1,
-                      height: 54,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 15,
-                      borderCurve: 'continuous',
-                      backgroundColor: '#F7F7F7',
-                      opacity: pressed ? 0.7 : 1,
-                    })}
-                  >
-                    <MaterialCommunityIcons name="apple" size={30} color="#111111" />
-                  </Pressable>
                 </View>
-
-                {socialMessage ? (
-                  <Text selectable style={{ color: '#6A6A6A', fontSize: 13, textAlign: 'center' }}>
-                    {socialMessage}
-                  </Text>
-                ) : null}
               </View>
+              ) : null}
             </View>
 
             <Text

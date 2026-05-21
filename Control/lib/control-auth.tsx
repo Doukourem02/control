@@ -25,6 +25,8 @@ type AuthContextValue = {
   loading: boolean;
   signIn: (input: AuthModeInput) => Promise<void>;
   signUp: (input: AuthModeInput) => Promise<void>;
+  requestPasswordRecovery: (email: string) => Promise<void>;
+  completePasswordRecovery: (input: { userId: string; secret: string; password: string }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
   signInWithOAuth: (provider: 'google' | 'facebook' | 'twitter' | 'apple') => Promise<void>;
@@ -37,7 +39,7 @@ const backendBaseUrl = (process.env.EXPO_PUBLIC_CONTROL_API_URL ?? 'http://local
   ''
 );
 
-async function authRequest(path: string, options: RequestInit = {}) {
+async function authRequest<ResponseBody = ControlAuthSession>(path: string, options: RequestInit = {}) {
   let response: Response;
 
   try {
@@ -56,7 +58,7 @@ async function authRequest(path: string, options: RequestInit = {}) {
     throw await createApiError(response, 'Impossible de contacter CONTROL.');
   }
 
-  return response.json() as Promise<ControlAuthSession>;
+  return response.json() as Promise<ResponseBody>;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -114,6 +116,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await saveStoredAuthSession(nextSession);
     setSession(nextSession);
   }, []);
+
+  const requestPasswordRecovery = useCallback(async (email: string) => {
+    const redirectUrl = 'appwrite-callback-6a099f2e000a6c4556d8://auth?mode=reset';
+
+    await authRequest<{ ok: true }>('/api/auth/recovery/request', {
+      method: 'POST',
+      body: JSON.stringify({ email, redirectUrl }),
+    });
+  }, []);
+
+  const completePasswordRecovery = useCallback(
+    async (input: { userId: string; secret: string; password: string }) => {
+      await authRequest<{ ok: true }>('/api/auth/recovery/confirm', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      });
+    },
+    []
+  );
 
   const signOut = useCallback(async () => {
     const currentSession = await getStoredAuthSession().catch(() => null);
@@ -178,8 +199,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, loading, signIn, signUp, signOut, refreshSession, signInWithOAuth }),
-    [loading, refreshSession, session, signIn, signInWithOAuth, signOut, signUp]
+    () => ({
+      session,
+      loading,
+      signIn,
+      signUp,
+      requestPasswordRecovery,
+      completePasswordRecovery,
+      signOut,
+      refreshSession,
+      signInWithOAuth,
+    }),
+    [
+      completePasswordRecovery,
+      loading,
+      refreshSession,
+      requestPasswordRecovery,
+      session,
+      signIn,
+      signInWithOAuth,
+      signOut,
+      signUp,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
