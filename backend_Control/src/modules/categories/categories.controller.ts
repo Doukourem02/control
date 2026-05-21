@@ -13,6 +13,6 @@ export async function createCategoryHandler(request: Request, response: Response
 }
 
 export async function deleteCategoryHandler(request: Request, response: Response) {
-  await deleteCategory(String(request.params.id));
+  await deleteCategory(String(request.params.id), getShopId(request));
   response.json({ ok: true });
 }

@@ -10,8 +10,11 @@ import { healthRouter } from './modules/health/health.routes';
 import { missingRouter } from './modules/missing/missing.routes';
 import { productsRouter } from './modules/products/products.routes';
 import { salesRouter } from './modules/sales/sales.routes';
+import { shopsRouter } from './modules/shops/shops.routes';
 import { stockRouter } from './modules/stock/stock.routes';
+import { usersRouter } from './modules/users/users.routes';
 import { errorHandler } from './middleware/error-handler';
+import { requireAuth } from './middleware/auth';
 
 export const app = express();
 
@@ -19,6 +22,11 @@ app.use(cors());
 app.use(express.json());
 
 app.use(healthRouter);
+app.use(usersRouter);
+
+app.use(requireAuth);
+
+app.use(shopsRouter);
 app.use(productsRouter);
 app.use(stockRouter);
 app.use(salesRouter);

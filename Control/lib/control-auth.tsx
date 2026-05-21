@@ -1,0 +1,189 @@
+import {
+  clearStoredAuthSession,
+  ensureAuthStorageAvailable,
+  getStoredAuthSession,
+  saveStoredAuthSession,
+  type ControlAuthSession,
+} from '@/lib/control-auth-storage';
+import * as WebBrowser from 'expo-web-browser';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+
+type AuthModeInput = {
+  email: string;
+  password: string;
+  name?: string;
+};
+
+type AuthContextValue = {
+  session: ControlAuthSession | null;
+  loading: boolean;
+  signIn: (input: AuthModeInput) => Promise<void>;
+  signUp: (input: AuthModeInput) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshSession: () => Promise<void>;
+  signInWithOAuth: (provider: 'google' | 'facebook' | 'twitter' | 'apple') => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+const backendBaseUrl = (process.env.EXPO_PUBLIC_CONTROL_API_URL ?? 'http://localhost:4000').replace(
+  /\/$/,
+  ''
+);
+
+function getErrorMessage(error: unknown) {
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String(error.message);
+  }
+
+  return 'Erreur inconnue.';
+}
+
+async function authRequest(path: string, options: RequestInit = {}) {
+  const response = await fetch(`${backendBaseUrl}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message ?? 'Impossible de contacter CONTROL.');
+  }
+
+  return response.json() as Promise<ControlAuthSession>;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<ControlAuthSession | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refreshSession = useCallback(async () => {
+    const storedSession = await getStoredAuthSession().catch(() => null);
+
+    if (!storedSession) {
+      setSession(null);
+      return;
+    }
+
+    try {
+      const nextSession = await authRequest('/api/auth/me', {
+        headers: {
+          Authorization: `Bearer ${storedSession.sessionSecret}`,
+        },
+      });
+
+      await saveStoredAuthSession(nextSession);
+      setSession(nextSession);
+    } catch {
+      await clearStoredAuthSession();
+      setSession(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSession().finally(() => setLoading(false));
+  }, [refreshSession]);
+
+  const signIn = useCallback(async (input: AuthModeInput) => {
+    await ensureAuthStorageAvailable();
+
+    const nextSession = await authRequest('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+
+    await saveStoredAuthSession(nextSession);
+    setSession(nextSession);
+  }, []);
+
+  const signUp = useCallback(async (input: AuthModeInput) => {
+    await ensureAuthStorageAvailable();
+
+    const nextSession = await authRequest('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+
+    await saveStoredAuthSession(nextSession);
+    setSession(nextSession);
+  }, []);
+
+  const signOut = useCallback(async () => {
+    const currentSession = await getStoredAuthSession().catch(() => null);
+
+    if (currentSession?.sessionSecret) {
+      await fetch(`${backendBaseUrl}/api/auth/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${currentSession.sessionSecret}`,
+        },
+      }).catch(() => null);
+    }
+
+    await clearStoredAuthSession().catch(() => null);
+    setSession(null);
+  }, []);
+
+  const signInWithOAuth = useCallback(async (provider: 'google' | 'facebook' | 'twitter' | 'apple') => {
+    await ensureAuthStorageAvailable();
+
+    const redirectUri = 'appwrite-callback-6a099f2e000a6c4556d8://auth/callback';
+
+    const urlResponse = await fetch(
+      `${backendBaseUrl}/api/auth/oauth/${provider}/url?success=${encodeURIComponent(redirectUri)}&failure=${encodeURIComponent(redirectUri + '?error=oauth_failed')}`
+    );
+
+    if (!urlResponse.ok) {
+      const body = (await urlResponse.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(body?.message ?? "Impossible d'obtenir l'URL OAuth.");
+    }
+
+    const { url } = (await urlResponse.json()) as { url: string };
+    const result = await WebBrowser.openAuthSessionAsync(url, redirectUri, {
+      preferEphemeralSession: true,
+    });
+
+    if (result.type !== 'success') {
+      throw new Error('Connexion annulée.');
+    }
+
+    const callbackUrl = new URL(result.url);
+    const userId = callbackUrl.searchParams.get('userId');
+    const oauthSecret = callbackUrl.searchParams.get('secret');
+    const oauthError = callbackUrl.searchParams.get('error');
+
+    if (oauthError || !userId || !oauthSecret) {
+      throw new Error('Connexion OAuth échouée. Vérifie ta configuration Appwrite.');
+    }
+
+    const session = await authRequest('/api/auth/oauth/session', {
+      method: 'POST',
+      body: JSON.stringify({ userId, secret: oauthSecret }),
+    });
+
+    await saveStoredAuthSession(session);
+    setSession(session);
+  }, []);
+
+  const value = useMemo(
+    () => ({ session, loading, signIn, signUp, signOut, refreshSession, signInWithOAuth }),
+    [loading, refreshSession, session, signIn, signInWithOAuth, signOut, signUp]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useControlAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error('useControlAuth doit etre utilise dans AuthProvider.');
+  }
+
+  return context;
+}
+
+export { getErrorMessage as getAuthErrorMessage };

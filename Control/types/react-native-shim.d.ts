@@ -75,6 +75,15 @@ export type ImageProps = ViewProps & {
   resizeMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'center';
 };
 
+export type ModalProps = ViewProps & {
+  visible?: boolean;
+  transparent?: boolean;
+  animationType?: 'none' | 'slide' | 'fade';
+  onRequestClose?: () => void;
+  statusBarTranslucent?: boolean;
+  presentationStyle?: 'fullScreen' | 'pageSheet' | 'formSheet' | 'overFullScreen';
+};
+
 export const View: ComponentType<ViewProps>;
 export const Text: ComponentType<TextProps>;
 export const TextInput: ComponentType<TextInputProps>;
@@ -83,6 +92,7 @@ export const ScrollView: ComponentType<ScrollViewProps>;
 export const Image: ComponentType<ImageProps>;
 export const ActivityIndicator: ComponentType<ActivityIndicatorProps>;
 export const KeyboardAvoidingView: ComponentType<KeyboardAvoidingViewProps>;
+export const Modal: ComponentType<ModalProps>;
 
 type AnimatedValue = {
   setValue: (value: number) => void;

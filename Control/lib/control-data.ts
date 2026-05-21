@@ -1,4 +1,4 @@
-export const DEFAULT_SHOP_ID = 'default-shop';
+import { getStoredSessionSecret } from '@/lib/control-auth-storage';
 
 type BaseRow = {
   $id: string;
@@ -95,6 +95,16 @@ export type StockMovementRow = BaseRow & {
   note: string;
 };
 
+export type ShopRow = BaseRow & {
+  ownerUserId: string;
+  ownerName: string;
+  name: string;
+  currency: string;
+  contact: string;
+  address: string;
+  openingHours: string;
+};
+
 export type CreateProductInput = {
   productId?: string;
   name: string;
@@ -139,6 +149,13 @@ export type CreateCashClosureInput = {
   note?: string;
 };
 
+export type UpdateShopInput = {
+  name: string;
+  contact?: string;
+  address?: string;
+  openingHours?: string;
+};
+
 export type TodaySummary = {
   cashSalesAmount: number;
   mobileMoneySalesAmount: number;
@@ -151,7 +168,15 @@ export type TodaySummary = {
   isClosed: boolean;
 };
 
-class ApiResponseError extends Error {}
+class ApiResponseError extends Error {
+  constructor(
+    message: string,
+    public status: number
+  ) {
+    super(message);
+    this.name = 'ApiResponseError';
+  }
+}
 
 const backendBaseUrl = (process.env.EXPO_PUBLIC_CONTROL_API_URL ?? 'http://localhost:4000').replace(
   /\/$/,
@@ -178,42 +203,48 @@ export function getControlErrorMessage(error: unknown) {
   return 'Erreur inconnue.';
 }
 
+function shouldSurfaceError(error: unknown) {
+  return error instanceof ApiResponseError && (error.status === 401 || error.status === 403);
+}
+
 async function requestApi<ResponseBody>(
   path: string,
   options: RequestInit = {}
 ): Promise<ResponseBody> {
+  const sessionSecret = await getStoredSessionSecret();
+
   const response = await fetch(`${backendBaseUrl}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(sessionSecret ? { Authorization: `Bearer ${sessionSecret}` } : {}),
       ...options.headers,
     },
   });
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new ApiResponseError(body?.message ?? 'Erreur backend inconnue.');
+    throw new ApiResponseError(body?.message ?? 'Erreur backend inconnue.', response.status);
   }
 
   return response.json() as Promise<ResponseBody>;
 }
 
-export async function getCategories(shopId = DEFAULT_SHOP_ID): Promise<CategoryRow[]> {
+export async function getCategories(): Promise<CategoryRow[]> {
   try {
-    const response = await requestApi<{ categories: CategoryRow[] }>(
-      `/api/categories?shopId=${encodeURIComponent(shopId)}`
-    );
+    const response = await requestApi<{ categories: CategoryRow[] }>('/api/categories');
     return response.categories;
   } catch (error) {
+    if (shouldSurfaceError(error)) throw error;
     console.warn('Unable to load categories.', getControlErrorMessage(error));
     return [];
   }
 }
 
-export async function createCategory(input: CreateCategoryInput, shopId = DEFAULT_SHOP_ID): Promise<CategoryRow> {
+export async function createCategory(input: CreateCategoryInput): Promise<CategoryRow> {
   const response = await requestApi<{ category: CategoryRow }>('/api/categories', {
     method: 'POST',
-    body: JSON.stringify({ ...input, shopId }),
+    body: JSON.stringify(input),
   });
   return response.category;
 }
@@ -222,50 +253,49 @@ export async function deleteCategory(categoryId: string): Promise<void> {
   await requestApi(`/api/categories/${categoryId}`, { method: 'DELETE' });
 }
 
-export async function getProducts(shopId = DEFAULT_SHOP_ID): Promise<ProductRow[]> {
+export async function getProducts(): Promise<ProductRow[]> {
   try {
-    const response = await requestApi<{ products: ProductRow[] }>(
-      `/api/products?shopId=${encodeURIComponent(shopId)}`
-    );
+    const response = await requestApi<{ products: ProductRow[] }>('/api/products');
 
     return response.products;
   } catch (error) {
+    if (shouldSurfaceError(error)) throw error;
     console.warn('Unable to load products from CONTROL API.', getControlErrorMessage(error));
     return [];
   }
 }
 
-export async function createProduct(input: CreateProductInput, shopId = DEFAULT_SHOP_ID) {
+export async function createProduct(input: CreateProductInput) {
   const response = await requestApi<{ product: ProductRow }>('/api/products', {
     method: 'POST',
-    body: JSON.stringify({ ...input, shopId }),
+    body: JSON.stringify(input),
   });
 
   return response.product;
 }
 
-export async function createSale(input: CreateSaleInput, shopId = DEFAULT_SHOP_ID) {
+export async function createSale(input: CreateSaleInput) {
   const response = await requestApi<{ sale: SaleRow }>('/api/sales', {
     method: 'POST',
-    body: JSON.stringify({ ...input, shopId }),
+    body: JSON.stringify(input),
   });
 
   return response.sale;
 }
 
-export async function createExpense(input: CreateExpenseInput, shopId = DEFAULT_SHOP_ID) {
+export async function createExpense(input: CreateExpenseInput) {
   const response = await requestApi<{ expense: ExpenseRow }>('/api/expenses', {
     method: 'POST',
-    body: JSON.stringify({ ...input, shopId }),
+    body: JSON.stringify(input),
   });
 
   return response.expense;
 }
 
-export async function createMissing(input: CreateMissingInput, shopId = DEFAULT_SHOP_ID) {
+export async function createMissing(input: CreateMissingInput) {
   const response = await requestApi<{ missing: MissingRow }>('/api/missings', {
     method: 'POST',
-    body: JSON.stringify({ ...input, shopId }),
+    body: JSON.stringify(input),
   });
 
   return response.missing;
@@ -273,12 +303,10 @@ export async function createMissing(input: CreateMissingInput, shopId = DEFAULT_
 
 export async function getRecentMissings(
   limit = 10,
-  date?: string,
-  shopId = DEFAULT_SHOP_ID
+  date?: string
 ): Promise<MissingRow[]> {
   try {
     const query = new URLSearchParams({
-      shopId,
       limit: String(limit),
     });
 
@@ -290,34 +318,34 @@ export async function getRecentMissings(
 
     return response.missings;
   } catch (error) {
+    if (shouldSurfaceError(error)) throw error;
     console.warn('Unable to load missings from CONTROL API.', getControlErrorMessage(error));
     return [];
   }
 }
 
 export async function getActivityLogs(
-  shopId = DEFAULT_SHOP_ID,
   limit = 20
 ): Promise<ActivityLogRow[]> {
   try {
     const response = await requestApi<{ logs: ActivityLogRow[] }>(
-      `/api/activity-logs?shopId=${encodeURIComponent(shopId)}&limit=${limit}`
+      `/api/activity-logs?limit=${limit}`
     );
 
     return response.logs;
   } catch (error) {
+    if (shouldSurfaceError(error)) throw error;
     console.warn('Unable to load activity logs from CONTROL API.', getControlErrorMessage(error));
     return [];
   }
 }
 
 export async function createCashClosure(
-  input: CreateCashClosureInput,
-  shopId = DEFAULT_SHOP_ID
+  input: CreateCashClosureInput
 ): Promise<CashClosureRow> {
   const response = await requestApi<{ closure: CashClosureRow }>('/api/cash-closures', {
     method: 'POST',
-    body: JSON.stringify({ ...input, shopId }),
+    body: JSON.stringify(input),
   });
 
   return response.closure;
@@ -325,12 +353,10 @@ export async function createCashClosure(
 
 export async function getCashClosures(
   limit = 30,
-  date?: string,
-  shopId = DEFAULT_SHOP_ID
+  date?: string
 ): Promise<CashClosureRow[]> {
   try {
     const query = new URLSearchParams({
-      shopId,
       limit: String(limit),
     });
 
@@ -342,6 +368,7 @@ export async function getCashClosures(
 
     return response.closures;
   } catch (error) {
+    if (shouldSurfaceError(error)) throw error;
     console.warn('Unable to load cash closures from CONTROL API.', getControlErrorMessage(error));
     return [];
   }
@@ -349,12 +376,10 @@ export async function getCashClosures(
 
 export async function getRecentStockMovements(
   limit = 6,
-  date?: string,
-  shopId = DEFAULT_SHOP_ID
+  date?: string
 ): Promise<StockMovementRow[]> {
   try {
     const query = new URLSearchParams({
-      shopId,
       limit: String(limit),
     });
 
@@ -366,6 +391,7 @@ export async function getRecentStockMovements(
 
     return response.movements;
   } catch (error) {
+    if (shouldSurfaceError(error)) throw error;
     console.warn('Unable to load stock movements from CONTROL API.', getControlErrorMessage(error));
     return [];
   }
@@ -400,12 +426,10 @@ const emptyAnalytics: AnalyticsData = {
 export async function getAnalytics(
   type: AnalyticsType,
   days: number,
-  date?: string,
-  shopId = DEFAULT_SHOP_ID
+  date?: string
 ): Promise<AnalyticsData> {
   try {
     const query = new URLSearchParams({
-      shopId,
       type,
       days: String(days),
     });
@@ -417,26 +441,35 @@ export async function getAnalytics(
     );
     return response.analytics;
   } catch (error) {
+    if (shouldSurfaceError(error)) throw error;
     console.warn('Unable to load analytics.', getControlErrorMessage(error));
     return emptyAnalytics;
   }
 }
 
 export async function getTodaySummary(
-  date?: string,
-  shopId = DEFAULT_SHOP_ID
+  date?: string
 ): Promise<TodaySummary> {
   try {
-    const query = new URLSearchParams({ shopId });
+    const query = new URLSearchParams();
     if (date) query.set('date', date);
 
-    const response = await requestApi<{ summary: TodaySummary }>(
-      `/api/summary/today?${query.toString()}`
-    );
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const response = await requestApi<{ summary: TodaySummary }>(`/api/summary/today${suffix}`);
 
     return response.summary;
   } catch (error) {
+    if (shouldSurfaceError(error)) throw error;
     console.warn('Unable to load today summary from CONTROL API.', getControlErrorMessage(error));
     return emptyTodaySummary;
   }
+}
+
+export async function updateCurrentShop(input: UpdateShopInput): Promise<ShopRow> {
+  const response = await requestApi<{ shop: ShopRow }>('/api/shops/current', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+
+  return response.shop;
 }

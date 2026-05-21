@@ -33,6 +33,12 @@ export async function createCategoryRecord(shopId: string, name: string, emoji: 
   return toCategoryRow(doc);
 }
 
-export async function deleteCategoryRecord(categoryId: string): Promise<void> {
+export async function deleteCategoryRecord(categoryId: string, shopId: string): Promise<void> {
+  const doc = await databases.getDocument(DATABASE_ID, COLLECTIONS.categories, categoryId);
+
+  if (doc.shopId !== shopId) {
+    throw new Error('Categorie introuvable pour cette boutique.');
+  }
+
   await databases.deleteDocument(DATABASE_ID, COLLECTIONS.categories, categoryId);
 }

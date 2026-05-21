@@ -1,7 +1,6 @@
 import {
   createCategory,
   createProduct,
-  DEFAULT_SHOP_ID,
   deleteCategory,
   getCategories,
   getControlErrorMessage,
@@ -175,7 +174,7 @@ export default function StockScreen() {
       $id: tempProductId,
       $createdAt: isExistingSupply ? selectedProduct!.$createdAt : now,
       $updatedAt: now,
-      shopId: DEFAULT_SHOP_ID,
+      shopId: isExistingSupply ? selectedProduct!.shopId : 'pending-shop',
       name: isExistingSupply ? selectedProduct!.name : name.trim(),
       category: isExistingSupply ? selectedProduct!.category : (selectedCategory?.name ?? ''),
       emoji: isExistingSupply ? selectedProduct!.emoji : (selectedCategory?.emoji ?? '📦'),

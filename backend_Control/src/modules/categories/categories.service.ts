@@ -19,10 +19,10 @@ export async function createCategory(body: Record<string, unknown>, shopId: stri
   return createCategoryRecord(shopId, name, emoji);
 }
 
-export async function deleteCategory(categoryId: string) {
+export async function deleteCategory(categoryId: string, shopId: string) {
   if (!categoryId) {
     throw new Error('ID de categorie manquant.');
   }
 
-  await deleteCategoryRecord(categoryId);
+  await deleteCategoryRecord(categoryId, shopId);
 }

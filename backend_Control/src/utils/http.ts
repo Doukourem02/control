@@ -1,11 +1,21 @@
 import type { Request, Response } from 'express';
 
-const defaultShopId = 'default-shop';
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number
+  ) {
+    super(message);
+    this.name = 'HttpError';
+  }
+}
 
 export function getShopId(request: Request) {
-  const body = request.body as { shopId?: unknown } | undefined;
+  if (!request.auth?.shopId) {
+    throw new HttpError('Boutique active introuvable.', 401);
+  }
 
-  return String(request.query.shopId || body?.shopId || defaultShopId);
+  return request.auth.shopId;
 }
 
 export function parseAmount(value: unknown) {

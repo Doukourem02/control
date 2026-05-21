@@ -1,8 +1,11 @@
 import { SellerActionTile, type SellerAction } from '@/components/seller-action-tile';
+import { useControlAuth } from '@/lib/control-auth';
 import {
+  getControlErrorMessage,
   getAnalytics,
   getRecentStockMovements,
   getTodaySummary,
+  updateCurrentShop,
   type AnalyticsData,
   type AnalyticsType,
   type StockMovementRow,
@@ -11,14 +14,18 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Animated,
   Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -59,6 +66,31 @@ const quickActions: SellerAction[] = [
 
 function formatMoney(value: number) {
   return `${Math.round(value).toLocaleString('fr-FR')} F`;
+}
+
+function needsShopSetup(session: ReturnType<typeof useControlAuth>['session']) {
+  if (!session) return false;
+
+  const shopName = session.shop.name.trim();
+  const ownerName = session.shop.ownerName.trim() || session.user.name.trim();
+
+  return (
+    !shopName ||
+    shopName === 'Ma boutique' ||
+    (!!ownerName && shopName.toLowerCase() === `boutique ${ownerName}`.toLowerCase())
+  );
+}
+
+function getInitials(value: string) {
+  const words = value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (words.length === 0) return 'C';
+
+  return words.map((word) => word[0]?.toUpperCase()).join('');
 }
 
 function NavAssetIcon({
@@ -170,34 +202,241 @@ function SettingsRow({
   icon,
   title,
   subtitle,
+  value,
+  onPress,
+  destructive = false,
 }: {
   icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
   title: string;
-  subtitle: string;
+  subtitle?: string;
+  value?: string;
+  onPress?: () => void;
+  destructive?: boolean;
 }) {
   return (
     <Pressable
+      onPress={onPress}
       style={({ pressed }: { pressed: boolean }) => ({
-        minHeight: 58,
-        borderRadius: 22,
-        borderCurve: 'continuous',
-        backgroundColor: '#F7F7F7',
-        paddingHorizontal: 16,
+        minHeight: subtitle ? 54 : 45,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 13,
+        gap: 12,
         opacity: pressed ? 0.68 : 1,
       })}
     >
-      <MaterialCommunityIcons name={icon} size={22} color="#777777" />
+      <MaterialCommunityIcons name={icon} size={21} color={destructive ? '#B42318' : '#111111'} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ color: '#111111', fontSize: 15, fontWeight: '700' }}>{title}</Text>
-        <Text numberOfLines={1} style={{ color: '#A4A4A4', fontSize: 13, marginTop: 2 }}>
-          {subtitle}
+        <Text
+          numberOfLines={1}
+          style={{
+            color: destructive ? '#B42318' : '#111111',
+            fontSize: subtitle ? 15 : 16,
+            fontWeight: subtitle ? '700' : '500',
+          }}
+        >
+          {title}
         </Text>
+        {subtitle ? (
+          <Text numberOfLines={1} style={{ color: '#A4A4A4', fontSize: 13, marginTop: 2 }}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
-      <Feather name="chevron-right" size={20} color="#B0B0B0" />
+      {value ? (
+        <Text
+          numberOfLines={1}
+          style={{
+            color: '#555555',
+            fontSize: 15,
+            fontWeight: '500',
+            maxWidth: 166,
+            textAlign: 'right',
+          }}
+        >
+          {value}
+        </Text>
+      ) : null}
+      {onPress ? <Feather name="chevron-right" size={19} color="#B0B0B0" /> : null}
     </Pressable>
+  );
+}
+
+function SettingsSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <View
+      style={{
+        borderRadius: 22,
+        borderCurve: 'continuous',
+        backgroundColor: '#F7F7F7',
+        paddingHorizontal: 18,
+        paddingVertical: 16,
+        gap: 7,
+      }}
+    >
+      <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>{title}</Text>
+      <View>{children}</View>
+    </View>
+  );
+}
+
+function ShopSettingsModal({
+  visible,
+  compact,
+  onClose,
+  onSaved,
+}: {
+  visible: boolean;
+  compact: boolean;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { session } = useControlAuth();
+  const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
+  const [address, setAddress] = useState('');
+  const [openingHours, setOpeningHours] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (!visible || !session) return;
+
+    setName(needsShopSetup(session) ? '' : session.shop.name);
+    setContact(session.shop.contact ?? '');
+    setAddress(session.shop.address ?? '');
+    setOpeningHours(session.shop.openingHours ?? '');
+    setErrorMessage('');
+  }, [session, visible]);
+
+  async function handleSave() {
+    const trimmedName = name.trim();
+
+    if (trimmedName.length < 2) {
+      setErrorMessage('Donne un nom de boutique plus complet.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage('');
+
+    try {
+      await updateCurrentShop({
+        name: trimmedName,
+        contact,
+        address,
+        openingHours,
+      });
+      await onSaved();
+      onClose();
+    } catch (error) {
+      setErrorMessage(getControlErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: 'rgba(0, 0, 0, 0.24)',
+        }}
+      >
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 24,
+            paddingTop: 18,
+            paddingBottom: compact ? 24 : 34,
+            gap: 14,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ gap: 2 }}>
+              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Boutique</Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+                Nom et informations visibles dans CONTROL
+              </Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }: { pressed: boolean }) => ({
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#F5F5F5',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.68 : 1,
+              })}
+            >
+              <Feather name="x" size={20} color="#111111" />
+            </Pressable>
+          </View>
+
+          {[
+            { label: 'Nom de la boutique', value: name, onChangeText: setName, placeholder: 'Ex. Chez Awa' },
+            { label: 'Contact', value: contact, onChangeText: setContact, placeholder: 'Téléphone ou WhatsApp' },
+            { label: 'Adresse', value: address, onChangeText: setAddress, placeholder: 'Quartier, marché, rue' },
+            { label: 'Horaires', value: openingHours, onChangeText: setOpeningHours, placeholder: 'Ex. 8h - 20h' },
+          ].map((field) => (
+            <View key={field.label} style={{ gap: 7 }}>
+              <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>{field.label}</Text>
+              <TextInput
+                value={field.value}
+                onChangeText={field.onChangeText}
+                placeholder={field.placeholder}
+                placeholderTextColor="#A8A8A8"
+                style={{
+                  height: 52,
+                  borderRadius: 18,
+                  backgroundColor: '#F7F7F7',
+                  paddingHorizontal: 16,
+                  color: '#111111',
+                  fontSize: 16,
+                  fontWeight: field.label === 'Nom de la boutique' ? '700' : '500',
+                }}
+              />
+            </View>
+          ))}
+
+          {errorMessage ? (
+            <Text style={{ color: '#B42318', fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
+          ) : null}
+
+          <Pressable
+            disabled={saving}
+            onPress={handleSave}
+            style={({ pressed }: { pressed: boolean }) => ({
+              height: 56,
+              borderRadius: 22,
+              backgroundColor: '#050505',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed || saving ? 0.72 : 1,
+            })}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
+            )}
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
@@ -1160,26 +1399,114 @@ function MissingMenu({
   );
 }
 
-function ProfileMenu({ compact }: { compact: boolean }) {
+function ProfileMenu({ compact, onEditShop }: { compact: boolean; onEditShop: () => void }) {
+  const { session, signOut } = useControlAuth();
+  const shopName = session?.shop.name || 'Boutique';
+  const email = session?.user.email || 'Session active';
+  const contact = session?.shop.contact || 'Non renseigné';
+  const address = session?.shop.address || 'Non renseignée';
+  const openingHours = session?.shop.openingHours || 'Non renseignés';
+  const currency = session?.shop.currency || 'FCFA';
+
   return (
-    <View style={{ marginTop: compact ? 24 : 34, marginBottom: compact ? 46 : 62, gap: 18 }}>
-      <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Réglages</Text>
-      <View style={{ gap: 13 }}>
-        <SettingsRow icon="store" title="Boutique" subtitle="Nom, contact, adresse, horaires" />
-        <SettingsRow icon="cash-register" title="Caisse" subtitle="Devise, paiements, heure de clôture" />
-        <SettingsRow icon="account-group" title="Équipe" subtitle="Vendeuse, rôle, accès autorisés" />
-        <SettingsRow icon="bell-outline" title="Alertes" subtitle="Stock faible, clôture oubliée, écarts" />
-        <SettingsRow icon="eye-outline" title="Affichage" subtitle="Montants visibles, langue, unités" />
-        <SettingsRow icon="database-outline" title="Données" subtitle="Sauvegarde, export, historique" />
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{
+        paddingTop: compact ? 18 : 26,
+        paddingBottom: compact ? 38 : 54,
+        gap: 18,
+      }}
+    >
+      <View style={{ alignItems: 'center', gap: 9 }}>
+        <View
+          style={{
+            width: compact ? 78 : 86,
+            height: compact ? 78 : 86,
+            borderRadius: compact ? 39 : 43,
+            backgroundColor: '#E8F4EF',
+            borderWidth: 1,
+            borderColor: '#D8E9E1',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#08784F', fontSize: 24, fontWeight: '800' }}>
+            {getInitials(shopName)}
+          </Text>
+        </View>
+        <View style={{ alignItems: 'center', gap: 2 }}>
+          <Text
+            numberOfLines={1}
+            style={{ color: '#050505', fontSize: 25, lineHeight: 30, fontWeight: '800' }}
+          >
+            {shopName}
+          </Text>
+          <Text numberOfLines={1} style={{ color: '#6F6F6F', fontSize: 15, fontWeight: '500' }}>
+            {email}
+          </Text>
+        </View>
+        <Pressable
+          onPress={onEditShop}
+          style={({ pressed }: { pressed: boolean }) => ({
+            height: 42,
+            paddingHorizontal: 24,
+            borderRadius: 22,
+            borderWidth: 1.5,
+            borderColor: '#08784F',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.65 : 1,
+            marginTop: 8,
+          })}
+        >
+          <Text style={{ color: '#08784F', fontSize: 14, fontWeight: '800' }}>
+            Modifier
+          </Text>
+        </Pressable>
       </View>
-    </View>
+
+      <View style={{ gap: 14, marginTop: compact ? 2 : 8 }}>
+        <SettingsSection title="Boutique">
+          <SettingsRow icon="store" title="Nom" value={shopName} onPress={onEditShop} />
+          <SettingsRow icon="phone-outline" title="Contact" value={contact} onPress={onEditShop} />
+          <SettingsRow icon="map-marker-outline" title="Adresse" value={address} onPress={onEditShop} />
+          <SettingsRow icon="clock-outline" title="Horaires" value={openingHours} onPress={onEditShop} />
+        </SettingsSection>
+
+        <SettingsSection title="Caisse">
+          <SettingsRow icon="cash-register" title="Devise" value={currency} />
+          <SettingsRow icon="credit-card-outline" title="Paiements" value="Cash, Mobile Money" />
+          <SettingsRow icon="calendar-clock" title="Clôture" value="Journalière" />
+        </SettingsSection>
+
+        <SettingsSection title="Préférences">
+          <SettingsRow icon="bell-outline" title="Notifications" value="Activées" />
+          <SettingsRow icon="eye-outline" title="Affichage" value="Montants visibles" />
+          <SettingsRow icon="account-group" title="Équipe" value="Accès vendeuse" />
+          <SettingsRow icon="database-outline" title="Données" value="Sauvegarde" />
+        </SettingsSection>
+
+        <SettingsSection title="Compte">
+          <SettingsRow icon="email-outline" title="Email" value={email} />
+          <SettingsRow
+            icon="logout"
+            title="Déconnexion"
+            value="Quitter"
+            onPress={signOut}
+            destructive
+          />
+        </SettingsSection>
+      </View>
+    </ScrollView>
   );
 }
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { session, refreshSession } = useControlAuth();
   const [activeMenu, setActiveMenu] = useState<NavKey>('home');
   const [amountsVisible, setAmountsVisible] = useState(true);
+  const [shopSettingsVisible, setShopSettingsVisible] = useState(false);
   const [todaySummary, setTodaySummary] = useState<TodaySummary>({
     cashSalesAmount: 0,
     mobileMoneySalesAmount: 0,
@@ -1191,6 +1518,7 @@ export default function HomeScreen() {
     closureCount: 0,
     isClosed: false,
   });
+  const promptedShopSetup = useRef(false);
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTranslateY = useRef(new Animated.Value(0)).current;
   const { width, height } = useWindowDimensions();
@@ -1251,6 +1579,13 @@ export default function HomeScreen() {
       isMounted = false;
     };
   }, []));
+
+  useEffect(() => {
+    if (promptedShopSetup.current || !needsShopSetup(session)) return;
+
+    promptedShopSetup.current = true;
+    setShopSettingsVisible(true);
+  }, [session]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -1437,7 +1772,7 @@ export default function HomeScreen() {
                   }
                 />
               ) : (
-                <ProfileMenu compact={compact} />
+                <ProfileMenu compact={compact} onEditShop={() => setShopSettingsVisible(true)} />
               )}
             </Animated.View>
           </View>
@@ -1445,6 +1780,12 @@ export default function HomeScreen() {
           <BottomNav active={activeMenu} compact={compact} onChange={handleTabChange} />
         </View>
       </View>
+      <ShopSettingsModal
+        visible={shopSettingsVisible}
+        compact={compact}
+        onClose={() => setShopSettingsVisible(false)}
+        onSaved={refreshSession}
+      />
     </SafeAreaView>
   );
 }
