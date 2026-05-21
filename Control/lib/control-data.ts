@@ -284,6 +284,24 @@ export async function createProduct(input: CreateProductInput) {
   return response.product;
 }
 
+export type UpdateProductInput = {
+  name?: string;
+  emoji?: string;
+  sellingUnitPrice?: number;
+};
+
+export async function updateProduct(productId: string, input: UpdateProductInput): Promise<ProductRow> {
+  const response = await requestApi<{ product: ProductRow }>(`/api/products/${productId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return response.product;
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  await requestApi(`/api/products/${productId}`, { method: 'DELETE' });
+}
+
 export async function createSale(input: CreateSaleInput) {
   const response = await requestApi<{ sale: SaleRow }>('/api/sales', {
     method: 'POST',
@@ -482,4 +500,134 @@ export async function updateCurrentShop(input: UpdateShopInput): Promise<ShopRow
   });
 
   return response.shop;
+}
+
+export type NotificationType = 'stock_low' | 'closure_reminder' | 'cash_gap';
+
+export type NotificationRow = BaseRow & {
+  shopId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: string;
+};
+
+export async function getNotifications(limit = 30): Promise<NotificationRow[]> {
+  try {
+    const response = await requestApi<{ notifications: NotificationRow[] }>(
+      `/api/notifications?limit=${limit}`
+    );
+    return response.notifications;
+  } catch (error) {
+    if (shouldSurfaceControlError(error)) throw error;
+    logControlError('load-notifications', error);
+    return [];
+  }
+}
+
+export async function markNotificationRead(id: string): Promise<NotificationRow> {
+  const response = await requestApi<{ notification: NotificationRow }>(
+    `/api/notifications/${id}/read`,
+    { method: 'PATCH' }
+  );
+  return response.notification;
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await requestApi('/api/notifications/read-all', { method: 'PATCH' });
+}
+
+async function downloadApiFile(path: string): Promise<{ data: string; filename: string }> {
+  const sessionSecret = await getStoredSessionSecret();
+
+  let response: Response;
+  try {
+    response = await fetch(`${backendBaseUrl}${path}`, {
+      headers: sessionSecret ? { Authorization: `Bearer ${sessionSecret}` } : {},
+    });
+  } catch (error) {
+    throw createNetworkError(error);
+  }
+
+  if (!response.ok) {
+    throw await createApiError(response);
+  }
+
+  const contentDisposition = response.headers.get('Content-Disposition') ?? '';
+  const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+  const filename = filenameMatch ? filenameMatch[1] : 'export';
+
+  const arrayBuffer = await response.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  let binary = '';
+  for (let i = 0; i < uint8Array.byteLength; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  const base64 = btoa(binary);
+
+  return { data: base64, filename };
+}
+
+export async function exportDailyReport(date: string): Promise<{ data: string; filename: string }> {
+  return downloadApiFile(`/api/exports/daily?date=${encodeURIComponent(date)}`);
+}
+
+export async function exportHistoryCSV(from: string, to: string): Promise<{ data: string; filename: string }> {
+  return downloadApiFile(`/api/exports/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+}
+
+// ── Team ─────────────────────────────────────────────────────────────────────
+
+export type MemberStatus = 'pending' | 'active' | 'removed';
+
+export type MemberRow = BaseRow & {
+  shopId: string;
+  email: string;
+  name: string;
+  userId: string | null;
+  role: 'seller';
+  inviteCode: string;
+  status: MemberStatus;
+};
+
+export async function getTeamMembers(): Promise<MemberRow[]> {
+  try {
+    const response = await requestApi<{ members: MemberRow[] }>('/api/team/members');
+    return response.members;
+  } catch (error) {
+    if (shouldSurfaceControlError(error)) throw error;
+    logControlError('load-team-members', error);
+    return [];
+  }
+}
+
+export async function getMyRole(): Promise<'owner' | 'seller'> {
+  try {
+    const response = await requestApi<{ role: 'owner' | 'seller' }>('/api/team/role');
+    return response.role;
+  } catch {
+    return 'owner';
+  }
+}
+
+export type InviteMemberInput = { email: string; name: string };
+
+export async function inviteTeamMember(input: InviteMemberInput): Promise<MemberRow> {
+  const response = await requestApi<{ member: MemberRow }>('/api/team/invite', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return response.member;
+}
+
+export async function removeTeamMember(memberId: string): Promise<void> {
+  await requestApi(`/api/team/members/${memberId}`, { method: 'DELETE' });
+}
+
+export async function joinShop(inviteCode: string): Promise<MemberRow> {
+  const response = await requestApi<{ member: MemberRow }>('/api/team/join', {
+    method: 'POST',
+    body: JSON.stringify({ inviteCode }),
+  });
+  return response.member;
 }

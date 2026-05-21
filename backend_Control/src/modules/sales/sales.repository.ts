@@ -2,6 +2,7 @@ import { AppwriteException, ID, Query, type Models } from 'node-appwrite';
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 import type { PaymentMethod, SaleRow } from '../../types/control';
 import { userError } from '../../utils/http';
+import { triggerStockLowAlert } from '../notifications/notifications.triggers';
 
 export type CreateSaleInput = {
   shopId: string;
@@ -65,9 +66,13 @@ export async function createSaleRecord(input: CreateSaleInput): Promise<SaleRow>
     paymentMethod: input.paymentMethod,
   });
 
+  const newQuantity = currentQuantity - input.quantity;
+
   await databases.updateDocument(DATABASE_ID, COLLECTIONS.products, input.productId, {
-    quantity: currentQuantity - input.quantity,
+    quantity: newQuantity,
   });
+
+  triggerStockLowAlert(input.shopId, productDoc['name'] as string, currentQuantity, newQuantity).catch(() => {});
 
   await databases.createDocument(DATABASE_ID, COLLECTIONS.stockMovements, ID.unique(), {
     shopId: input.shopId,
@@ -114,4 +119,13 @@ export async function listSalesInRange(shopId: string, from: Date, to: Date): Pr
   ]);
 
   return response.documents.map(toSaleRow);
+}
+
+export async function productHasSales(shopId: string, productId: string): Promise<boolean> {
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.sales, [
+    Query.equal('shopId', shopId),
+    Query.equal('productId', productId),
+    Query.limit(1),
+  ]);
+  return response.total > 0;
 }

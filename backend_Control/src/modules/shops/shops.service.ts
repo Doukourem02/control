@@ -1,12 +1,17 @@
 import { userError } from '../../utils/http';
+import { getActiveMemberByUserId } from '../team/team.repository';
 import { createShopForUser, getShopById, updateShopById, type UpdateShopInput } from './shops.repository';
 
 export async function getOrCreateCurrentShop(userId: string, ownerName: string) {
-  const existingShop = await getShopById(userId);
-
-  if (existingShop) {
-    return existingShop;
+  // Seller: look up active membership in another shop first
+  const membership = await getActiveMemberByUserId(userId);
+  if (membership) {
+    const ownerShop = await getShopById(membership.shopId);
+    if (ownerShop) return ownerShop;
   }
+
+  const existingShop = await getShopById(userId);
+  if (existingShop) return existingShop;
 
   return createShopForUser(userId, ownerName);
 }

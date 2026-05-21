@@ -8,6 +8,9 @@ import { cashRouter } from './modules/cash/cash.routes';
 import { expensesRouter } from './modules/expenses/expenses.routes';
 import { healthRouter } from './modules/health/health.routes';
 import { missingRouter } from './modules/missing/missing.routes';
+import { exportsRouter } from './modules/exports/exports.routes';
+import { teamRouter } from './modules/team/team.routes';
+import { notificationsRouter } from './modules/notifications/notifications.routes';
 import { productsRouter } from './modules/products/products.routes';
 import { salesRouter } from './modules/sales/sales.routes';
 import { shopsRouter } from './modules/shops/shops.routes';
@@ -36,5 +39,8 @@ app.use(missingRouter);
 app.use(activityRouter);
 app.use(analyticsRouter);
 app.use(categoriesRouter);
+app.use(notificationsRouter);
+app.use(exportsRouter);
+app.use(teamRouter);
 
 app.use(errorHandler);

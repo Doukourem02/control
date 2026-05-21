@@ -1,19 +1,32 @@
 import { SellerActionTile, type SellerAction } from '@/components/seller-action-tile';
 import { useControlAuth } from '@/lib/control-auth';
 import {
+  exportDailyReport,
+  exportHistoryCSV,
   getControlErrorMessage,
   getAnalytics,
+  getNotifications,
   getRecentStockMovements,
+  getTeamMembers,
   getTodaySummary,
+  inviteTeamMember,
+  joinShop,
+  markAllNotificationsRead,
+  markNotificationRead,
+  removeTeamMember,
   updateCurrentShop,
   type AnalyticsData,
   type AnalyticsType,
+  type MemberRow,
+  type NotificationRow,
   type ProductUnit,
   type StockMovementRow,
   type TodaySummary,
 } from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import {
@@ -838,7 +851,7 @@ function DisplaySettingsModal({
                   Visibles au démarrage
                 </Text>
                 <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                  Tu peux toujours masquer avec l’icône œil
+                  {"Tu peux toujours masquer avec l'icône œil"}
                 </Text>
               </View>
               <MaterialCommunityIcons
@@ -1157,84 +1170,294 @@ function TeamSettingsModal({
   onClose: () => void;
 }) {
   const { session } = useControlAuth();
-  const ownerName = session?.shop.ownerName || session?.user.name || 'Propriétaire';
-  const email = session?.user.email || 'Session active';
+  const ownerName = session?.shop.ownerName || session?.user.name || 'Proprietaire';
+  const ownerEmail = session?.user.email || '';
+  const userId = session?.user.id ?? '';
+  const shopId = session?.shop.$id ?? '';
+  const isOwner = !userId || !shopId || userId === shopId;
+
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [inviteVisible, setInviteVisible] = useState(false);
+  const [joinVisible, setJoinVisible] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  function flash(msg: string, ok = false) {
+    setFeedback({ msg, ok });
+    setTimeout(() => setFeedback(null), 3500);
+  }
+
+  useEffect(() => {
+    if (!visible) return;
+    setLoadingMembers(true);
+    getTeamMembers()
+      .then(setMembers)
+      .finally(() => setLoadingMembers(false));
+  }, [visible]);
+
+  async function handleInvite() {
+    if (inviteLoading) return;
+    setInviteLoading(true);
+    try {
+      const member = await inviteTeamMember({ name: inviteName, email: inviteEmail });
+      setMembers((prev) => [member, ...prev]);
+      setInviteName('');
+      setInviteEmail('');
+      setInviteVisible(false);
+      flash(`Code d'invitation : ${member.inviteCode}`, true);
+    } catch (err: any) {
+      flash(getControlErrorMessage(err));
+    } finally {
+      setInviteLoading(false);
+    }
+  }
+
+  async function handleRemove(memberId: string) {
+    try {
+      await removeTeamMember(memberId);
+      setMembers((prev) => prev.filter((m) => m.$id !== memberId));
+    } catch (err: any) {
+      flash(getControlErrorMessage(err));
+    }
+  }
+
+  async function handleJoin() {
+    if (joinLoading) return;
+    setJoinLoading(true);
+    try {
+      await joinShop(joinCode.trim().toUpperCase());
+      setJoinCode('');
+      setJoinVisible(false);
+      flash('Tu as rejoint la boutique. Reconnecte-toi pour activer.', true);
+    } catch (err: any) {
+      flash(getControlErrorMessage(err));
+    } finally {
+      setJoinLoading(false);
+    }
+  }
+
+  const activeMembers = members.filter((m) => m.status === 'active');
+  const pendingMembers = members.filter((m) => m.status === 'pending');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.24)' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
-            paddingHorizontal: 24,
-            paddingTop: 18,
-            paddingBottom: compact ? 24 : 34,
-            gap: 16,
-          }}
+        <ScrollView
+          style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '85%' }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 18, paddingBottom: compact ? 24 : 34, gap: 16 }}
+          showsVerticalScrollIndicator={false}
         >
+          {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ gap: 2 }}>
-              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Équipe</Text>
-              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
-                Propriétaire, vendeuses et accès
-              </Text>
+              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Equipe</Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>Proprietaire, vendeuses et acces</Text>
             </View>
             <Pressable
               onPress={onClose}
               style={({ pressed }: { pressed: boolean }) => ({
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                backgroundColor: '#F5F5F5',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: pressed ? 0.68 : 1,
+                width: 38, height: 38, borderRadius: 19, backgroundColor: '#F5F5F5',
+                alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.68 : 1,
               })}
             >
               <Feather name="x" size={20} color="#111111" />
             </Pressable>
           </View>
 
-          <View style={{ borderRadius: 20, backgroundColor: '#F7F7F7', padding: 16, gap: 12 }}>
+          {/* Feedback */}
+          {feedback ? (
+            <View style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: feedback.ok ? '#E8F8F0' : '#FFF3CD' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: feedback.ok ? '#08784F' : '#856404' }}>{feedback.msg}</Text>
+            </View>
+          ) : null}
+
+          {/* Proprietaire */}
+          <View style={{ borderRadius: 20, backgroundColor: '#F7F7F7', padding: 14 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View
-                style={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: 23,
-                  backgroundColor: '#E8F4EF',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ color: '#08784F', fontSize: 16, fontWeight: '800' }}>{getInitials(ownerName)}</Text>
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8F4EF', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#08784F', fontSize: 15, fontWeight: '800' }}>{getInitials(ownerName)}</Text>
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
-                  {ownerName}
-                </Text>
-                <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
-                  {email}
-                </Text>
+                <Text numberOfLines={1} style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>{ownerName}</Text>
+                {ownerEmail ? <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 1 }}>{ownerEmail}</Text> : null}
               </View>
-              <Text style={{ color: '#08784F', fontSize: 12, fontWeight: '800' }}>Owner</Text>
+              <Text style={{ color: '#08784F', fontSize: 11, fontWeight: '800' }}>Owner</Text>
             </View>
           </View>
 
-          <View style={{ borderRadius: 20, backgroundColor: '#F7F7F7', padding: 16, gap: 8 }}>
-            <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>Invitations</Text>
-            <Text style={{ color: '#8E8E8E', fontSize: 13, lineHeight: 18, fontWeight: '600' }}>
-              La structure est prête. La prochaine étape sera d’ajouter les invitations, rôles vendeuse et accès
-              limités côté backend.
-            </Text>
-          </View>
-        </View>
+          {/* Membres actifs */}
+          {loadingMembers ? (
+            <ActivityIndicator size="small" color="#111111" style={{ alignSelf: 'center', marginVertical: 8 }} />
+          ) : activeMembers.length > 0 ? (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Vendeuses actives</Text>
+              {activeMembers.map((m) => (
+                <View key={m.$id} style={{ borderRadius: 16, backgroundColor: '#F7F7F7', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#EAF0FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#2A5BE8', fontSize: 13, fontWeight: '800' }}>{getInitials(m.name || m.email)}</Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>{m.name || m.email}</Text>
+                    {m.name ? <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600' }}>{m.email}</Text> : null}
+                  </View>
+                  {isOwner ? (
+                    <Pressable
+                      onPress={() => handleRemove(m.$id)}
+                      style={({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
+                    >
+                      <Feather name="x" size={16} color="#BBBBBB" />
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          {/* Invitations en attente */}
+          {isOwner && pendingMembers.length > 0 ? (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>En attente</Text>
+              {pendingMembers.map((m) => (
+                <View key={m.$id} style={{ borderRadius: 16, backgroundColor: '#F7F7F7', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#F5F0FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Feather name="clock" size={15} color="#8B5CF6" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>{m.name || m.email}</Text>
+                    <Text style={{ color: '#8B5CF6', fontSize: 12, fontWeight: '700', marginTop: 1 }}>Code : {m.inviteCode}</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => handleRemove(m.$id)}
+                    style={({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
+                  >
+                    <Feather name="x" size={16} color="#BBBBBB" />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          {/* Inviter (owner) */}
+          {isOwner ? (
+            inviteVisible ? (
+              <View style={{ borderRadius: 20, backgroundColor: '#F7F7F7', padding: 14, gap: 10 }}>
+                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Inviter une vendeuse</Text>
+                <TextInput
+                  placeholder="Nom"
+                  value={inviteName}
+                  onChangeText={setInviteName}
+                  placeholderTextColor="#AAAAAA"
+                  style={{ height: 44, borderRadius: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 14, color: '#111111', fontWeight: '600' }}
+                />
+                <TextInput
+                  placeholder="Email"
+                  value={inviteEmail}
+                  onChangeText={setInviteEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholderTextColor="#AAAAAA"
+                  style={{ height: 44, borderRadius: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 14, color: '#111111', fontWeight: '600' }}
+                />
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    onPress={() => { setInviteVisible(false); setInviteName(''); setInviteEmail(''); }}
+                    style={{ flex: 1, height: 42, borderRadius: 12, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>Annuler</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleInvite}
+                    style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 42, borderRadius: 12, backgroundColor: '#111111', alignItems: 'center', justifyContent: 'center', opacity: pressed || inviteLoading ? 0.68 : 1 })}
+                  >
+                    {inviteLoading
+                      ? <ActivityIndicator size="small" color="#FFFFFF" />
+                      : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Generer le code</Text>}
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => setInviteVisible(true)}
+                style={({ pressed }: { pressed: boolean }) => ({
+                  height: 48, borderRadius: 18, backgroundColor: '#111111', flexDirection: 'row',
+                  alignItems: 'center', justifyContent: 'center', gap: 8, opacity: pressed ? 0.68 : 1,
+                })}
+              >
+                <Feather name="user-plus" size={16} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Inviter une vendeuse</Text>
+              </Pressable>
+            )
+          ) : null}
+
+          {/* Rejoindre (seller / new user) */}
+          {!isOwner || (!loadingMembers && activeMembers.length === 0 && pendingMembers.length === 0) ? (
+            joinVisible ? (
+              <View style={{ borderRadius: 20, backgroundColor: '#F0F4FF', padding: 14, gap: 10 }}>
+                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Rejoindre une boutique</Text>
+                <TextInput
+                  placeholder="Code d'invitation (ex. A3F9C2)"
+                  value={joinCode}
+                  onChangeText={setJoinCode}
+                  autoCapitalize="characters"
+                  placeholderTextColor="#AAAAAA"
+                  style={{ height: 44, borderRadius: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 14, color: '#111111', fontWeight: '700', letterSpacing: 2 }}
+                />
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    onPress={() => { setJoinVisible(false); setJoinCode(''); }}
+                    style={{ flex: 1, height: 42, borderRadius: 12, backgroundColor: '#DDEAFF', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ color: '#2A5BE8', fontSize: 14, fontWeight: '700' }}>Annuler</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleJoin}
+                    style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 42, borderRadius: 12, backgroundColor: '#2A5BE8', alignItems: 'center', justifyContent: 'center', opacity: pressed || joinLoading ? 0.68 : 1 })}
+                  >
+                    {joinLoading
+                      ? <ActivityIndicator size="small" color="#FFFFFF" />
+                      : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Rejoindre</Text>}
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => setJoinVisible(true)}
+                style={({ pressed }: { pressed: boolean }) => ({
+                  height: 48, borderRadius: 18, backgroundColor: '#F0F4FF', flexDirection: 'row',
+                  alignItems: 'center', justifyContent: 'center', gap: 8, opacity: pressed ? 0.68 : 1,
+                })}
+              >
+                <Feather name="log-in" size={16} color="#2A5BE8" />
+                <Text style={{ color: '#2A5BE8', fontSize: 14, fontWeight: '700' }}>Rejoindre une boutique</Text>
+              </Pressable>
+            )
+          ) : null}
+        </ScrollView>
       </View>
     </Modal>
   );
+}
+
+function todayDateKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function shiftDateKey(key: string, days: number): string {
+  const d = new Date(`${key}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function formatDayLabel(key: string): string {
+  const [y, m, d] = key.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 function DataSettingsModal({
@@ -1246,6 +1469,53 @@ function DataSettingsModal({
   compact: boolean;
   onClose: () => void;
 }) {
+  const today = todayDateKey();
+  const [pdfDate, setPdfDate] = useState(today);
+  const [csvFrom, setCsvFrom] = useState(shiftDateKey(today, -6));
+  const [csvTo, setCsvTo] = useState(today);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  function showFeedback(msg: string) {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 3000);
+  }
+
+  async function handleExportPDF() {
+    if (pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      const { data, filename } = await exportDailyReport(pdfDate);
+      const path = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(path, data, { encoding: FileSystem.EncodingType.Base64 });
+      await Sharing.shareAsync(path, { mimeType: 'application/pdf', dialogTitle: 'Partager le bilan PDF' });
+    } catch {
+      showFeedback('Erreur lors de la génération du PDF.');
+    } finally {
+      setPdfLoading(false);
+    }
+  }
+
+  async function handleExportCSV() {
+    if (csvLoading) return;
+    if (csvFrom > csvTo) {
+      showFeedback('La date de début doit être avant la date de fin.');
+      return;
+    }
+    setCsvLoading(true);
+    try {
+      const { data, filename } = await exportHistoryCSV(csvFrom, csvTo);
+      const path = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(path, data, { encoding: FileSystem.EncodingType.Base64 });
+      await Sharing.shareAsync(path, { mimeType: 'text/csv', dialogTitle: 'Partager l\'historique CSV' });
+    } catch {
+      showFeedback('Erreur lors de la génération du CSV.');
+    } finally {
+      setCsvLoading(false);
+    }
+  }
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.24)' }}>
@@ -1261,12 +1531,11 @@ function DataSettingsModal({
             gap: 16,
           }}
         >
+          {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ gap: 2 }}>
               <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Données</Text>
-              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
-                Sauvegarde, export et historique
-              </Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>Export et historique</Text>
             </View>
             <Pressable
               onPress={onClose}
@@ -1284,32 +1553,142 @@ function DataSettingsModal({
             </Pressable>
           </View>
 
-          {[
-            { icon: 'file-chart-outline' as const, title: 'Exporter le bilan', subtitle: 'PDF journalier à brancher' },
-            { icon: 'table-arrow-down' as const, title: 'Exporter l’historique', subtitle: 'CSV / Excel à brancher' },
-            { icon: 'cloud-check-outline' as const, title: 'Sauvegarde', subtitle: 'Données déjà isolées par boutique' },
-          ].map((item) => (
-            <View
-              key={item.title}
-              style={{
-                minHeight: 58,
-                borderRadius: 18,
-                backgroundColor: '#F7F7F7',
-                paddingHorizontal: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-              }}
-            >
-              <MaterialCommunityIcons name={item.icon} size={22} color="#111111" />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>{item.title}</Text>
-                <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
-                  {item.subtitle}
-                </Text>
+          {/* Feedback banner */}
+          {feedback ? (
+            <View style={{ backgroundColor: '#FFF3CD', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+              <Text style={{ color: '#856404', fontSize: 13, fontWeight: '600' }}>{feedback}</Text>
+            </View>
+          ) : null}
+
+          {/* Bilan PDF */}
+          <View style={{ borderRadius: 18, backgroundColor: '#F7F7F7', padding: 14, gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <MaterialCommunityIcons name="file-chart-outline" size={22} color="#111111" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Bilan journalier</Text>
+                <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 1 }}>Export PDF</Text>
               </View>
             </View>
-          ))}
+            {/* Date selector */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Pressable
+                onPress={() => setPdfDate(shiftDateKey(pdfDate, -1))}
+                style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Feather name="chevron-left" size={16} color="#111111" />
+              </Pressable>
+              <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#EBEBEB', borderRadius: 10, paddingVertical: 6 }}>
+                <Text style={{ color: '#111111', fontSize: 13, fontWeight: '700' }}>{formatDayLabel(pdfDate)}</Text>
+              </View>
+              <Pressable
+                onPress={() => pdfDate < today && setPdfDate(shiftDateKey(pdfDate, 1))}
+                style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center', opacity: pdfDate >= today ? 0.35 : 1 }}
+              >
+                <Feather name="chevron-right" size={16} color="#111111" />
+              </Pressable>
+            </View>
+            <Pressable
+              onPress={handleExportPDF}
+              style={({ pressed }: { pressed: boolean }) => ({
+                height: 42,
+                borderRadius: 12,
+                backgroundColor: '#111111',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed || pdfLoading ? 0.68 : 1,
+              })}
+            >
+              {pdfLoading
+                ? <ActivityIndicator size="small" color="#FFFFFF" />
+                : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Exporter PDF</Text>
+              }
+            </Pressable>
+          </View>
+
+          {/* Historique CSV */}
+          <View style={{ borderRadius: 18, backgroundColor: '#F7F7F7', padding: 14, gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <MaterialCommunityIcons name="table-arrow-down" size={22} color="#111111" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Historique</Text>
+                <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 1 }}>Export CSV sur une période</Text>
+              </View>
+            </View>
+            {/* From / To */}
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', width: 38 }}>Début</Text>
+                <Pressable
+                  onPress={() => setCsvFrom(shiftDateKey(csvFrom, -1))}
+                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Feather name="chevron-left" size={14} color="#111111" />
+                </Pressable>
+                <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#EBEBEB', borderRadius: 8, paddingVertical: 5 }}>
+                  <Text style={{ color: '#111111', fontSize: 13, fontWeight: '700' }}>{formatDayLabel(csvFrom)}</Text>
+                </View>
+                <Pressable
+                  onPress={() => csvFrom < csvTo && setCsvFrom(shiftDateKey(csvFrom, 1))}
+                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center', opacity: csvFrom >= csvTo ? 0.35 : 1 }}
+                >
+                  <Feather name="chevron-right" size={14} color="#111111" />
+                </Pressable>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', width: 38 }}>Fin</Text>
+                <Pressable
+                  onPress={() => csvTo > csvFrom && setCsvTo(shiftDateKey(csvTo, -1))}
+                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center', opacity: csvTo <= csvFrom ? 0.35 : 1 }}
+                >
+                  <Feather name="chevron-left" size={14} color="#111111" />
+                </Pressable>
+                <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#EBEBEB', borderRadius: 8, paddingVertical: 5 }}>
+                  <Text style={{ color: '#111111', fontSize: 13, fontWeight: '700' }}>{formatDayLabel(csvTo)}</Text>
+                </View>
+                <Pressable
+                  onPress={() => csvTo < today && setCsvTo(shiftDateKey(csvTo, 1))}
+                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center', opacity: csvTo >= today ? 0.35 : 1 }}
+                >
+                  <Feather name="chevron-right" size={14} color="#111111" />
+                </Pressable>
+              </View>
+            </View>
+            <Pressable
+              onPress={handleExportCSV}
+              style={({ pressed }: { pressed: boolean }) => ({
+                height: 42,
+                borderRadius: 12,
+                backgroundColor: '#111111',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed || csvLoading ? 0.68 : 1,
+              })}
+            >
+              {csvLoading
+                ? <ActivityIndicator size="small" color="#FFFFFF" />
+                : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Exporter CSV</Text>
+              }
+            </Pressable>
+          </View>
+
+          {/* Sauvegarde info */}
+          <View
+            style={{
+              minHeight: 52,
+              borderRadius: 18,
+              backgroundColor: '#F7F7F7',
+              paddingHorizontal: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <MaterialCommunityIcons name="cloud-check-outline" size={22} color="#111111" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Sauvegarde</Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 1 }}>Données isolées par boutique sur Appwrite</Text>
+            </View>
+          </View>
         </View>
       </View>
     </Modal>
@@ -1998,7 +2377,7 @@ function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisi
             })}
           >
             <MaterialCommunityIcons name="calendar-today" size={18} color="#2A8DEB" />
-            <Text style={{ color: '#111111', fontSize: 13, fontWeight: '800' }}>Aujourd’hui</Text>
+            <Text style={{ color: '#111111', fontSize: 13, fontWeight: '800' }}>{"Aujourd'hui"}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -2054,7 +2433,7 @@ function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisi
               paddingVertical: 2,
             }}
           >
-            {data.transactions.map((t, i) => (
+            {data.transactions.map((t) => (
               <View
                 key={t.id}
                 style={{
@@ -2402,11 +2781,209 @@ function ProfileMenu({
   );
 }
 
+function NotificationsCenterModal({
+  visible,
+  compact,
+  notifications,
+  onClose,
+  onRead,
+  onReadAll,
+}: {
+  visible: boolean;
+  compact: boolean;
+  notifications: NotificationRow[];
+  onClose: () => void;
+  onRead: (id: string) => void;
+  onReadAll: () => void;
+}) {
+  const unreadCount = notifications.filter((n) => n.read === 'false').length;
+
+  const typeLabel: Record<string, string> = {
+    stock_low: 'Stock faible',
+    closure_reminder: 'Clôture oubliée',
+    cash_gap: 'Écart de caisse',
+  };
+
+  function formatRelativeDate(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "à l'instant";
+    if (mins < 60) return `il y a ${mins} min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `il y a ${hours} h`;
+    const days = Math.floor(hours / 24);
+    return `il y a ${days} j`;
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: 'rgba(0, 0, 0, 0.24)',
+        }}
+      >
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingTop: 18,
+            paddingBottom: compact ? 24 : 34,
+            maxHeight: '80%',
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 24,
+              marginBottom: 4,
+            }}
+          >
+            <View style={{ gap: 2 }}>
+              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Notifications</Text>
+              {unreadCount > 0 && (
+                <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+                  {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
+                </Text>
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {unreadCount > 0 && (
+                <Pressable
+                  onPress={onReadAll}
+                  style={({ pressed }: { pressed: boolean }) => ({
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 12,
+                    backgroundColor: '#F5F5F5',
+                    opacity: pressed ? 0.68 : 1,
+                  })}
+                >
+                  <Text style={{ color: '#111111', fontSize: 13, fontWeight: '600' }}>
+                    Tout lire
+                  </Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={onClose}
+                style={({ pressed }: { pressed: boolean }) => ({
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  backgroundColor: '#F5F5F5',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: pressed ? 0.68 : 1,
+                })}
+              >
+                <Feather name="x" size={20} color="#111111" />
+              </Pressable>
+            </View>
+          </View>
+
+          <ScrollView
+            style={{ marginTop: 8 }}
+            contentContainerStyle={{ paddingHorizontal: 24, gap: 8, paddingBottom: 8 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {notifications.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                <MaterialCommunityIcons name="bell-outline" size={40} color="#D0D0D0" />
+                <Text style={{ color: '#A0A0A0', fontSize: 15, marginTop: 12 }}>
+                  Aucune notification
+                </Text>
+              </View>
+            ) : (
+              notifications.map((notif) => (
+                <Pressable
+                  key={notif.$id}
+                  onPress={() => notif.read === 'false' && onRead(notif.$id)}
+                  style={({ pressed }: { pressed: boolean }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                    backgroundColor: notif.read === 'false' ? '#F5F8FF' : '#FAFAFA',
+                    borderRadius: 16,
+                    padding: 14,
+                    opacity: pressed ? 0.75 : 1,
+                  })}
+                >
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: notif.read === 'false' ? '#E8F0FF' : '#F0F0F0',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name={
+                        notif.type === 'stock_low'
+                          ? 'package-variant-closed'
+                          : notif.type === 'cash_gap'
+                            ? 'cash-minus'
+                            : 'bell-ring-outline'
+                      }
+                      size={18}
+                      color={notif.read === 'false' ? '#4C9BFF' : '#A0A0A0'}
+                    />
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text
+                        style={{
+                          color: '#111111',
+                          fontSize: 14,
+                          fontWeight: notif.read === 'false' ? '700' : '600',
+                          flex: 1,
+                        }}
+                      >
+                        {notif.title}
+                      </Text>
+                      {notif.read === 'false' && (
+                        <View
+                          style={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: 4,
+                            backgroundColor: '#4C9BFF',
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                    </View>
+                    <Text style={{ color: '#5A5A5A', fontSize: 13, lineHeight: 18 }}>
+                      {notif.message}
+                    </Text>
+                    <Text style={{ color: '#A0A0A0', fontSize: 12, marginTop: 2 }}>
+                      {typeLabel[notif.type] ?? notif.type} · {formatRelativeDate(notif.$createdAt)}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const { session, refreshSession } = useControlAuth();
   const [activeMenu, setActiveMenu] = useState<NavKey>('home');
   const [amountsVisible, setAmountsVisible] = useState(true);
+  const [notificationsVisible, setNotificationsVisible] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [shopSettingsVisible, setShopSettingsVisible] = useState(false);
   const [cashSettingsVisible, setCashSettingsVisible] = useState(false);
   const [displaySettingsVisible, setDisplaySettingsVisible] = useState(false);
@@ -2433,8 +3010,8 @@ export default function HomeScreen() {
   const contentWidth = Math.min(width, 520);
   const alertText =
     todaySummary.salesCount === 0
-      ? 'Aucune vente aujourd’hui'
-      : `${todaySummary.salesCount} vente${todaySummary.salesCount > 1 ? 's' : ''} aujourd’hui`;
+      ? "Aucune vente aujourd'hui"
+      : `${todaySummary.salesCount} vente${todaySummary.salesCount > 1 ? 's' : ''} aujourd'hui`;
   const expectedCashAmount = todaySummary.physicalCashExpected;
   const displayedCashAmount = amountsVisible ? formatMoney(expectedCashAmount) : '•••';
   const cashTrendText = amountsVisible ? 'à encaisser' : 'masqué';
@@ -2477,9 +3054,11 @@ export default function HomeScreen() {
     let isMounted = true;
 
     getTodaySummary().then((summary) => {
-      if (isMounted) {
-        setTodaySummary(summary);
-      }
+      if (isMounted) setTodaySummary(summary);
+    });
+
+    getNotifications().then((list) => {
+      if (isMounted) setNotifications(list);
     });
 
     return () => {
@@ -2554,6 +3133,7 @@ export default function HomeScreen() {
               )}
 
               <Pressable
+                onPress={() => setNotificationsVisible(true)}
                 style={({ pressed }: { pressed: boolean }) => ({
                   width: 36,
                   height: 36,
@@ -2564,6 +3144,21 @@ export default function HomeScreen() {
                 })}
               >
                 <MaterialCommunityIcons name="bell" size={25} color="#777777" />
+                {notifications.filter((n) => n.read === 'false').length > 0 && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      width: 9,
+                      height: 9,
+                      borderRadius: 5,
+                      backgroundColor: '#FF3B30',
+                      borderWidth: 1.5,
+                      borderColor: '#FFFFFF',
+                    }}
+                  />
+                )}
               </Pressable>
             </View>
 
@@ -2708,6 +3303,22 @@ export default function HomeScreen() {
           <BottomNav active={activeMenu} compact={compact} onChange={handleTabChange} />
         </View>
       </View>
+      <NotificationsCenterModal
+        visible={notificationsVisible}
+        compact={compact}
+        notifications={notifications}
+        onClose={() => setNotificationsVisible(false)}
+        onRead={(id) => {
+          markNotificationRead(id).then((updated) =>
+            setNotifications((prev) => prev.map((n) => (n.$id === id ? updated : n)))
+          );
+        }}
+        onReadAll={() => {
+          markAllNotificationsRead().then(() =>
+            setNotifications((prev) => prev.map((n) => ({ ...n, read: 'true' })))
+          );
+        }}
+      />
       <ShopSettingsModal
         visible={shopSettingsVisible}
         compact={compact}

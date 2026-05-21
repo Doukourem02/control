@@ -30,6 +30,27 @@ function toProductRow(doc: any): ProductRow {
   };
 }
 
+export async function getProductById(productId: string): Promise<ProductRow | null> {
+  try {
+    const doc = await databases.getDocument(DATABASE_ID, COLLECTIONS.products, productId);
+    return toProductRow(doc);
+  } catch {
+    return null;
+  }
+}
+
+export async function updateProductFields(
+  productId: string,
+  fields: Partial<{ name: string; emoji: string; sellingUnitPrice: number }>
+): Promise<ProductRow> {
+  const doc = await databases.updateDocument(DATABASE_ID, COLLECTIONS.products, productId, fields);
+  return toProductRow(doc);
+}
+
+export async function deleteProductById(productId: string): Promise<void> {
+  await databases.deleteDocument(DATABASE_ID, COLLECTIONS.products, productId);
+}
+
 export async function listProductsByShop(shopId: string): Promise<ProductRow[]> {
   const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.products, [
     Query.equal('shopId', shopId),

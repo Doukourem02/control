@@ -31,4 +31,6 @@ export const COLLECTIONS = {
   missings: 'missings',
   activityLogs: 'activity_logs',
   categories: 'categories',
+  notifications: 'notifications',
+  members: 'members',
 } as const;

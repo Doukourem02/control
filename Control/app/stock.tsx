@@ -2,12 +2,15 @@ import {
   createCategory,
   createProduct,
   deleteCategory,
+  deleteProduct,
   getCategories,
   getControlErrorMessage,
   getProducts,
+  updateProduct,
   type CategoryRow,
   type ProductRow,
   type ProductUnit,
+  type UpdateProductInput,
 } from '@/lib/control-data';
 import { useControlAuth } from '@/lib/control-auth';
 import { logControlError } from '@/lib/control-errors';
@@ -17,6 +20,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -121,7 +125,71 @@ export default function StockScreen() {
   const purchaseUnitPrice = parsedPurchaseUnit > 0 ? Math.round(parsedPurchaseUnit) : 0;
   const selectedProduct = products.find((product) => product.$id === selectedProductId);
   const selectedCategory = categories.find((c) => c.$id === selectedCategoryId);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
+  const [confirmDeleteProduct, setConfirmDeleteProduct] = useState<ProductRow | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmoji, setEditEmoji] = useState('');
+  const [editSellingPrice, setEditSellingPrice] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteSaving, setDeleteSaving] = useState(false);
+
+  const filteredProducts = searchQuery.trim()
+    ? products.filter((p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : products;
+
   const lowStockCount = products.filter((product) => product.quantity > 0 && product.quantity <= 5).length;
+
+  function openEdit(product: ProductRow) {
+    setEditingProduct(product);
+    setEditName(product.name);
+    setEditEmoji(product.emoji);
+    setEditSellingPrice(String(product.sellingUnitPrice));
+    setFormError('');
+  }
+
+  async function handleSaveEdit() {
+    if (!editingProduct || editSaving) return;
+    const price = parseAmount(editSellingPrice);
+    if (!editName.trim()) { setFormError('Le nom ne peut pas etre vide.'); return; }
+    if (Number.isNaN(price) || price <= 0) { setFormError('Prix de vente invalide.'); return; }
+    setEditSaving(true);
+    setFormError('');
+    try {
+      const input: UpdateProductInput = {};
+      if (editName.trim() !== editingProduct.name) input.name = editName.trim();
+      if (editEmoji !== editingProduct.emoji) input.emoji = editEmoji;
+      if (Math.round(price) !== editingProduct.sellingUnitPrice) input.sellingUnitPrice = Math.round(price);
+      const updated = await updateProduct(editingProduct.$id, input);
+      setProducts((prev) => prev.map((p) => (p.$id === updated.$id ? updated : p)));
+      setEditingProduct(null);
+      setSuccessMessage(`${updated.name} mis a jour.`);
+    } catch (err) {
+      setFormError(getControlErrorMessage(err));
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!confirmDeleteProduct || deleteSaving) return;
+    setDeleteSaving(true);
+    try {
+      await deleteProduct(confirmDeleteProduct.$id);
+      setProducts((prev) => prev.filter((p) => p.$id !== confirmDeleteProduct.$id));
+      setConfirmDeleteProduct(null);
+      setSuccessMessage(`${confirmDeleteProduct.name} supprime.`);
+    } catch (err) {
+      setConfirmDeleteProduct(null);
+      setFormError(getControlErrorMessage(err));
+    } finally {
+      setDeleteSaving(false);
+    }
+  }
+
   const loadProducts = useCallback(async ({ silent: _silent = false }: { silent?: boolean } = {}) => {
     const [nextProducts, nextCategories] = await Promise.all([
       getProducts(),
@@ -704,9 +772,178 @@ export default function StockScreen() {
               </Pressable>
             </View>
 
+            {/* ── Liste des produits ───────────────────────────────── */}
+            {products.length > 0 ? (
+              <View style={{ marginTop: 32, gap: 14 }}>
+                <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>
+                  Catalogue ({products.length})
+                </Text>
+
+                {/* Barre de recherche */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F2F2F2', borderRadius: 16, paddingHorizontal: 14, gap: 8 }}>
+                  <Feather name="search" size={16} color="#AAAAAA" />
+                  <TextInput
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Rechercher un produit..."
+                    placeholderTextColor="#AAAAAA"
+                    style={{ flex: 1, height: 44, fontSize: 14, color: '#111111', fontWeight: '600' }}
+                  />
+                  {searchQuery.length > 0 ? (
+                    <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                      <Feather name="x" size={15} color="#AAAAAA" />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                {filteredProducts.length === 0 ? (
+                  <Text style={{ color: '#B4B4B4', fontSize: 13, fontWeight: '600', textAlign: 'center', paddingVertical: 12 }}>
+                    Aucun produit correspondant
+                  </Text>
+                ) : (
+                  filteredProducts.map((product) => {
+                    const isLow = product.quantity > 0 && product.quantity <= 5;
+                    const isEmpty = product.quantity === 0;
+                    return (
+                      <View
+                        key={product.$id}
+                        style={{
+                          borderRadius: 18,
+                          backgroundColor: '#F7F7F7',
+                          paddingHorizontal: 14,
+                          paddingVertical: 12,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 12,
+                        }}
+                      >
+                        <Text style={{ fontSize: 28 }}>{product.emoji}</Text>
+                        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                          <Text numberOfLines={1} style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
+                            {product.name}
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={{ color: isEmpty ? '#D93D42' : isLow ? '#E07A10' : '#8E8E8E', fontSize: 12, fontWeight: '700' }}>
+                              {isEmpty ? 'Rupture' : `${product.quantity} ${product.unit}`}
+                            </Text>
+                            <Text style={{ color: '#CCCCCC', fontSize: 12 }}>·</Text>
+                            <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600' }}>
+                              {formatMoney(product.sellingUnitPrice)} / {product.unit}
+                            </Text>
+                          </View>
+                        </View>
+                        <Pressable
+                          onPress={() => openEdit(product)}
+                          style={({ pressed }: { pressed: boolean }) => ({
+                            width: 34, height: 34, borderRadius: 10, backgroundColor: '#EBEBEB',
+                            alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1,
+                          })}
+                        >
+                          <Feather name="edit-2" size={14} color="#555555" />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => setConfirmDeleteProduct(product)}
+                          style={({ pressed }: { pressed: boolean }) => ({
+                            width: 34, height: 34, borderRadius: 10, backgroundColor: '#FFEEEE',
+                            alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1,
+                          })}
+                        >
+                          <Feather name="trash-2" size={14} color="#D93D42" />
+                        </Pressable>
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Modal Edition ─────────────────────────────────────────── */}
+      <Modal visible={editingProduct !== null} transparent animationType="fade" onRequestClose={() => setEditingProduct(null)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.24)' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setEditingProduct(null)} />
+          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 36, gap: 14 }}>
+            <Text style={{ color: '#111111', fontSize: 20, fontWeight: '800' }}>Modifier le produit</Text>
+
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Emoji</Text>
+              <TextInput
+                value={editEmoji}
+                onChangeText={setEditEmoji}
+                maxLength={4}
+                style={{ height: 48, borderRadius: 14, backgroundColor: '#F7F7F7', paddingHorizontal: 14, fontSize: 22, color: '#111111' }}
+              />
+            </View>
+
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Nom</Text>
+              <TextInput
+                value={editName}
+                onChangeText={setEditName}
+                style={{ height: 48, borderRadius: 14, backgroundColor: '#F7F7F7', paddingHorizontal: 14, fontSize: 15, color: '#111111', fontWeight: '600' }}
+              />
+            </View>
+
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Prix de vente / unite (F)</Text>
+              <TextInput
+                value={editSellingPrice}
+                onChangeText={setEditSellingPrice}
+                keyboardType="number-pad"
+                style={{ height: 48, borderRadius: 14, backgroundColor: '#F7F7F7', paddingHorizontal: 14, fontSize: 15, color: '#111111', fontWeight: '600' }}
+              />
+            </View>
+
+            {formError ? <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>{formError}</Text> : null}
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={() => { setEditingProduct(null); setFormError(''); }}
+                style={{ flex: 1, height: 50, borderRadius: 16, backgroundColor: '#F2F2F2', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '700' }}>Annuler</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveEdit}
+                style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 50, borderRadius: 16, backgroundColor: '#2A8DEB', alignItems: 'center', justifyContent: 'center', opacity: pressed || editSaving ? 0.68 : 1 })}
+              >
+                {editSaving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>Enregistrer</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Modal Confirmation suppression ────────────────────────── */}
+      <Modal visible={confirmDeleteProduct !== null} transparent animationType="fade" onRequestClose={() => setConfirmDeleteProduct(null)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.24)' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setConfirmDeleteProduct(null)} />
+          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 36, gap: 16 }}>
+            <View style={{ gap: 4 }}>
+              <Text style={{ color: '#111111', fontSize: 20, fontWeight: '800' }}>Supprimer ce produit ?</Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 14, lineHeight: 20 }}>
+                {confirmDeleteProduct?.emoji} <Text style={{ fontWeight: '700', color: '#111111' }}>{confirmDeleteProduct?.name}</Text> sera supprime definitivement. Cette action est irreversible.
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={() => setConfirmDeleteProduct(null)}
+                style={{ flex: 1, height: 50, borderRadius: 16, backgroundColor: '#F2F2F2', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '700' }}>Annuler</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleConfirmDelete}
+                style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 50, borderRadius: 16, backgroundColor: '#D93D42', alignItems: 'center', justifyContent: 'center', opacity: pressed || deleteSaving ? 0.68 : 1 })}
+              >
+                {deleteSaving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>Supprimer</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

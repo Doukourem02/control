@@ -2,6 +2,7 @@ import { AppwriteException, ID, Query, type Models } from 'node-appwrite';
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 import type { MissingReason, MissingRow } from '../../types/control';
 import { userError } from '../../utils/http';
+import { triggerStockLowAlert } from '../notifications/notifications.triggers';
 
 export type CreateMissingInput = {
   shopId: string;
@@ -59,9 +60,13 @@ export async function createMissingRecord(input: CreateMissingInput): Promise<Mi
     note: input.note,
   });
 
+  const newQuantity = currentQuantity - input.quantity;
+
   await databases.updateDocument(DATABASE_ID, COLLECTIONS.products, input.productId, {
-    quantity: currentQuantity - input.quantity,
+    quantity: newQuantity,
   });
+
+  triggerStockLowAlert(input.shopId, productDoc['name'] as string, currentQuantity, newQuantity).catch(() => {});
 
   await databases.createDocument(DATABASE_ID, COLLECTIONS.stockMovements, ID.unique(), {
     shopId: input.shopId,

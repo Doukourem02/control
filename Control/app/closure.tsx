@@ -32,6 +32,45 @@ function formatMoney(value: number) {
   return `${Math.round(value).toLocaleString('fr-FR')} F`;
 }
 
+function ClosureSummaryRow({
+  label,
+  value,
+  muted = false,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        minHeight: 30,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 14,
+      }}
+    >
+      <Text style={{ flex: 1, color: '#777777', fontSize: 13, fontWeight: '700' }}>{label}</Text>
+      <Text
+        selectable
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        style={{
+          maxWidth: '52%',
+          color: muted ? '#9A9A9A' : '#111111',
+          fontSize: 14,
+          fontWeight: '900',
+          textAlign: 'right',
+          fontVariant: ['tabular-nums'],
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 function dateToKey(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -434,33 +473,81 @@ export default function ClosureScreen() {
                 </View>
 
                 <View
-	                  style={{
-	                    minHeight: 82,
-	                    borderRadius: 24,
-	                    borderCurve: 'continuous',
-	                    backgroundColor: !canCalculateGap || cashGap === 0 ? '#F7F7F7' : '#FFF5F5',
-	                    borderWidth: 1,
-	                    borderColor: !canCalculateGap || cashGap === 0 ? '#EFEFEF' : '#FFD7D9',
-	                    padding: 18,
-	                    justifyContent: 'space-between',
-	                  }}
+                  style={{
+                    borderRadius: 24,
+                    borderCurve: 'continuous',
+                    backgroundColor: '#F7F7F7',
+                    borderWidth: 1,
+                    borderColor: '#EFEFEF',
+                    padding: 18,
+                    gap: 8,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+                    <Feather name="clipboard" size={17} color="#777777" />
+                    <Text style={{ color: '#111111', fontSize: 16, fontWeight: '900' }}>
+                      Resume avant confirmation
+                    </Text>
+                  </View>
+
+                  <View style={{ gap: 2 }}>
+                    <ClosureSummaryRow
+                      label="Ventes cash"
+                      value={formatMoney(summary.cashSalesAmount)}
+                    />
+                    <ClosureSummaryRow
+                      label="Sorties caisse"
+                      value={summary.expensesAmount === 0 ? formatMoney(0) : `-${formatMoney(summary.expensesAmount)}`}
+                      muted={summary.expensesAmount === 0}
+                    />
+                    <ClosureSummaryRow
+                      label="Cash attendu en caisse"
+                      value={formatMoney(summary.physicalCashExpected)}
+                    />
+                    <ClosureSummaryRow
+                      label="Mobile Money suivi"
+                      value={formatMoney(summary.mobileMoneySalesAmount)}
+                      muted
+                    />
+                  </View>
+
+                  {summary.closureCount > 0 ? (
+                    <Text style={{ color: '#E5484D', fontSize: 12, lineHeight: 17, fontWeight: '700' }}>
+                      {summary.closureCount === 1
+                        ? 'Une cloture existe deja pour cette journee.'
+                        : `${summary.closureCount} clotures existent deja pour cette journee.`}
+                    </Text>
+                  ) : null}
+                </View>
+
+                <View
+                  style={{
+                    minHeight: 82,
+                    borderRadius: 24,
+                    borderCurve: 'continuous',
+                    backgroundColor: !canCalculateGap || cashGap === 0 ? '#F7F7F7' : '#FFF5F5',
+                    borderWidth: 1,
+                    borderColor: !canCalculateGap || cashGap === 0 ? '#EFEFEF' : '#FFD7D9',
+                    padding: 18,
+                    justifyContent: 'space-between',
+                  }}
                 >
                   <Text style={{ color: '#777777', fontSize: 14, fontWeight: '700' }}>
                     Ecart calcule
                   </Text>
-	                  <Text
-	                    selectable
-	                    style={{
-	                      color: !canCalculateGap ? '#A4A4A4' : cashGap === 0 ? '#111111' : '#E5484D',
-	                      fontSize: canCalculateGap ? 26 : 18,
-	                      lineHeight: 31,
-	                      fontWeight: canCalculateGap ? '900' : '700',
-	                      fontVariant: ['tabular-nums'],
-	                    }}
-	                  >
-	                    {canCalculateGap ? formatMoney(cashGap) : 'En attente du cash compte'}
-	                  </Text>
-	                </View>
+                  <Text
+                    selectable
+                    style={{
+                      color: !canCalculateGap ? '#A4A4A4' : cashGap === 0 ? '#111111' : '#E5484D',
+                      fontSize: canCalculateGap ? 26 : 18,
+                      lineHeight: 31,
+                      fontWeight: canCalculateGap ? '900' : '700',
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {canCalculateGap ? formatMoney(cashGap) : 'En attente du cash compte'}
+                  </Text>
+                </View>
 
                 {formError ? (
                   <Text selectable style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>
@@ -474,20 +561,20 @@ export default function ClosureScreen() {
                   </Text>
                 ) : null}
 
-	                <Pressable
-	                  onPress={handleCreateClosure}
-	                  disabled={saving || !canCalculateGap || parsedPhysicalCash < 0}
-	                  style={({ pressed }: { pressed: boolean }) => ({
-	                    height: 54,
-	                    borderRadius: 20,
-	                    borderCurve: 'continuous',
-	                    backgroundColor: saving || !canCalculateGap || parsedPhysicalCash < 0 ? '#9FCAEF' : '#2A8DEB',
-	                    alignItems: 'center',
-	                    justifyContent: 'center',
-	                    flexDirection: 'row',
-	                    gap: 9,
-	                    opacity: pressed && canCalculateGap ? 0.76 : 1,
-	                  })}
+                <Pressable
+                  onPress={handleCreateClosure}
+                  disabled={saving || !canCalculateGap || parsedPhysicalCash < 0}
+                  style={({ pressed }: { pressed: boolean }) => ({
+                    height: 54,
+                    borderRadius: 20,
+                    borderCurve: 'continuous',
+                    backgroundColor: saving || !canCalculateGap || parsedPhysicalCash < 0 ? '#9FCAEF' : '#2A8DEB',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexDirection: 'row',
+                    gap: 9,
+                    opacity: pressed && canCalculateGap ? 0.76 : 1,
+                  })}
                 >
                   {saving ? (
                     <ActivityIndicator color="#FFFFFF" />

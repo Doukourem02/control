@@ -1,4 +1,5 @@
 import { listExpensesInRange } from '../expenses/expenses.repository';
+import { triggerCashGapAlert } from '../notifications/notifications.triggers';
 import { listSalesInRange } from '../sales/sales.repository';
 import { parseAmount, userError } from '../../utils/http';
 import {
@@ -6,21 +7,8 @@ import {
   listCashClosuresByBusinessDate,
   listCashClosuresByShop,
 } from './cash.repository';
-
-function getBusinessDateKey(date?: string) {
-  const parsed = date ? new Date(`${date}T12:00:00`) : new Date();
-  const value = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-}
-
-function getBusinessDateRange(date?: string) {
-  const businessDate = getBusinessDateKey(date);
-  const from = new Date(`${businessDate}T00:00:00`);
-  const to = new Date(`${businessDate}T23:59:59.999`);
-
-  return { businessDate, from, to };
-}
+import { getShopById } from '../shops/shops.repository';
+import { buildTodaySummary, getBusinessDateKey, getBusinessDateRange } from './cash.calculations';
 
 export async function getTodaySummary(shopId: string, date?: string) {
   const { businessDate, from, to } = getBusinessDateRange(date);
@@ -30,25 +18,7 @@ export async function getTodaySummary(shopId: string, date?: string) {
     listCashClosuresByBusinessDate(shopId, businessDate),
   ]);
 
-  const cashSalesAmount = todaySales
-    .filter((sale) => sale.paymentMethod === 'Cash')
-    .reduce((total, sale) => total + sale.totalAmount, 0);
-  const mobileMoneySalesAmount = todaySales
-    .filter((sale) => sale.paymentMethod === 'Mobile Money')
-    .reduce((total, sale) => total + sale.totalAmount, 0);
-  const expensesAmount = todayExpenses.reduce((total, expense) => total + expense.amount, 0);
-
-  return {
-    cashSalesAmount,
-    mobileMoneySalesAmount,
-    expensesAmount,
-    physicalCashExpected: cashSalesAmount - expensesAmount,
-    salesCount: todaySales.length,
-    expensesCount: todayExpenses.length,
-    latestCashGap: todayClosures[0]?.cashGap ?? 0,
-    closureCount: todayClosures.length,
-    isClosed: todayClosures.length > 0,
-  };
+  return buildTodaySummary(todaySales, todayExpenses, todayClosures);
 }
 
 export async function getCashClosures(shopId: string, rawLimit: unknown, date?: string) {
@@ -76,15 +46,22 @@ export async function createCashClosure(body: Record<string, unknown>, shopId: s
   const physicalCashExpected = summary.physicalCashExpected;
   const cashGap = physicalCashActual - physicalCashExpected;
 
-  return createCashClosureRecord({
-    shopId,
-    businessDate,
-    cashSalesAmount: summary.cashSalesAmount,
-    mobileMoneySalesAmount: summary.mobileMoneySalesAmount,
-    expensesAmount: summary.expensesAmount,
-    physicalCashExpected,
-    physicalCashActual,
-    cashGap,
-    note,
-  });
+  const [closure, shop] = await Promise.all([
+    createCashClosureRecord({
+      shopId,
+      businessDate,
+      cashSalesAmount: summary.cashSalesAmount,
+      mobileMoneySalesAmount: summary.mobileMoneySalesAmount,
+      expensesAmount: summary.expensesAmount,
+      physicalCashExpected,
+      physicalCashActual,
+      cashGap,
+      note,
+    }),
+    getShopById(shopId),
+  ]);
+
+  triggerCashGapAlert(shopId, businessDate, cashGap, shop?.currency ?? 'FCFA').catch(() => {});
+
+  return closure;
 }
