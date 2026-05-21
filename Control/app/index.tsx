@@ -8,6 +8,7 @@ import {
   updateCurrentShop,
   type AnalyticsData,
   type AnalyticsType,
+  type ProductUnit,
   type StockMovementRow,
   type TodaySummary,
 } from '@/lib/control-data';
@@ -91,6 +92,58 @@ function getInitials(value: string) {
   if (words.length === 0) return 'C';
 
   return words.map((word) => word[0]?.toUpperCase()).join('');
+}
+
+function readPaymentMethods(value?: string) {
+  const methods = (value || 'Cash,Mobile Money')
+    .split(',')
+    .map((method) => method.trim())
+    .filter(Boolean);
+
+  return methods.length > 0 ? methods : ['Cash', 'Mobile Money'];
+}
+
+function formatPaymentMethods(value?: string) {
+  return readPaymentMethods(value).join(', ');
+}
+
+function isAmountsVisibleByDefault(value?: string) {
+  return value !== 'false';
+}
+
+function isPreferenceEnabled(value?: string) {
+  return value !== 'false';
+}
+
+function formatLanguage(value?: string) {
+  return value === 'en' ? 'English' : 'Français';
+}
+
+function formatUnit(value?: string) {
+  const labels: Record<string, string> = {
+    kg: 'kg',
+    piece: 'pièce',
+    carton: 'carton',
+    tas: 'tas',
+    unite: 'unité',
+  };
+
+  return labels[value || 'piece'] ?? 'pièce';
+}
+
+function formatAlertsSummary(shop?: {
+  stockLowAlertsEnabled?: string;
+  closureReminderEnabled?: string;
+  cashGapAlertsEnabled?: string;
+}) {
+  const enabledCount = [
+    isPreferenceEnabled(shop?.stockLowAlertsEnabled),
+    isPreferenceEnabled(shop?.closureReminderEnabled),
+    isPreferenceEnabled(shop?.cashGapAlertsEnabled),
+  ].filter(Boolean).length;
+
+  if (enabledCount === 0) return 'Désactivées';
+  return `${enabledCount} active${enabledCount > 1 ? 's' : ''}`;
 }
 
 function NavAssetIcon({
@@ -436,6 +489,829 @@ function ShopSettingsModal({
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function CashSettingsModal({
+  visible,
+  compact,
+  onClose,
+  onSaved,
+}: {
+  visible: boolean;
+  compact: boolean;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { session } = useControlAuth();
+  const [currency, setCurrency] = useState('FCFA');
+  const [cashEnabled, setCashEnabled] = useState(true);
+  const [mobileMoneyEnabled, setMobileMoneyEnabled] = useState(true);
+  const [defaultClosingTime, setDefaultClosingTime] = useState('20:00');
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const currencies = ['FCFA', 'GNF', 'EUR', 'USD'];
+
+  useEffect(() => {
+    if (!visible || !session) return;
+
+    const paymentMethods = readPaymentMethods(session.shop.paymentMethods);
+    setCurrency(session.shop.currency || 'FCFA');
+    setCashEnabled(paymentMethods.includes('Cash'));
+    setMobileMoneyEnabled(paymentMethods.includes('Mobile Money'));
+    setDefaultClosingTime(session.shop.defaultClosingTime || '20:00');
+    setErrorMessage('');
+  }, [session, visible]);
+
+  async function handleSave() {
+    const paymentMethods = [
+      ...(cashEnabled ? ['Cash'] : []),
+      ...(mobileMoneyEnabled ? ['Mobile Money'] : []),
+    ];
+
+    if (paymentMethods.length === 0) {
+      setErrorMessage('Active au moins un mode de paiement.');
+      return;
+    }
+
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(defaultClosingTime.trim())) {
+      setErrorMessage('Renseigne une heure au format HH:MM.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage('');
+
+    try {
+      await updateCurrentShop({
+        currency,
+        paymentMethods,
+        defaultClosingTime: defaultClosingTime.trim(),
+      });
+      await onSaved();
+      onClose();
+    } catch (error) {
+      setErrorMessage(getControlErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: 'rgba(0, 0, 0, 0.24)',
+        }}
+      >
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 24,
+            paddingTop: 18,
+            paddingBottom: compact ? 24 : 34,
+            gap: 16,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ gap: 2 }}>
+              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Caisse</Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+                Devise, paiements et clôture
+              </Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }: { pressed: boolean }) => ({
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#F5F5F5',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.68 : 1,
+              })}
+            >
+              <Feather name="x" size={20} color="#111111" />
+            </Pressable>
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Devise</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {currencies.map((item) => {
+                const selected = currency === item;
+
+                return (
+                  <Pressable
+                    key={item}
+                    onPress={() => setCurrency(item)}
+                    style={({ pressed }: { pressed: boolean }) => ({
+                      height: 42,
+                      paddingHorizontal: 16,
+                      borderRadius: 21,
+                      backgroundColor: selected ? '#050505' : '#F7F7F7',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: pressed ? 0.72 : 1,
+                    })}
+                  >
+                    <Text style={{ color: selected ? '#FFFFFF' : '#111111', fontSize: 14, fontWeight: '800' }}>
+                      {item}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Modes de paiement</Text>
+            {[
+              { label: 'Cash', enabled: cashEnabled, onToggle: setCashEnabled },
+              { label: 'Mobile Money', enabled: mobileMoneyEnabled, onToggle: setMobileMoneyEnabled },
+            ].map((method) => (
+              <Pressable
+                key={method.label}
+                onPress={() => method.onToggle(!method.enabled)}
+                style={({ pressed }: { pressed: boolean }) => ({
+                  minHeight: 48,
+                  borderRadius: 16,
+                  backgroundColor: '#F7F7F7',
+                  paddingHorizontal: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  opacity: pressed ? 0.72 : 1,
+                })}
+              >
+                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '700' }}>{method.label}</Text>
+                <MaterialCommunityIcons
+                  name={method.enabled ? 'check-circle' : 'circle-outline'}
+                  size={23}
+                  color={method.enabled ? '#08784F' : '#A8A8A8'}
+                />
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={{ gap: 7 }}>
+            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Heure de clôture par défaut</Text>
+            <TextInput
+              value={defaultClosingTime}
+              onChangeText={setDefaultClosingTime}
+              placeholder="20:00"
+              placeholderTextColor="#A8A8A8"
+              keyboardType="numbers-and-punctuation"
+              style={{
+                height: 52,
+                borderRadius: 18,
+                backgroundColor: '#F7F7F7',
+                paddingHorizontal: 16,
+                color: '#111111',
+                fontSize: 16,
+                fontWeight: '700',
+              }}
+            />
+          </View>
+
+          {errorMessage ? (
+            <Text style={{ color: '#B42318', fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
+          ) : null}
+
+          <Pressable
+            disabled={saving}
+            onPress={handleSave}
+            style={({ pressed }: { pressed: boolean }) => ({
+              height: 56,
+              borderRadius: 22,
+              backgroundColor: '#050505',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed || saving ? 0.72 : 1,
+            })}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
+            )}
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function DisplaySettingsModal({
+  visible,
+  compact,
+  onClose,
+  onSaved,
+}: {
+  visible: boolean;
+  compact: boolean;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { session } = useControlAuth();
+  const [amountsVisibleByDefault, setAmountsVisibleByDefault] = useState(true);
+  const [displayLanguage, setDisplayLanguage] = useState<'fr' | 'en'>('fr');
+  const [defaultUnit, setDefaultUnit] = useState<ProductUnit>('piece');
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const languages: { label: string; value: 'fr' | 'en' }[] = [
+    { label: 'Français', value: 'fr' },
+    { label: 'English', value: 'en' },
+  ];
+  const units: { label: string; value: ProductUnit }[] = [
+    { label: 'kg', value: 'kg' },
+    { label: 'pièce', value: 'piece' },
+    { label: 'carton', value: 'carton' },
+    { label: 'tas', value: 'tas' },
+    { label: 'unité', value: 'unite' },
+  ];
+
+  useEffect(() => {
+    if (!visible || !session) return;
+
+    const language = session.shop.displayLanguage === 'en' ? 'en' : 'fr';
+    const validUnits: ProductUnit[] = ['kg', 'piece', 'carton', 'tas', 'unite'];
+    const unit = validUnits.includes(session.shop.defaultUnit as ProductUnit)
+      ? (session.shop.defaultUnit as ProductUnit)
+      : 'piece';
+
+    setAmountsVisibleByDefault(isAmountsVisibleByDefault(session.shop.amountsVisibleByDefault));
+    setDisplayLanguage(language);
+    setDefaultUnit(unit);
+    setErrorMessage('');
+  }, [session, visible]);
+
+  async function handleSave() {
+    setSaving(true);
+    setErrorMessage('');
+
+    try {
+      await updateCurrentShop({
+        amountsVisibleByDefault,
+        displayLanguage,
+        defaultUnit,
+      });
+      await onSaved();
+      onClose();
+    } catch (error) {
+      setErrorMessage(getControlErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: 'rgba(0, 0, 0, 0.24)',
+        }}
+      >
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 24,
+            paddingTop: 18,
+            paddingBottom: compact ? 24 : 34,
+            gap: 16,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ gap: 2 }}>
+              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Affichage</Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+                Montants, langue et unités
+              </Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }: { pressed: boolean }) => ({
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#F5F5F5',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.68 : 1,
+              })}
+            >
+              <Feather name="x" size={20} color="#111111" />
+            </Pressable>
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Montants</Text>
+            <Pressable
+              onPress={() => setAmountsVisibleByDefault((visible) => !visible)}
+              style={({ pressed }: { pressed: boolean }) => ({
+                minHeight: 52,
+                borderRadius: 18,
+                backgroundColor: '#F7F7F7',
+                paddingHorizontal: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                opacity: pressed ? 0.72 : 1,
+              })}
+            >
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
+                  Visibles au démarrage
+                </Text>
+                <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+                  Tu peux toujours masquer avec l’icône œil
+                </Text>
+              </View>
+              <MaterialCommunityIcons
+                name={amountsVisibleByDefault ? 'check-circle' : 'circle-outline'}
+                size={24}
+                color={amountsVisibleByDefault ? '#08784F' : '#A8A8A8'}
+              />
+            </Pressable>
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Langue</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {languages.map((item) => {
+                const selected = displayLanguage === item.value;
+
+                return (
+                  <Pressable
+                    key={item.value}
+                    onPress={() => setDisplayLanguage(item.value)}
+                    style={({ pressed }: { pressed: boolean }) => ({
+                      flex: 1,
+                      height: 44,
+                      borderRadius: 22,
+                      backgroundColor: selected ? '#050505' : '#F7F7F7',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: pressed ? 0.72 : 1,
+                    })}
+                  >
+                    <Text style={{ color: selected ? '#FFFFFF' : '#111111', fontSize: 14, fontWeight: '800' }}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Unité par défaut</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {units.map((item) => {
+                const selected = defaultUnit === item.value;
+
+                return (
+                  <Pressable
+                    key={item.value}
+                    onPress={() => setDefaultUnit(item.value)}
+                    style={({ pressed }: { pressed: boolean }) => ({
+                      height: 42,
+                      minWidth: 76,
+                      paddingHorizontal: 15,
+                      borderRadius: 21,
+                      backgroundColor: selected ? '#050505' : '#F7F7F7',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: pressed ? 0.72 : 1,
+                    })}
+                  >
+                    <Text style={{ color: selected ? '#FFFFFF' : '#111111', fontSize: 14, fontWeight: '800' }}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {errorMessage ? (
+            <Text style={{ color: '#B42318', fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
+          ) : null}
+
+          <Pressable
+            disabled={saving}
+            onPress={handleSave}
+            style={({ pressed }: { pressed: boolean }) => ({
+              height: 56,
+              borderRadius: 22,
+              backgroundColor: '#050505',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed || saving ? 0.72 : 1,
+            })}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
+            )}
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function PreferenceToggle({
+  title,
+  subtitle,
+  enabled,
+  onToggle,
+}: {
+  title: string;
+  subtitle: string;
+  enabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onToggle}
+      style={({ pressed }: { pressed: boolean }) => ({
+        minHeight: 54,
+        borderRadius: 18,
+        backgroundColor: '#F7F7F7',
+        paddingHorizontal: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        opacity: pressed ? 0.72 : 1,
+      })}
+    >
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>{title}</Text>
+        <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+          {subtitle}
+        </Text>
+      </View>
+      <MaterialCommunityIcons
+        name={enabled ? 'check-circle' : 'circle-outline'}
+        size={24}
+        color={enabled ? '#08784F' : '#A8A8A8'}
+      />
+    </Pressable>
+  );
+}
+
+function AlertsSettingsModal({
+  visible,
+  compact,
+  onClose,
+  onSaved,
+}: {
+  visible: boolean;
+  compact: boolean;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { session } = useControlAuth();
+  const [stockLowAlertsEnabled, setStockLowAlertsEnabled] = useState(true);
+  const [closureReminderEnabled, setClosureReminderEnabled] = useState(true);
+  const [cashGapAlertsEnabled, setCashGapAlertsEnabled] = useState(true);
+  const [defaultLowStockThreshold, setDefaultLowStockThreshold] = useState('5');
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (!visible || !session) return;
+
+    setStockLowAlertsEnabled(isPreferenceEnabled(session.shop.stockLowAlertsEnabled));
+    setClosureReminderEnabled(isPreferenceEnabled(session.shop.closureReminderEnabled));
+    setCashGapAlertsEnabled(isPreferenceEnabled(session.shop.cashGapAlertsEnabled));
+    setDefaultLowStockThreshold(session.shop.defaultLowStockThreshold || '5');
+    setErrorMessage('');
+  }, [session, visible]);
+
+  async function handleSave() {
+    const threshold = defaultLowStockThreshold.trim();
+
+    if (!/^\d+$/.test(threshold) || Number(threshold) < 1 || Number(threshold) > 999) {
+      setErrorMessage('Renseigne un seuil entre 1 et 999.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage('');
+
+    try {
+      await updateCurrentShop({
+        stockLowAlertsEnabled,
+        closureReminderEnabled,
+        cashGapAlertsEnabled,
+        defaultLowStockThreshold: String(Number(threshold)),
+      });
+      await onSaved();
+      onClose();
+    } catch (error) {
+      setErrorMessage(getControlErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: 'rgba(0, 0, 0, 0.24)',
+        }}
+      >
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 24,
+            paddingTop: 18,
+            paddingBottom: compact ? 24 : 34,
+            gap: 16,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ gap: 2 }}>
+              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Alertes</Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+                Préférences avant les notifications
+              </Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }: { pressed: boolean }) => ({
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#F5F5F5',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.68 : 1,
+              })}
+            >
+              <Feather name="x" size={20} color="#111111" />
+            </Pressable>
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <PreferenceToggle
+              title="Stock faible"
+              subtitle="Signaler les produits sous le seuil"
+              enabled={stockLowAlertsEnabled}
+              onToggle={() => setStockLowAlertsEnabled((enabled) => !enabled)}
+            />
+            <PreferenceToggle
+              title="Clôture oubliée"
+              subtitle="Préparer le rappel de fin de journée"
+              enabled={closureReminderEnabled}
+              onToggle={() => setClosureReminderEnabled((enabled) => !enabled)}
+            />
+            <PreferenceToggle
+              title="Écart de caisse"
+              subtitle="Mettre en avant les écarts détectés"
+              enabled={cashGapAlertsEnabled}
+              onToggle={() => setCashGapAlertsEnabled((enabled) => !enabled)}
+            />
+          </View>
+
+          <View style={{ gap: 7 }}>
+            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Seuil stock faible</Text>
+            <TextInput
+              value={defaultLowStockThreshold}
+              onChangeText={setDefaultLowStockThreshold}
+              placeholder="5"
+              placeholderTextColor="#A8A8A8"
+              keyboardType="number-pad"
+              style={{
+                height: 52,
+                borderRadius: 18,
+                backgroundColor: '#F7F7F7',
+                paddingHorizontal: 16,
+                color: '#111111',
+                fontSize: 16,
+                fontWeight: '700',
+              }}
+            />
+          </View>
+
+          {errorMessage ? (
+            <Text style={{ color: '#B42318', fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
+          ) : null}
+
+          <Pressable
+            disabled={saving}
+            onPress={handleSave}
+            style={({ pressed }: { pressed: boolean }) => ({
+              height: 56,
+              borderRadius: 22,
+              backgroundColor: '#050505',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed || saving ? 0.72 : 1,
+            })}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
+            )}
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function TeamSettingsModal({
+  visible,
+  compact,
+  onClose,
+}: {
+  visible: boolean;
+  compact: boolean;
+  onClose: () => void;
+}) {
+  const { session } = useControlAuth();
+  const ownerName = session?.shop.ownerName || session?.user.name || 'Propriétaire';
+  const email = session?.user.email || 'Session active';
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.24)' }}>
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 24,
+            paddingTop: 18,
+            paddingBottom: compact ? 24 : 34,
+            gap: 16,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ gap: 2 }}>
+              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Équipe</Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+                Propriétaire, vendeuses et accès
+              </Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }: { pressed: boolean }) => ({
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#F5F5F5',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.68 : 1,
+              })}
+            >
+              <Feather name="x" size={20} color="#111111" />
+            </Pressable>
+          </View>
+
+          <View style={{ borderRadius: 20, backgroundColor: '#F7F7F7', padding: 16, gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 23,
+                  backgroundColor: '#E8F4EF',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: '#08784F', fontSize: 16, fontWeight: '800' }}>{getInitials(ownerName)}</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text numberOfLines={1} style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
+                  {ownerName}
+                </Text>
+                <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
+                  {email}
+                </Text>
+              </View>
+              <Text style={{ color: '#08784F', fontSize: 12, fontWeight: '800' }}>Owner</Text>
+            </View>
+          </View>
+
+          <View style={{ borderRadius: 20, backgroundColor: '#F7F7F7', padding: 16, gap: 8 }}>
+            <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>Invitations</Text>
+            <Text style={{ color: '#8E8E8E', fontSize: 13, lineHeight: 18, fontWeight: '600' }}>
+              La structure est prête. La prochaine étape sera d’ajouter les invitations, rôles vendeuse et accès
+              limités côté backend.
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function DataSettingsModal({
+  visible,
+  compact,
+  onClose,
+}: {
+  visible: boolean;
+  compact: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.24)' }}>
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 24,
+            paddingTop: 18,
+            paddingBottom: compact ? 24 : 34,
+            gap: 16,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ gap: 2 }}>
+              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Données</Text>
+              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+                Sauvegarde, export et historique
+              </Text>
+            </View>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }: { pressed: boolean }) => ({
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#F5F5F5',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.68 : 1,
+              })}
+            >
+              <Feather name="x" size={20} color="#111111" />
+            </Pressable>
+          </View>
+
+          {[
+            { icon: 'file-chart-outline' as const, title: 'Exporter le bilan', subtitle: 'PDF journalier à brancher' },
+            { icon: 'table-arrow-down' as const, title: 'Exporter l’historique', subtitle: 'CSV / Excel à brancher' },
+            { icon: 'cloud-check-outline' as const, title: 'Sauvegarde', subtitle: 'Données déjà isolées par boutique' },
+          ].map((item) => (
+            <View
+              key={item.title}
+              style={{
+                minHeight: 58,
+                borderRadius: 18,
+                backgroundColor: '#F7F7F7',
+                paddingHorizontal: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <MaterialCommunityIcons name={item.icon} size={22} color="#111111" />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>{item.title}</Text>
+                <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+                  {item.subtitle}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -1399,7 +2275,23 @@ function MissingMenu({
   );
 }
 
-function ProfileMenu({ compact, onEditShop }: { compact: boolean; onEditShop: () => void }) {
+function ProfileMenu({
+  compact,
+  onEditShop,
+  onEditCash,
+  onEditDisplay,
+  onEditAlerts,
+  onEditTeam,
+  onEditData,
+}: {
+  compact: boolean;
+  onEditShop: () => void;
+  onEditCash: () => void;
+  onEditDisplay: () => void;
+  onEditAlerts: () => void;
+  onEditTeam: () => void;
+  onEditData: () => void;
+}) {
   const { session, signOut } = useControlAuth();
   const shopName = session?.shop.name || 'Boutique';
   const email = session?.user.email || 'Session active';
@@ -1407,6 +2299,14 @@ function ProfileMenu({ compact, onEditShop }: { compact: boolean; onEditShop: ()
   const address = session?.shop.address || 'Non renseignée';
   const openingHours = session?.shop.openingHours || 'Non renseignés';
   const currency = session?.shop.currency || 'FCFA';
+  const paymentMethods = formatPaymentMethods(session?.shop.paymentMethods);
+  const defaultClosingTime = session?.shop.defaultClosingTime || '20:00';
+  const amountsPreference = isAmountsVisibleByDefault(session?.shop.amountsVisibleByDefault)
+    ? 'Visibles'
+    : 'Masqués';
+  const displayPreference = `${amountsPreference} · ${formatLanguage(session?.shop.displayLanguage)}`;
+  const defaultUnit = formatUnit(session?.shop.defaultUnit);
+  const alertsSummary = formatAlertsSummary(session?.shop);
 
   return (
     <ScrollView
@@ -1474,16 +2374,17 @@ function ProfileMenu({ compact, onEditShop }: { compact: boolean; onEditShop: ()
         </SettingsSection>
 
         <SettingsSection title="Caisse">
-          <SettingsRow icon="cash-register" title="Devise" value={currency} />
-          <SettingsRow icon="credit-card-outline" title="Paiements" value="Cash, Mobile Money" />
-          <SettingsRow icon="calendar-clock" title="Clôture" value="Journalière" />
+          <SettingsRow icon="cash-register" title="Devise" value={currency} onPress={onEditCash} />
+          <SettingsRow icon="credit-card-outline" title="Paiements" value={paymentMethods} onPress={onEditCash} />
+          <SettingsRow icon="calendar-clock" title="Clôture" value={defaultClosingTime} onPress={onEditCash} />
         </SettingsSection>
 
         <SettingsSection title="Préférences">
-          <SettingsRow icon="bell-outline" title="Notifications" value="Activées" />
-          <SettingsRow icon="eye-outline" title="Affichage" value="Montants visibles" />
-          <SettingsRow icon="account-group" title="Équipe" value="Accès vendeuse" />
-          <SettingsRow icon="database-outline" title="Données" value="Sauvegarde" />
+          <SettingsRow icon="bell-outline" title="Alertes" value={alertsSummary} onPress={onEditAlerts} />
+          <SettingsRow icon="eye-outline" title="Affichage" value={displayPreference} onPress={onEditDisplay} />
+          <SettingsRow icon="ruler-square" title="Unité" value={defaultUnit} onPress={onEditDisplay} />
+          <SettingsRow icon="account-group" title="Équipe" value="1 membre" onPress={onEditTeam} />
+          <SettingsRow icon="database-outline" title="Données" value="Exports" onPress={onEditData} />
         </SettingsSection>
 
         <SettingsSection title="Compte">
@@ -1507,6 +2408,11 @@ export default function HomeScreen() {
   const [activeMenu, setActiveMenu] = useState<NavKey>('home');
   const [amountsVisible, setAmountsVisible] = useState(true);
   const [shopSettingsVisible, setShopSettingsVisible] = useState(false);
+  const [cashSettingsVisible, setCashSettingsVisible] = useState(false);
+  const [displaySettingsVisible, setDisplaySettingsVisible] = useState(false);
+  const [alertsSettingsVisible, setAlertsSettingsVisible] = useState(false);
+  const [teamSettingsVisible, setTeamSettingsVisible] = useState(false);
+  const [dataSettingsVisible, setDataSettingsVisible] = useState(false);
   const [todaySummary, setTodaySummary] = useState<TodaySummary>({
     cashSalesAmount: 0,
     mobileMoneySalesAmount: 0,
@@ -1519,6 +2425,7 @@ export default function HomeScreen() {
     isClosed: false,
   });
   const promptedShopSetup = useRef(false);
+  const appliedDisplayDefaults = useRef<string | null>(null);
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTranslateY = useRef(new Animated.Value(0)).current;
   const { width, height } = useWindowDimensions();
@@ -1585,6 +2492,19 @@ export default function HomeScreen() {
 
     promptedShopSetup.current = true;
     setShopSettingsVisible(true);
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) {
+      appliedDisplayDefaults.current = null;
+      return;
+    }
+
+    const preferenceKey = `${session.shop.$id}:${session.shop.amountsVisibleByDefault}`;
+    if (appliedDisplayDefaults.current === preferenceKey) return;
+
+    appliedDisplayDefaults.current = preferenceKey;
+    setAmountsVisible(isAmountsVisibleByDefault(session.shop.amountsVisibleByDefault));
   }, [session]);
 
   return (
@@ -1772,7 +2692,15 @@ export default function HomeScreen() {
                   }
                 />
               ) : (
-                <ProfileMenu compact={compact} onEditShop={() => setShopSettingsVisible(true)} />
+                <ProfileMenu
+                  compact={compact}
+                  onEditShop={() => setShopSettingsVisible(true)}
+                  onEditCash={() => setCashSettingsVisible(true)}
+                  onEditDisplay={() => setDisplaySettingsVisible(true)}
+                  onEditAlerts={() => setAlertsSettingsVisible(true)}
+                  onEditTeam={() => setTeamSettingsVisible(true)}
+                  onEditData={() => setDataSettingsVisible(true)}
+                />
               )}
             </Animated.View>
           </View>
@@ -1785,6 +2713,34 @@ export default function HomeScreen() {
         compact={compact}
         onClose={() => setShopSettingsVisible(false)}
         onSaved={refreshSession}
+      />
+      <CashSettingsModal
+        visible={cashSettingsVisible}
+        compact={compact}
+        onClose={() => setCashSettingsVisible(false)}
+        onSaved={refreshSession}
+      />
+      <DisplaySettingsModal
+        visible={displaySettingsVisible}
+        compact={compact}
+        onClose={() => setDisplaySettingsVisible(false)}
+        onSaved={refreshSession}
+      />
+      <AlertsSettingsModal
+        visible={alertsSettingsVisible}
+        compact={compact}
+        onClose={() => setAlertsSettingsVisible(false)}
+        onSaved={refreshSession}
+      />
+      <TeamSettingsModal
+        visible={teamSettingsVisible}
+        compact={compact}
+        onClose={() => setTeamSettingsVisible(false)}
+      />
+      <DataSettingsModal
+        visible={dataSettingsVisible}
+        compact={compact}
+        onClose={() => setDataSettingsVisible(false)}
       />
     </SafeAreaView>
   );

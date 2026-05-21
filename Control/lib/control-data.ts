@@ -111,6 +111,15 @@ export type ShopRow = BaseRow & {
   contact: string;
   address: string;
   openingHours: string;
+  paymentMethods: string;
+  defaultClosingTime: string;
+  amountsVisibleByDefault: string;
+  displayLanguage: string;
+  defaultUnit: ProductUnit;
+  stockLowAlertsEnabled: string;
+  closureReminderEnabled: string;
+  cashGapAlertsEnabled: string;
+  defaultLowStockThreshold: string;
 };
 
 export type CreateProductInput = {
@@ -158,10 +167,20 @@ export type CreateCashClosureInput = {
 };
 
 export type UpdateShopInput = {
-  name: string;
+  name?: string;
+  currency?: string;
   contact?: string;
   address?: string;
   openingHours?: string;
+  paymentMethods?: string[];
+  defaultClosingTime?: string;
+  amountsVisibleByDefault?: boolean;
+  displayLanguage?: string;
+  defaultUnit?: ProductUnit;
+  stockLowAlertsEnabled?: boolean;
+  closureReminderEnabled?: boolean;
+  cashGapAlertsEnabled?: boolean;
+  defaultLowStockThreshold?: string;
 };
 
 export type TodaySummary = {

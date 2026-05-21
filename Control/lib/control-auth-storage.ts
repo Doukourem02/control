@@ -16,6 +16,15 @@ export type ControlAuthSession = {
     contact: string;
     address: string;
     openingHours: string;
+    paymentMethods: string;
+    defaultClosingTime: string;
+    amountsVisibleByDefault: string;
+    displayLanguage: string;
+    defaultUnit: string;
+    stockLowAlertsEnabled: string;
+    closureReminderEnabled: string;
+    cashGapAlertsEnabled: string;
+    defaultLowStockThreshold: string;
   };
 };
 

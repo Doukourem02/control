@@ -33,6 +33,15 @@ const attributes = [
   { key: 'contact', size: 128, required: false },
   { key: 'address', size: 256, required: false },
   { key: 'openingHours', size: 128, required: false },
+  { key: 'paymentMethods', size: 64, required: false },
+  { key: 'defaultClosingTime', size: 8, required: false },
+  { key: 'amountsVisibleByDefault', size: 8, required: false },
+  { key: 'displayLanguage', size: 8, required: false },
+  { key: 'defaultUnit', size: 16, required: false },
+  { key: 'stockLowAlertsEnabled', size: 8, required: false },
+  { key: 'closureReminderEnabled', size: 8, required: false },
+  { key: 'cashGapAlertsEnabled', size: 8, required: false },
+  { key: 'defaultLowStockThreshold', size: 8, required: false },
 ];
 
 async function ensureCollection() {

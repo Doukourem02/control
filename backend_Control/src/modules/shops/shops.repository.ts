@@ -13,13 +13,32 @@ export type ShopRow = {
   contact: string;
   address: string;
   openingHours: string;
+  paymentMethods: string;
+  defaultClosingTime: string;
+  amountsVisibleByDefault: string;
+  displayLanguage: string;
+  defaultUnit: string;
+  stockLowAlertsEnabled: string;
+  closureReminderEnabled: string;
+  cashGapAlertsEnabled: string;
+  defaultLowStockThreshold: string;
 };
 
 export type UpdateShopInput = {
   name?: string;
+  currency?: string;
   contact?: string;
   address?: string;
   openingHours?: string;
+  paymentMethods?: string;
+  defaultClosingTime?: string;
+  amountsVisibleByDefault?: string;
+  displayLanguage?: string;
+  defaultUnit?: string;
+  stockLowAlertsEnabled?: string;
+  closureReminderEnabled?: string;
+  cashGapAlertsEnabled?: string;
+  defaultLowStockThreshold?: string;
 };
 
 function toShopRow(doc: any): ShopRow {
@@ -34,6 +53,15 @@ function toShopRow(doc: any): ShopRow {
     contact: doc.contact ?? '',
     address: doc.address ?? '',
     openingHours: doc.openingHours ?? '',
+    paymentMethods: doc.paymentMethods ?? 'Cash,Mobile Money',
+    defaultClosingTime: doc.defaultClosingTime ?? '20:00',
+    amountsVisibleByDefault: doc.amountsVisibleByDefault ?? 'true',
+    displayLanguage: doc.displayLanguage ?? 'fr',
+    defaultUnit: doc.defaultUnit ?? 'piece',
+    stockLowAlertsEnabled: doc.stockLowAlertsEnabled ?? 'true',
+    closureReminderEnabled: doc.closureReminderEnabled ?? 'true',
+    cashGapAlertsEnabled: doc.cashGapAlertsEnabled ?? 'true',
+    defaultLowStockThreshold: doc.defaultLowStockThreshold ?? '5',
   };
 }
 
@@ -64,6 +92,15 @@ export async function createShopForUser(userId: string, ownerName: string): Prom
     contact: '',
     address: '',
     openingHours: '',
+    paymentMethods: 'Cash,Mobile Money',
+    defaultClosingTime: '20:00',
+    amountsVisibleByDefault: 'true',
+    displayLanguage: 'fr',
+    defaultUnit: 'piece',
+    stockLowAlertsEnabled: 'true',
+    closureReminderEnabled: 'true',
+    cashGapAlertsEnabled: 'true',
+    defaultLowStockThreshold: '5',
   });
 
   return toShopRow(doc);

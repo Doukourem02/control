@@ -5,6 +5,7 @@ import {
   type PaymentMethod,
   type ProductRow,
 } from '@/lib/control-data';
+import { useControlAuth } from '@/lib/control-auth';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -27,6 +28,15 @@ function formatMoney(value: number) {
 function parseQuantity(value: string) {
   const parsed = Number(value.replace(',', '.').trim());
   return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function readPaymentMethods(value?: string): PaymentMethod[] {
+  const methods = (value || 'Cash,Mobile Money')
+    .split(',')
+    .map((method) => method.trim())
+    .filter((method): method is PaymentMethod => method === 'Cash' || method === 'Mobile Money');
+
+  return methods.length > 0 ? methods : ['Cash'];
 }
 
 function ProductTile({
@@ -85,6 +95,7 @@ function ProductTile({
 
 export default function SaleScreen() {
   const router = useRouter();
+  const { session } = useControlAuth();
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -106,6 +117,16 @@ export default function SaleScreen() {
       : 0;
   const parsedTotal = parseQuantity(totalInput);
   const totalAmount = Number.isFinite(parsedTotal) && parsedTotal > 0 ? parsedTotal : autoTotal;
+  const availablePaymentMethods = useMemo(
+    () => readPaymentMethods(session?.shop.paymentMethods),
+    [session?.shop.paymentMethods]
+  );
+
+  useEffect(() => {
+    if (!availablePaymentMethods.includes(paymentMethod)) {
+      setPaymentMethod(availablePaymentMethods[0] ?? 'Cash');
+    }
+  }, [availablePaymentMethods, paymentMethod]);
 
   function handleQuantityChange(val: string) {
     setQuantity(val);
@@ -326,7 +347,7 @@ export default function SaleScreen() {
               <View style={{ flex: 1, gap: 7 }}>
                 <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Paiement</Text>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {(['Cash', 'Mobile Money'] as PaymentMethod[]).map((method) => {
+                  {availablePaymentMethods.map((method) => {
                     const selected = paymentMethod === method;
                     return (
                       <Pressable

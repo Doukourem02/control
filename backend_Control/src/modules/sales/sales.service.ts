@@ -1,5 +1,6 @@
 import { type PaymentMethod } from '../../types/control';
 import { parseAmount, userError } from '../../utils/http';
+import { getShopById } from '../shops/shops.repository';
 import { createSaleRecord } from './sales.repository';
 
 const paymentMethods: PaymentMethod[] = ['Cash', 'Mobile Money'];
@@ -23,6 +24,15 @@ export async function createSale(body: Record<string, unknown>, shopId: string) 
 
   if (!isPaymentMethod(paymentMethod)) {
     throw userError('Selectionne un mode de paiement valide.', 400, 'PAYMENT_METHOD_INVALID');
+  }
+
+  const shop = await getShopById(shopId);
+  const enabledPaymentMethods = (shop?.paymentMethods || 'Cash,Mobile Money')
+    .split(',')
+    .map((method) => method.trim());
+
+  if (!enabledPaymentMethods.includes(paymentMethod)) {
+    throw userError('Ce mode de paiement est desactive dans les reglages caisse.', 400, 'PAYMENT_METHOD_DISABLED');
   }
 
   const totalAmount = parseAmount(body.totalAmount);

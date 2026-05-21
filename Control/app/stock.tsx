@@ -9,6 +9,7 @@ import {
   type ProductRow,
   type ProductUnit,
 } from '@/lib/control-data';
+import { useControlAuth } from '@/lib/control-auth';
 import { logControlError } from '@/lib/control-errors';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -27,10 +28,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const units: { label: string; value: ProductUnit }[] = [
   { label: 'kg', value: 'kg' },
-  { label: 'piece', value: 'piece' },
+  { label: 'pièce', value: 'piece' },
   { label: 'carton', value: 'carton' },
   { label: 'tas', value: 'tas' },
-  { label: 'unite', value: 'unite' },
+  { label: 'unité', value: 'unite' },
 ];
 
 type SupplyMode = 'new' | 'existing';
@@ -44,6 +45,10 @@ function parseAmount(value: string) {
   const parsed = Number(normalized);
 
   return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function normalizeProductUnit(value?: string): ProductUnit {
+  return units.some((item) => item.value === value) ? (value as ProductUnit) : 'piece';
 }
 
 function Field({
@@ -88,6 +93,7 @@ function Field({
 
 export default function StockScreen() {
   const router = useRouter();
+  const { session } = useControlAuth();
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -102,7 +108,8 @@ export default function StockScreen() {
   const [savingCategory, setSavingCategory] = useState(false);
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [unit, setUnit] = useState<ProductUnit>('kg');
+  const defaultUnit = normalizeProductUnit(session?.shop.defaultUnit);
+  const [unit, setUnit] = useState<ProductUnit>(defaultUnit);
   const [purchaseUnitInput, setPurchaseUnitInput] = useState('');
   const [sellingUnitPrice, setSellingUnitPrice] = useState('');
   const parsedQuantity = parseAmount(quantity);
@@ -131,6 +138,12 @@ export default function StockScreen() {
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  useEffect(() => {
+    if (supplyMode === 'new') {
+      setUnit(defaultUnit);
+    }
+  }, [defaultUnit, supplyMode]);
 
   useEffect(() => {
     if (supplyMode === 'existing' && selectedProduct) {
@@ -197,7 +210,7 @@ export default function StockScreen() {
     setName('');
     setSelectedCategoryId('');
     setQuantity('');
-    setUnit('kg');
+    setUnit(defaultUnit);
     setPurchaseUnitInput('');
     setSellingUnitPrice(isExistingSupply ? String(Math.round(parsedSellingPrice)) : '');
 

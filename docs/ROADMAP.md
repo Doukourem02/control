@@ -48,13 +48,13 @@
 ### Écrans Settings (actuellement tous morts)
 
 - [x] **Boutique** — modifier nom, contact, adresse, horaires
-- [ ] **Caisse** — configurer devise, modes de paiement, heure de clôture par défaut
+- [x] **Caisse** — configurer devise, modes de paiement, heure de clôture par défaut
 - [ ] **Équipe** — inviter des vendeurs, définir les rôles (propriétaire / vendeur), gérer les accès
 - [ ] **Alertes** — activer/désactiver alertes stock faible, rappel clôture oubliée, écarts de caisse
-- [ ] **Affichage** — toggle montants visibles par défaut, choix de langue, unités
+- [x] **Affichage** — toggle montants visibles par défaut, choix de langue, unités
 - [ ] **Données** — export historique, sauvegarde manuelle
 
-> Actuellement le `ProfileMenu` affiche ces 6 sections mais aucune n'a de navigation ni d'implémentation.
+> Le `ProfileMenu` ouvre maintenant les sections Boutique, Caisse, Affichage, Alertes, Équipe et Données. Équipe et Données restent à connecter aux fonctionnalités backend complètes.
 
 ### Notifications & Alertes
 
@@ -156,9 +156,9 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 
 - [ ] Brancher / finaliser les sections du profil réglages
 - [x] Implémenter les réglages Boutique
-- [ ] Implémenter les réglages Caisse
-- [ ] Implémenter les réglages Affichage
-- [ ] Préparer la structure des réglages Alertes, Équipe et Données sans forcément tout finaliser
+- [x] Implémenter les réglages Caisse
+- [x] Implémenter les réglages Affichage
+- [x] Préparer la structure des réglages Alertes, Équipe et Données sans forcément tout finaliser
 
 ### Sprint 3 — Qualité minimale
 
@@ -175,7 +175,7 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 | Priorité | Tâches totales | Restantes | Statut |
 | -------- | ------------- | --------- | ------ |
 | P0 | 16 | 1 | Bloquant production |
-| P1 | 15 | 12 | Réclamé en premier |
+| P1 | 15 | 10 | Réclamé en premier |
 | P2 | 15 | 15 | Différenciants |
 | P3 | 16 | 16 | Long terme |
-| **Total** | **62** | **44** | |
+| **Total** | **62** | **42** | |
