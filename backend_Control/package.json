@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "test": "npm run build && node --test dist/**/*.test.js",
+    "test": "npm run build && node --test $(find dist -name '*.test.js' | sort)",
     "start": "node dist/server.js",
     "appwrite:setup-shops": "node scripts/setup-appwrite-shops.js",
     "appwrite:setup-notifications": "node scripts/setup-appwrite-notifications.js",

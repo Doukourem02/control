@@ -7,9 +7,23 @@
 
 ## Point de reprise rapide
 
-Dernière mise à jour : 2026-05-22 (session 2).
+Dernière mise à jour : 2026-05-22 (session 3).
 
 ### Dernier arrêt concret
+
+**Tests unitaires services backend — LIVRÉ** (session 3). `npm test` dans `backend_Control` : **53 tests, 0 échec**.
+
+Ce qui a été livré dans la session 3 :
+
+- **`backend_Control/src/modules/cash/cash.service.test.ts`** — nouveau (13 tests). Couvre : `getCashClosures` (limit clamping, route par date), `createCashClosure` (validation montant, calcul cashGap, montant 0 accepté), `patchCashClosure` (note vide, clôture introuvable, mauvaise boutique, correction appliquée). Mocks via `require.cache` : sales/expenses/cash/shops repos + notifications triggers.
+- **`backend_Control/src/modules/sales/sales.service.test.ts`** — nouveau (7 tests). Couvre : `createSale` — productId manquant, quantity ≤ 0 ou NaN, paymentMethod invalide, méthode désactivée dans la boutique, chemin heureux.
+- **`backend_Control/src/modules/stock/stock.service.test.ts`** — nouveau (9 tests). Couvre : `getStockMovements` — limit clamping (1–50), filtre productId + trim + blank, plage date from/to, type de mouvement, pas de date → range undefined. Utilise `mock.fn()` pour vérifier les arguments passés au repo.
+- **`backend_Control/src/modules/products/products.service.test.ts`** — nouveau (20 tests). Couvre : `createOrSupplyProduct` (7 validations + 2 chemins heureux), `updateProduct` (not found, mauvaise boutique, nom vide, prix ≤ 0, aucun champ, mises à jour), `archiveProduct` (not found, mauvaise boutique, hasSales, suppression OK).
+- **`backend_Control/package.json`** — script `test` corrigé : remplace le glob `dist/**/*.test.js` (non supporté par `/bin/sh`) par `find dist -name '*.test.js' | sort`.
+
+**Technique de mock utilisée** : injection dans `require.cache` via `createRequire(__filename)` + chargement lazy du service après injection. Compatible Node 20 (pas de `mock.module()` qui nécessite Node 22).
+
+---
 
 **Photo/emoji amélioré — LIVRÉ** (session 2). `npx tsc --noEmit` passe. P2 terminé à 100 %.
 
@@ -34,14 +48,12 @@ Ce qui a été livré dans la session 1 :
 
 ### Prochaine étape
 
-#### P3 : Tests unitaires sur les services backend
+#### P3 : Tests d'intégration sur les routes API critiques
 
-Prochains services à couvrir (par ordre de criticité) :
+Les tests unitaires services sont terminés (53 tests). La prochaine couche utile :
 
-1. `cash.service.ts` — calculs résumé journalier (socle partiel déjà dans `cash.calculations.test.ts`)
-2. `sales.service.ts` — création vente, décrémentation stock
-3. `stock.service.ts` — mouvements de stock, supply
-4. `products.service.ts` — création, modification, suppression
+1. Tests d'intégration sur les routes HTTP critiques (sales, cash, products) — vérifie que controller + service + repo s'assemblent correctement, sans Appwrite réel (mock du repo Appwrite).
+2. Tests de composants frontend (formulaire vente, clôture caisse) — si Expo Testing Library est ajouté.
 
 CI/CD et push notifications : **différés explicitement — ne pas toucher pour l'instant.**
 
@@ -49,7 +61,21 @@ CI/CD et push notifications : **différés explicitement — ne pas toucher pour
 
 Push notifications Expo/iOS, connexion Apple/Facebook/X, multi-boutique, analytics avancés, CI/CD.
 
-### Fichiers modifiés sur la dernière reprise
+### Fichiers modifiés sur la dernière reprise (session 3)
+
+- `backend_Control/src/modules/cash/cash.service.test.ts` — nouveau (13 tests).
+- `backend_Control/src/modules/sales/sales.service.test.ts` — nouveau (7 tests).
+- `backend_Control/src/modules/stock/stock.service.test.ts` — nouveau (9 tests).
+- `backend_Control/src/modules/products/products.service.test.ts` — nouveau (20 tests).
+- `backend_Control/package.json` — script `test` : glob `**` → `find dist -name '*.test.js'`.
+
+### Vérifications au dernier arrêt (session 3)
+
+```sh
+npm test   # dans backend_Control — 53 tests, 0 échec
+```
+
+### Fichiers modifiés sur la reprise précédente (session 2)
 
 - `Control/lib/network-state.ts` — nouveau.
 - `Control/lib/offline-cache.ts` — nouveau.
@@ -259,7 +285,7 @@ backend_Control/src/modules/
 
 ### Tests
 
-- [ ] Tests unitaires sur les services backend (sales, cash, stock, analytics)
+- [x] Tests unitaires sur les services backend (sales, cash, stock, products)
 - [x] Premier socle de tests backend : calculs de caisse (`cash.calculations.test.ts`)
 - [ ] Tests d'intégration sur les routes API critiques
 - [ ] Tests de composants frontend (formulaire vente, clôture)
@@ -316,7 +342,7 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 ### Sprint 3 — Qualité minimale
 
 - [x] Ajouter un framework de test backend (`node:test` via `npm test`)
-- [ ] Couvrir les services critiques : produits, stock, ventes, caisse
+- [x] Couvrir les services critiques : produits, stock, ventes, caisse (53 tests — session 3)
 - [x] Couvrir le premier bloc caisse : calcul du résumé journalier, dates métier, état clôturé/ouvert
 - [ ] Ajouter `npm run build` backend dans une vérification locale ou CI
 - [ ] Ajouter `npm run lint` frontend dans une vérification locale ou CI
@@ -331,7 +357,7 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 | P0 | 16 | 1 | Apple/FB/X différé en dernier plan |
 | P1 | 18 | 2 | Alertes settings UI + réappro historique (fait) |
 | P2 | 15 | 0 | Tout livré ✓ |
-| P3 | 16 | 16 | Long terme |
-| **Total** | **65** | **23** | |
+| P3 | 16 | 15 | Tests unitaires services ✓ |
+| **Total** | **65** | **22** | |
 
 > Le tableau compte les tâches haut niveau. Les sous-tâches ajoutées dans les sections de détail servent au suivi de reprise et peuvent être consolidées au fur et à mesure.
