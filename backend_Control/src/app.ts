@@ -18,11 +18,15 @@ import { stockRouter } from './modules/stock/stock.routes';
 import { usersRouter } from './modules/users/users.routes';
 import { errorHandler } from './middleware/error-handler';
 import { requireAuth } from './middleware/auth';
+import { apiVersionAlias } from './middleware/api-version';
+import { createRateLimiter } from './middleware/rate-limit';
 
 export const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(apiVersionAlias);
+app.use('/api', createRateLimiter());
 
 app.use(healthRouter);
 app.use(usersRouter);

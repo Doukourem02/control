@@ -1,0 +1,7 @@
+{
+  "name": "projet-control",
+  "private": true,
+  "scripts": {
+    "verify:local": "npm --prefix backend_Control run build && npm --prefix backend_Control test && npm --prefix Control run typecheck && npm --prefix Control run lint && npm --prefix Control test"
+  }
+}

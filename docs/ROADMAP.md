@@ -7,9 +7,55 @@
 
 ## Point de reprise rapide
 
-Dernière mise à jour : 2026-05-22 (session 3).
+Dernière mise à jour : 2026-05-22 (session 5).
+
+### État global actuel
+
+Tout ce qui devait être fait avant les sujets différés est terminé et vérifié.
+
+Il reste uniquement les blocs volontairement mis de côté :
+
+- Push notifications Expo/iOS.
+- CI/CD.
+- Connexion sociale Apple / Facebook / X.
+- Multi-boutique.
+- Analytics avancés.
+
+Ne pas reprendre d'autre chantier avant décision explicite sur l'un de ces blocs.
 
 ### Dernier arrêt concret
+
+**Qualité restante hors CI — LIVRÉ** (session 5). `npm run verify:local` à la racine : **OK**.
+
+Ce qui a été livré dans la session 5 :
+
+- **Tests de composants frontend** — nouveaux composants testables :
+  - `Control/components/sale-form.tsx` + `Control/tests/components/sale-form.test.tsx` (4 tests).
+  - `Control/components/closure-form.tsx` + `Control/tests/components/closure-form.test.tsx` (4 tests).
+  - `Control/app/sale.tsx` et `Control/app/closure.tsx` utilisent maintenant ces composants purs.
+- **Backend durci** :
+  - validation des variables d'environnement au démarrage (`validateEnv()` dans `backend_Control/src/config/env.ts`) + tests.
+  - rate limiting mémoire sur `/api` (`backend_Control/src/middleware/rate-limit.ts`) + tests.
+  - logger JSON structuré (`backend_Control/src/utils/logger.ts`) branché sur le serveur et l'error handler.
+  - alias compatible `/api/v1/...` → `/api/...` sans casser les routes existantes.
+- **Vérification locale hors CI** :
+  - `package.json` racine avec `npm run verify:local`.
+  - `Control/package.json` : scripts `test` et `typecheck`.
+
+---
+
+**Tests d'intégration routes API critiques backend — LIVRÉ** (session 4). `npm test` dans `backend_Control` : **63 tests, 0 échec**.
+
+Ce qui a été livré dans la session 4 :
+
+- **`backend_Control/src/integration/api-routes.test.ts`** — nouveau (10 tests). Couvre l'assemblage HTTP Express route → controller → service → repository, sans Appwrite réel : `sales`, `products`, `summary/today`, `cash-closures`.
+- Auth mockée au niveau middleware (`requireAuth`) pour fournir `request.auth.shopId`.
+- Repositories Appwrite mockés via `require.cache` avant chargement de `app.ts`.
+- Serveur HTTP local éphémère autour de l'app Express + client `fetch` natif Node.
+
+**Note vérification** : dans le sandbox Codex, l'écoute HTTP locale demande une autorisation escaladée (`listen EPERM` sinon). Une fois autorisée, la suite passe.
+
+---
 
 **Tests unitaires services backend — LIVRÉ** (session 3). `npm test` dans `backend_Control` : **53 tests, 0 échec**.
 
@@ -48,20 +94,53 @@ Ce qui a été livré dans la session 1 :
 
 ### Prochaine étape
 
-#### P3 : Tests d'intégration sur les routes API critiques
+#### Differes explicitement — ne pas toucher pour l'instant
 
-Les tests unitaires services sont terminés (53 tests). La prochaine couche utile :
+Tout ce qui etait faisable hors zone differee est termine.
 
-1. Tests d'intégration sur les routes HTTP critiques (sales, cash, products) — vérifie que controller + service + repo s'assemblent correctement, sans Appwrite réel (mock du repo Appwrite).
-2. Tests de composants frontend (formulaire vente, clôture caisse) — si Expo Testing Library est ajouté.
+Il reste uniquement :
 
-CI/CD et push notifications : **différés explicitement — ne pas toucher pour l'instant.**
+- Push notifications Expo/iOS.
+- Connexion Apple/Facebook/X.
+- Multi-boutique.
+- Analytics avancés.
+- CI/CD.
 
-#### Volontairement différé — ne pas toucher
+### Fichiers modifiés sur la dernière reprise (session 5)
 
-Push notifications Expo/iOS, connexion Apple/Facebook/X, multi-boutique, analytics avancés, CI/CD.
+- `Control/components/sale-form.tsx` — nouveau composant pur formulaire vente.
+- `Control/tests/components/sale-form.test.tsx` — nouveau (4 tests).
+- `Control/components/closure-form.tsx` — nouveau composant pur formulaire clôture.
+- `Control/tests/components/closure-form.test.tsx` — nouveau (4 tests).
+- `Control/app/sale.tsx` — utilise `SaleForm`.
+- `Control/app/closure.tsx` — utilise `ClosureForm`.
+- `Control/package.json` / `Control/package-lock.json` — deps/scripts tests frontend.
+- `Control/tsconfig.json` — types Node pour tests.
+- `backend_Control/src/config/env.ts` + `env.test.ts` — validation env.
+- `backend_Control/src/middleware/rate-limit.ts` + `rate-limit.test.ts` — rate limiting.
+- `backend_Control/src/middleware/api-version.ts` — alias `/api/v1`.
+- `backend_Control/src/utils/logger.ts` — logger structuré.
+- `backend_Control/src/app.ts`, `server.ts`, `middleware/error-handler.ts` — branchements qualité.
+- `backend_Control/src/integration/api-routes.test.ts` — ajout test `/api/v1/products`.
+- `package.json` — script racine `verify:local`.
 
-### Fichiers modifiés sur la dernière reprise (session 3)
+### Vérifications au dernier arrêt (session 5)
+
+```sh
+npm run verify:local   # racine — OK
+```
+
+### Fichiers modifiés sur la reprise précédente (session 4)
+
+- `backend_Control/src/integration/api-routes.test.ts` — nouveau (10 tests d'intégration API).
+
+### Vérifications au dernier arrêt (session 4)
+
+```sh
+npm test   # dans backend_Control — 63 tests, 0 échec
+```
+
+### Fichiers modifiés sur la reprise précédente (session 3)
 
 - `backend_Control/src/modules/cash/cash.service.test.ts` — nouveau (13 tests).
 - `backend_Control/src/modules/sales/sales.service.test.ts` — nouveau (7 tests).
@@ -69,7 +148,7 @@ Push notifications Expo/iOS, connexion Apple/Facebook/X, multi-boutique, analyti
 - `backend_Control/src/modules/products/products.service.test.ts` — nouveau (20 tests).
 - `backend_Control/package.json` — script `test` : glob `**` → `find dist -name '*.test.js'`.
 
-### Vérifications au dernier arrêt (session 3)
+### Vérifications session 3
 
 ```sh
 npm test   # dans backend_Control — 53 tests, 0 échec
@@ -211,7 +290,7 @@ backend_Control/src/modules/
 - [x] **Boutique** — modifier nom, contact, adresse, horaires
 - [x] **Caisse** — configurer devise, modes de paiement, heure de clôture par défaut
 - [x] **Équipe** — invitations avec code, rôles propriétaire/vendeuse, contrôle d'accès backend, modal interactif
-- [ ] **Alertes** — activer/désactiver alertes stock faible, rappel clôture oubliée, écarts de caisse
+- [x] **Alertes** — activer/désactiver alertes stock faible, rappel clôture oubliée, écarts de caisse
 - [x] **Affichage** — toggle montants visibles par défaut, choix de langue, unités
 - [x] **Données** — export PDF journalier, export CSV historique, partage natif
 
@@ -287,8 +366,8 @@ backend_Control/src/modules/
 
 - [x] Tests unitaires sur les services backend (sales, cash, stock, products)
 - [x] Premier socle de tests backend : calculs de caisse (`cash.calculations.test.ts`)
-- [ ] Tests d'intégration sur les routes API critiques
-- [ ] Tests de composants frontend (formulaire vente, clôture)
+- [x] Tests d'intégration sur les routes API critiques
+- [x] Tests de composants frontend (formulaire vente, clôture)
 
 ### Multi-boutique
 
@@ -306,10 +385,10 @@ backend_Control/src/modules/
 ### CI/CD & qualité
 
 - [ ] Pipeline CI (lint + build + tests) sur chaque PR
-- [ ] Versionning de l'API (préfixe `/v1/`)
-- [ ] Rate limiting sur le backend
-- [ ] Logs structurés (remplacer les `console.warn` par un vrai logger)
-- [ ] Variables d'environnement validées au démarrage du serveur
+- [x] Versionning de l'API (préfixe `/v1/`)
+- [x] Rate limiting sur le backend
+- [x] Logs structurés (remplacer les `console.warn` par un vrai logger)
+- [x] Variables d'environnement validées au démarrage du serveur
 
 ---
 
@@ -344,9 +423,9 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 - [x] Ajouter un framework de test backend (`node:test` via `npm test`)
 - [x] Couvrir les services critiques : produits, stock, ventes, caisse (53 tests — session 3)
 - [x] Couvrir le premier bloc caisse : calcul du résumé journalier, dates métier, état clôturé/ouvert
-- [ ] Ajouter `npm run build` backend dans une vérification locale ou CI
-- [ ] Ajouter `npm run lint` frontend dans une vérification locale ou CI
-- [ ] Valider les variables d'environnement au démarrage backend
+- [x] Ajouter `npm run build` backend dans une vérification locale ou CI
+- [x] Ajouter `npm run lint` frontend dans une vérification locale ou CI
+- [x] Valider les variables d'environnement au démarrage backend
 
 ---
 
@@ -355,9 +434,9 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 | Priorité | Tâches totales | Restantes | Statut |
 | -------- | ------------- | --------- | ------ |
 | P0 | 16 | 1 | Apple/FB/X différé en dernier plan |
-| P1 | 18 | 2 | Alertes settings UI + réappro historique (fait) |
+| P1 | 18 | 1 | Push notifications différées |
 | P2 | 15 | 0 | Tout livré ✓ |
-| P3 | 16 | 15 | Tests unitaires services ✓ |
-| **Total** | **65** | **22** | |
+| P3 | 16 | 8 | Hors CI/CD, multi-boutique et analytics : livré ✓ |
+| **Total** | **65** | **10** | Uniquement les blocs différés |
 
 > Le tableau compte les tâches haut niveau. Les sous-tâches ajoutées dans les sections de détail servent au suivi de reprise et peuvent être consolidées au fur et à mesure.
