@@ -1,7 +1,8 @@
-import { createExpense, getControlErrorMessage, type ExpenseCategory } from '@/lib/control-data';
+import { createExpense, flushOfflineQueue, getControlErrorMessage, isOfflineQueued, type ExpenseCategory } from '@/lib/control-data';
+import { useNetworkStatus } from '@/lib/network-state';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -36,6 +37,8 @@ function formatMoney(value: number) {
 
 export default function ExpenseScreen() {
   const router = useRouter();
+  const isOffline = useNetworkStatus();
+  const prevOfflineRef = useRef(false);
   const [category, setCategory] = useState<ExpenseCategory>('transport');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
@@ -43,6 +46,13 @@ export default function ExpenseScreen() {
   const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const parsedAmount = parseAmount(amount);
+
+  useEffect(() => {
+    if (prevOfflineRef.current && !isOffline) {
+      flushOfflineQueue();
+    }
+    prevOfflineRef.current = isOffline;
+  }, [isOffline]);
 
   async function handleCreateExpense() {
     setFormError('');
@@ -66,7 +76,13 @@ export default function ExpenseScreen() {
       setNote('');
       setSuccessMessage(`Sortie enregistree : ${formatMoney(expense.amount)}.`);
     } catch (error) {
-      setFormError(getControlErrorMessage(error));
+      if (isOfflineQueued(error)) {
+        setAmount('');
+        setNote('');
+        setSuccessMessage('En attente de connexion — sera synchronisée.');
+      } else {
+        setFormError(getControlErrorMessage(error));
+      }
     } finally {
       setSaving(false);
     }
@@ -78,6 +94,23 @@ export default function ExpenseScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
+        {isOffline && (
+          <View
+            style={{
+              backgroundColor: '#FFF3CD',
+              paddingVertical: 8,
+              paddingHorizontal: 24,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <Feather name="wifi-off" size={13} color="#856404" />
+            <Text style={{ color: '#856404', fontSize: 13, fontWeight: '600', flex: 1 }}>
+              Hors ligne — les sorties seront synchronisées à la reconnexion
+            </Text>
+          </View>
+        )}
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{

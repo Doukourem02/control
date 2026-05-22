@@ -4,8 +4,10 @@ import { listSalesInRange } from '../sales/sales.repository';
 import { parseAmount, userError } from '../../utils/http';
 import {
   createCashClosureRecord,
+  getCashClosureById,
   listCashClosuresByBusinessDate,
   listCashClosuresByShop,
+  updateCashClosureCorrection,
 } from './cash.repository';
 import { getShopById } from '../shops/shops.repository';
 import { buildTodaySummary, getBusinessDateKey, getBusinessDateRange } from './cash.calculations';
@@ -35,6 +37,7 @@ export async function createCashClosure(body: Record<string, unknown>, shopId: s
   const physicalCashActual = Math.round(parseAmount(body.physicalCashAmount));
   const note = String(body.note ?? '').trim();
   const requestedBusinessDate = typeof body.businessDate === 'string' ? body.businessDate : undefined;
+  const isPartial = body.isPartial === true;
 
   if (!Number.isFinite(physicalCashActual) || physicalCashActual < 0) {
     throw userError('Le montant compte doit etre valide.', 400, 'CASH_AMOUNT_INVALID');
@@ -57,6 +60,7 @@ export async function createCashClosure(body: Record<string, unknown>, shopId: s
       physicalCashActual,
       cashGap,
       note,
+      isPartial,
     }),
     getShopById(shopId),
   ]);
@@ -64,4 +68,20 @@ export async function createCashClosure(body: Record<string, unknown>, shopId: s
   triggerCashGapAlert(shopId, businessDate, cashGap, shop?.currency ?? 'FCFA').catch(() => {});
 
   return closure;
+}
+
+export async function patchCashClosure(id: string, shopId: string, body: Record<string, unknown>) {
+  const correctionNote = String(body.correctionNote ?? '').trim();
+
+  if (!correctionNote) {
+    throw userError('La note de correction ne peut pas etre vide.', 400, 'CORRECTION_NOTE_EMPTY');
+  }
+
+  const existing = await getCashClosureById(id);
+
+  if (!existing || existing.shopId !== shopId) {
+    throw userError('Cloture introuvable.', 404, 'CLOSURE_NOT_FOUND');
+  }
+
+  return updateCashClosureCorrection(id, correctionNote);
 }

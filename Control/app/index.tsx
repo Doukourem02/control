@@ -3,6 +3,7 @@ import { useControlAuth } from '@/lib/control-auth';
 import {
   exportDailyReport,
   exportHistoryCSV,
+  flushOfflineQueue,
   getControlErrorMessage,
   getAnalytics,
   getNotifications,
@@ -23,6 +24,7 @@ import {
   type StockMovementRow,
   type TodaySummary,
 } from '@/lib/control-data';
+import { useNetworkStatus } from '@/lib/network-state';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -2995,6 +2997,8 @@ function NotificationsCenterModal({
 export default function HomeScreen() {
   const router = useRouter();
   const { session, refreshSession } = useControlAuth();
+  const isOffline = useNetworkStatus();
+  const prevOfflineRef = useRef(false);
   const [activeMenu, setActiveMenu] = useState<NavKey>('home');
   const [amountsVisible, setAmountsVisible] = useState(true);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
@@ -3101,8 +3105,34 @@ export default function HomeScreen() {
     setAmountsVisible(isAmountsVisibleByDefault(session.shop.amountsVisibleByDefault));
   }, [session]);
 
+  useEffect(() => {
+    if (prevOfflineRef.current && !isOffline) {
+      flushOfflineQueue().then(() => {
+        getTodaySummary().then((s) => setTodaySummary(s));
+      });
+    }
+    prevOfflineRef.current = isOffline;
+  }, [isOffline]);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      {isOffline && (
+        <View
+          style={{
+            backgroundColor: '#FFF3CD',
+            paddingVertical: 8,
+            paddingHorizontal: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <Feather name="wifi-off" size={13} color="#856404" />
+          <Text style={{ color: '#856404', fontSize: 13, fontWeight: '600', flex: 1 }}>
+            Hors ligne — données en cache affichées
+          </Text>
+        </View>
+      )}
       <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#FFFFFF' }}>
         <View
           style={{

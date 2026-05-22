@@ -1,14 +1,17 @@
 import {
   createSale,
+  flushOfflineQueue,
   getControlErrorMessage,
   getProducts,
+  isOfflineQueued,
   type PaymentMethod,
   type ProductRow,
 } from '@/lib/control-data';
 import { useControlAuth } from '@/lib/control-auth';
+import { useNetworkStatus } from '@/lib/network-state';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -96,6 +99,8 @@ function ProductTile({
 export default function SaleScreen() {
   const router = useRouter();
   const { session } = useControlAuth();
+  const isOffline = useNetworkStatus();
+  const prevOfflineRef = useRef(false);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -165,6 +170,13 @@ export default function SaleScreen() {
     loadProducts();
   }, [loadProducts]);
 
+  useEffect(() => {
+    if (prevOfflineRef.current && !isOffline) {
+      flushOfflineQueue().then(() => loadProducts({ silent: true }));
+    }
+    prevOfflineRef.current = isOffline;
+  }, [isOffline, loadProducts]);
+
   async function handleCreateSale() {
     setFormError('');
     setSuccessMessage('');
@@ -207,8 +219,12 @@ export default function SaleScreen() {
       );
       await loadProducts({ silent: true });
     } catch (error) {
-      setProducts(prevProducts);
-      setFormError(getControlErrorMessage(error));
+      if (isOfflineQueued(error)) {
+        setSuccessMessage('En attente de connexion — sera synchronisée.');
+      } else {
+        setProducts(prevProducts);
+        setFormError(getControlErrorMessage(error));
+      }
     } finally {
       setSaving(false);
     }
@@ -226,6 +242,23 @@ export default function SaleScreen() {
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1 }}>
+          {isOffline && (
+            <View
+              style={{
+                backgroundColor: '#FFF3CD',
+                paddingVertical: 8,
+                paddingHorizontal: 20,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <Feather name="wifi-off" size={13} color="#856404" />
+              <Text style={{ color: '#856404', fontSize: 13, fontWeight: '600', flex: 1 }}>
+                Hors ligne — les ventes seront synchronisées à la reconnexion
+              </Text>
+            </View>
+          )}
           <ScrollView
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{

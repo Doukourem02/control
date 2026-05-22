@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 
 import { getShopId } from '../../utils/http';
 import { triggerClosureReminderIfNeeded } from '../notifications/notifications.triggers';
-import { createCashClosure, getCashClosures, getTodaySummary } from './cash.service';
+import { createCashClosure, getCashClosures, getTodaySummary, patchCashClosure } from './cash.service';
 
 export async function getTodaySummaryController(request: Request, response: Response) {
   const date = typeof request.query.date === 'string' ? request.query.date : undefined;
@@ -27,4 +27,11 @@ export async function getCashClosuresController(request: Request, response: Resp
   const closures = await getCashClosures(getShopId(request), request.query.limit, date);
 
   response.json({ closures });
+}
+
+export async function patchCashClosureController(request: Request, response: Response) {
+  const id = String(request.params.id);
+  const closure = await patchCashClosure(id, getShopId(request), request.body);
+
+  response.json({ closure });
 }

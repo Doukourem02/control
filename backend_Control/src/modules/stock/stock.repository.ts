@@ -24,7 +24,8 @@ export async function listStockMovementsByShop(
   limit: number,
   type?: string,
   from?: Date,
-  to?: Date
+  to?: Date,
+  productId?: string
 ): Promise<StockMovementRow[]> {
   const filters = [
     Query.equal('shopId', shopId),
@@ -32,6 +33,10 @@ export async function listStockMovementsByShop(
 
   if (type) {
     filters.push(Query.equal('type', type));
+  }
+
+  if (productId) {
+    filters.push(Query.equal('productId', productId));
   }
 
   if (from) {

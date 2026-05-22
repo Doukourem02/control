@@ -91,6 +91,8 @@ export type CashClosureRow = {
   physicalCashActual: number;
   cashGap: number;
   note: string;
+  correctionNote: string;
+  isPartial: boolean;
 };
 
 export const missingReasons = ['perdu', 'abime', 'erreur', 'consommation interne'] as const;

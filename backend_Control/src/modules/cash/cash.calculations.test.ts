@@ -46,6 +46,8 @@ function closure(cashGap: number): CashClosureRow {
     physicalCashActual: 0,
     cashGap,
     note: '',
+    correctionNote: '',
+    isPartial: false,
   };
 }
 

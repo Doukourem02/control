@@ -120,6 +120,10 @@ export function shouldSurfaceControlError(error: unknown) {
   return error instanceof ControlApiError && (error.status === 401 || error.status === 403);
 }
 
+export function isOfflineQueued(error: unknown): boolean {
+  return error instanceof ControlApiError && error.code === 'OFFLINE_QUEUED';
+}
+
 export function logControlError(context: string, error: unknown) {
   if (!isDevelopment()) return;
 

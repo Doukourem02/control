@@ -1,12 +1,16 @@
 import {
+  ControlApiError,
   createApiError,
   createNetworkError,
   logControlError,
   shouldSurfaceControlError,
 } from '@/lib/control-errors';
 import { getStoredSessionSecret } from '@/lib/control-auth-storage';
+import { cacheRead, cacheWrite } from '@/lib/offline-cache';
+import { getIsOffline, notifyNetworkOffline, notifyNetworkOnline } from '@/lib/network-state';
+import { queueAdd, queueGet, queueRemove } from '@/lib/offline-queue';
 
-export { getControlErrorMessage } from '@/lib/control-errors';
+export { getControlErrorMessage, isOfflineQueued } from '@/lib/control-errors';
 
 type BaseRow = {
   $id: string;
@@ -53,6 +57,8 @@ export type CashClosureRow = BaseRow & {
   physicalCashActual: number;
   cashGap: number;
   note: string;
+  correctionNote: string;
+  isPartial: boolean;
 };
 
 export type MissingRow = BaseRow & {
@@ -164,6 +170,7 @@ export type CreateCashClosureInput = {
   businessDate?: string;
   physicalCashAmount: number;
   note?: string;
+  isPartial?: boolean;
 };
 
 export type UpdateShopInput = {
@@ -230,6 +237,7 @@ async function requestApi<ResponseBody>(
       },
     });
   } catch (error) {
+    notifyNetworkOffline();
     throw createNetworkError(error);
   }
 
@@ -237,17 +245,19 @@ async function requestApi<ResponseBody>(
     throw await createApiError(response);
   }
 
+  notifyNetworkOnline();
   return response.json() as Promise<ResponseBody>;
 }
 
 export async function getCategories(): Promise<CategoryRow[]> {
   try {
     const response = await requestApi<{ categories: CategoryRow[] }>('/api/categories');
+    void cacheWrite('categories', response.categories);
     return response.categories;
   } catch (error) {
     if (shouldSurfaceControlError(error)) throw error;
     logControlError('load-categories', error);
-    return [];
+    return (await cacheRead<CategoryRow[]>('categories')) ?? [];
   }
 }
 
@@ -266,12 +276,12 @@ export async function deleteCategory(categoryId: string): Promise<void> {
 export async function getProducts(): Promise<ProductRow[]> {
   try {
     const response = await requestApi<{ products: ProductRow[] }>('/api/products');
-
+    void cacheWrite('products', response.products);
     return response.products;
   } catch (error) {
     if (shouldSurfaceControlError(error)) throw error;
     logControlError('load-products', error);
-    return [];
+    return (await cacheRead<ProductRow[]>('products')) ?? [];
   }
 }
 
@@ -303,21 +313,64 @@ export async function deleteProduct(productId: string): Promise<void> {
 }
 
 export async function createSale(input: CreateSaleInput) {
+  if (getIsOffline()) {
+    await queueAdd({ type: 'sale', payload: input });
+    throw new ControlApiError(
+      'Vente mise en attente — sera envoyée à la reconnexion.',
+      0,
+      'OFFLINE_QUEUED',
+      'user'
+    );
+  }
   const response = await requestApi<{ sale: SaleRow }>('/api/sales', {
     method: 'POST',
     body: JSON.stringify(input),
   });
-
   return response.sale;
 }
 
 export async function createExpense(input: CreateExpenseInput) {
+  if (getIsOffline()) {
+    await queueAdd({ type: 'expense', payload: input });
+    throw new ControlApiError(
+      'Sortie mise en attente — sera envoyée à la reconnexion.',
+      0,
+      'OFFLINE_QUEUED',
+      'user'
+    );
+  }
   const response = await requestApi<{ expense: ExpenseRow }>('/api/expenses', {
     method: 'POST',
     body: JSON.stringify(input),
   });
-
   return response.expense;
+}
+
+let flushing = false;
+
+export async function flushOfflineQueue(): Promise<number> {
+  if (flushing) return 0;
+  flushing = true;
+  let flushed = 0;
+  try {
+    const queue = await queueGet();
+    for (const item of queue) {
+      try {
+        if (item.type === 'sale') {
+          await requestApi('/api/sales', { method: 'POST', body: JSON.stringify(item.payload) });
+        } else if (item.type === 'expense') {
+          await requestApi('/api/expenses', { method: 'POST', body: JSON.stringify(item.payload) });
+        }
+        await queueRemove(item.id);
+        flushed++;
+      } catch {
+        break;
+      }
+    }
+  } finally {
+    flushing = false;
+  }
+  return flushed;
 }
 
 export async function createMissing(input: CreateMissingInput) {
@@ -402,6 +455,18 @@ export async function getCashClosures(
   }
 }
 
+export async function correctCashClosure(
+  id: string,
+  correctionNote: string
+): Promise<CashClosureRow> {
+  const response = await requestApi<{ closure: CashClosureRow }>(`/api/cash-closures/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ correctionNote }),
+  });
+
+  return response.closure;
+}
+
 export async function getRecentStockMovements(
   limit = 6,
   date?: string
@@ -421,6 +486,26 @@ export async function getRecentStockMovements(
   } catch (error) {
     if (shouldSurfaceControlError(error)) throw error;
     logControlError('load-stock-movements', error);
+    return [];
+  }
+}
+
+export async function getProductSupplyHistory(productId: string, limit = 20): Promise<StockMovementRow[]> {
+  try {
+    const query = new URLSearchParams({
+      productId,
+      type: 'supply',
+      limit: String(limit),
+    });
+
+    const response = await requestApi<{ movements: StockMovementRow[] }>(
+      `/api/stock-movements?${query.toString()}`
+    );
+
+    return response.movements;
+  } catch (error) {
+    if (shouldSurfaceControlError(error)) throw error;
+    logControlError('load-supply-history', error);
     return [];
   }
 }
@@ -484,11 +569,12 @@ export async function getTodaySummary(
 
     const suffix = query.toString() ? `?${query.toString()}` : '';
     const response = await requestApi<{ summary: TodaySummary }>(`/api/summary/today${suffix}`);
-
+    if (!date) void cacheWrite('today-summary', response.summary);
     return response.summary;
   } catch (error) {
     if (shouldSurfaceControlError(error)) throw error;
     logControlError('load-today-summary', error);
+    if (!date) return (await cacheRead<TodaySummary>('today-summary')) ?? emptyTodaySummary;
     return emptyTodaySummary;
   }
 }

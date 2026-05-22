@@ -1,15 +1,21 @@
 import {
+  correctCashClosure,
   getCashClosures,
+  getControlErrorMessage,
   type CashClosureRow,
 } from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,15 +56,195 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
-function ClosureItem({ closure }: { closure: CashClosureRow }) {
+function CorrectionModal({
+  closure,
+  visible,
+  onClose,
+  onSaved,
+}: {
+  closure: CashClosureRow | null;
+  visible: boolean;
+  onClose: () => void;
+  onSaved: (updated: CashClosureRow) => void;
+}) {
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const inputRef = useRef<typeof TextInput>(null);
+
+  useEffect(() => {
+    if (visible && closure) {
+      setNote(closure.correctionNote ?? '');
+      setError('');
+    }
+  }, [visible, closure]);
+
+  async function handleSave() {
+    if (!closure) return;
+    setError('');
+    setSaving(true);
+    try {
+      const updated = await correctCashClosure(closure.$id, note.trim());
+      onSaved(updated);
+      onClose();
+    } catch (err) {
+      setError(getControlErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.38)' }}
+        onPress={onClose}
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
+      >
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingHorizontal: 24,
+            paddingTop: 20,
+            paddingBottom: 36,
+            gap: 16,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ color: '#111111', fontSize: 20, fontWeight: '900' }}>
+              Correction
+            </Text>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }: { pressed: boolean }) => ({
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                backgroundColor: '#F7F7F7',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.62 : 1,
+              })}
+            >
+              <Feather name="x" size={18} color="#111111" />
+            </Pressable>
+          </View>
+
+          <Text style={{ color: '#9A9A9A', fontSize: 13, lineHeight: 18, fontWeight: '600' }}>
+            Ajoute une note pour expliquer l&apos;erreur de saisie. Les montants originaux sont conserves pour l&apos;audit.
+          </Text>
+
+          {closure ? (
+            <View
+              style={{
+                borderRadius: 18,
+                borderCurve: 'continuous',
+                backgroundColor: '#F7F7F7',
+                borderWidth: 1,
+                borderColor: '#EFEFEF',
+                padding: 14,
+                gap: 6,
+              }}
+            >
+              <Text style={{ color: '#9A9A9A', fontSize: 12, fontWeight: '700' }}>
+                Cloture du {formatTime(closure.$createdAt)}
+              </Text>
+              <Text style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>
+                Attendu {formatMoney(closure.physicalCashExpected)} — Compte {formatMoney(closure.physicalCashActual)} — Ecart {formatMoney(closure.cashGap)}
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={{ gap: 7 }}>
+            <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Note de correction</Text>
+            <TextInput
+              ref={inputRef}
+              value={note}
+              onChangeText={setNote}
+              placeholder="Ex : j'ai saisi 5000 au lieu de 15000"
+              placeholderTextColor="#B4B4B4"
+              multiline
+              style={{
+                minHeight: 72,
+                borderRadius: 16,
+                borderCurve: 'continuous',
+                backgroundColor: '#F7F7F7',
+                borderWidth: 1,
+                borderColor: '#EEEEEE',
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                color: '#111111',
+                fontSize: 15,
+                fontWeight: '600',
+                textAlignVertical: 'top',
+              }}
+            />
+          </View>
+
+          {error ? (
+            <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>{error}</Text>
+          ) : null}
+
+          <Pressable
+            onPress={handleSave}
+            disabled={saving || note.trim().length === 0}
+            style={({ pressed }: { pressed: boolean }) => ({
+              height: 52,
+              borderRadius: 18,
+              borderCurve: 'continuous',
+              backgroundColor: saving || note.trim().length === 0 ? '#9FCAEF' : '#2A8DEB',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'row',
+              gap: 8,
+              opacity: pressed && note.trim().length > 0 ? 0.76 : 1,
+            })}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Feather name="check" size={18} color="#FFFFFF" />
+            )}
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              Enregistrer la correction
+            </Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function ClosureItem({
+  closure,
+  onCorrect,
+}: {
+  closure: CashClosureRow;
+  onCorrect: (closure: CashClosureRow) => void;
+}) {
   const balanced = closure.cashGap === 0;
   const gapColor = balanced ? '#34C875' : '#E5484D';
-  const status = balanced ? 'Equilibree' : closure.cashGap < 0 ? 'Manquant' : 'Surplus';
+  const status = closure.isPartial
+    ? 'Partielle'
+    : balanced
+      ? 'Equilibree'
+      : closure.cashGap < 0
+        ? 'Manquant'
+        : 'Surplus';
 
   return (
     <View
       style={{
-        minHeight: 112,
         borderRadius: 24,
         borderCurve: 'continuous',
         backgroundColor: '#F7F7F7',
@@ -69,17 +255,49 @@ function ClosureItem({ closure }: { closure: CashClosureRow }) {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ color: '#111111', fontSize: 17, fontWeight: '900' }}>
-            {status}
-          </Text>
-          <Text style={{ marginTop: 3, color: '#9A9A9A', fontSize: 13, fontWeight: '600' }}>
-            {formatTime(closure.$createdAt)}
-          </Text>
+        <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text numberOfLines={1} style={{ color: '#111111', fontSize: 17, fontWeight: '900' }}>
+                {status}
+              </Text>
+              {closure.isPartial ? (
+                <View
+                  style={{
+                    borderRadius: 8,
+                    backgroundColor: '#FFF3CD',
+                    paddingHorizontal: 7,
+                    paddingVertical: 2,
+                  }}
+                >
+                  <Text style={{ color: '#856404', fontSize: 11, fontWeight: '800' }}>EN COURS</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={{ marginTop: 3, color: '#9A9A9A', fontSize: 13, fontWeight: '600' }}>
+              {formatTime(closure.$createdAt)}
+            </Text>
+          </View>
         </View>
-        <Text style={{ color: gapColor, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'] }}>
-          {formatMoney(closure.cashGap)}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={{ color: gapColor, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'] }}>
+            {formatMoney(closure.cashGap)}
+          </Text>
+          <Pressable
+            onPress={() => onCorrect(closure)}
+            style={({ pressed }: { pressed: boolean }) => ({
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              backgroundColor: '#EEEEEE',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.62 : 1,
+            })}
+          >
+            <Feather name="edit-2" size={15} color="#555555" />
+          </Pressable>
+        </View>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -96,6 +314,27 @@ function ClosureItem({ closure }: { closure: CashClosureRow }) {
           </Text>
         </View>
       </View>
+
+      {closure.correctionNote ? (
+        <View
+          style={{
+            borderRadius: 12,
+            backgroundColor: '#FFF8E7',
+            borderWidth: 1,
+            borderColor: '#FFE9A0',
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: 7,
+          }}
+        >
+          <Feather name="alert-circle" size={14} color="#B06D00" style={{ marginTop: 2 }} />
+          <Text style={{ flex: 1, color: '#7A4A00', fontSize: 13, fontWeight: '600', lineHeight: 18 }}>
+            {closure.correctionNote}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -106,6 +345,7 @@ export default function ClosureHistoryScreen() {
   const [businessDate, setBusinessDate] = useState(todayKey);
   const [closures, setClosures] = useState<CashClosureRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [correcting, setCorrecting] = useState<CashClosureRow | null>(null);
 
   const loadClosures = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!silent) setLoading(true);
@@ -117,6 +357,10 @@ export default function ClosureHistoryScreen() {
   useEffect(() => {
     loadClosures();
   }, [loadClosures]);
+
+  function handleCorrectionSaved(updated: CashClosureRow) {
+    setClosures((prev) => prev.map((c) => (c.$id === updated.$id ? updated : c)));
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -259,12 +503,23 @@ export default function ClosureHistoryScreen() {
               </View>
             ) : (
               closures.map((closure) => (
-                <ClosureItem key={closure.$id} closure={closure} />
+                <ClosureItem
+                  key={closure.$id}
+                  closure={closure}
+                  onCorrect={setCorrecting}
+                />
               ))
             )}
           </View>
         </View>
       </ScrollView>
+
+      <CorrectionModal
+        closure={correcting}
+        visible={correcting !== null}
+        onClose={() => setCorrecting(null)}
+        onSaved={handleCorrectionSaved}
+      />
     </SafeAreaView>
   );
 }

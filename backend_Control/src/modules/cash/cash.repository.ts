@@ -12,6 +12,7 @@ export type CreateCashClosureInput = {
   physicalCashActual: number;
   cashGap: number;
   note?: string;
+  isPartial?: boolean;
 };
 
 function toCashClosureRow(doc: any): CashClosureRow {
@@ -28,6 +29,8 @@ function toCashClosureRow(doc: any): CashClosureRow {
     physicalCashActual: doc['physicalCashActual'] as number,
     cashGap: doc['cashGap'] as number,
     note: (doc['note'] ?? '') as string,
+    correctionNote: (doc['correctionNote'] ?? '') as string,
+    isPartial: (doc['isPartial'] ?? false) as boolean,
   };
 }
 
@@ -41,6 +44,7 @@ export async function createCashClosureRecord(input: CreateCashClosureInput): Pr
     physicalCashExpected: input.physicalCashExpected,
     physicalCashActual: input.physicalCashActual,
     cashGap: input.cashGap,
+    isPartial: input.isPartial ?? false,
   });
 
   await databases.createDocument(DATABASE_ID, COLLECTIONS.activityLogs, ID.unique(), {
@@ -91,4 +95,20 @@ export async function listCashClosuresByShop(shopId: string, limit: number): Pro
   ]);
 
   return response.documents.map(toCashClosureRow);
+}
+
+export async function getCashClosureById(id: string): Promise<CashClosureRow | null> {
+  try {
+    const doc = await databases.getDocument(DATABASE_ID, COLLECTIONS.cashClosures, id);
+    return toCashClosureRow(doc);
+  } catch {
+    return null;
+  }
+}
+
+export async function updateCashClosureCorrection(id: string, correctionNote: string): Promise<CashClosureRow> {
+  const doc = await databases.updateDocument(DATABASE_ID, COLLECTIONS.cashClosures, id, {
+    correctionNote,
+  });
+  return toCashClosureRow(doc);
 }

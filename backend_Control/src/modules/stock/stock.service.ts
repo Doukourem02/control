@@ -10,14 +10,21 @@ function getBusinessDateRange(date: string) {
   return { from, to };
 }
 
-export async function getStockMovements(shopId: string, rawLimit: unknown, type?: unknown, date?: unknown) {
+export async function getStockMovements(
+  shopId: string,
+  rawLimit: unknown,
+  type?: unknown,
+  date?: unknown,
+  productId?: unknown
+) {
   const limit = Math.max(1, Math.min(50, Number(rawLimit ?? 8)));
   const movementType = typeof type === 'string' ? type : undefined;
+  const productFilter = typeof productId === 'string' && productId.trim() ? productId.trim() : undefined;
 
   if (typeof date === 'string' && date.trim()) {
     const { from, to } = getBusinessDateRange(date);
-    return listStockMovementsByShop(shopId, limit, movementType, from, to);
+    return listStockMovementsByShop(shopId, limit, movementType, from, to, productFilter);
   }
 
-  return listStockMovementsByShop(shopId, limit, movementType);
+  return listStockMovementsByShop(shopId, limit, movementType, undefined, undefined, productFilter);
 }

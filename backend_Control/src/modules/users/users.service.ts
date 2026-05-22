@@ -107,7 +107,14 @@ export async function loginUser(input: AuthInput) {
 }
 
 export async function getCurrentUser(sessionSecret: string) {
-  return createSessionPayload(sessionSecret);
+  try {
+    return await createSessionPayload(sessionSecret);
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 401) {
+      throw userError('Session expiree. Reconnecte-toi.', 401, 'AUTH_SESSION_EXPIRED');
+    }
+    throw error;
+  }
 }
 
 export async function logoutUser(sessionSecret: string) {

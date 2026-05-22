@@ -115,6 +115,7 @@ export default function ClosureScreen() {
   const [summary, setSummary] = useState<TodaySummary>(emptySummary);
   const [physicalCashAmount, setPhysicalCashAmount] = useState('');
   const [note, setNote] = useState('');
+  const [isPartial, setIsPartial] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -154,6 +155,7 @@ export default function ClosureScreen() {
   useEffect(() => {
     setPhysicalCashAmount('');
     setNote('');
+    setIsPartial(false);
     setFormError('');
     setSuccessMessage('');
   }, [businessDate]);
@@ -179,6 +181,7 @@ export default function ClosureScreen() {
         businessDate,
         physicalCashAmount: Math.round(parsedPhysicalCash),
         note: note.trim(),
+        isPartial,
       });
 
       setSuccessMessage(
@@ -471,6 +474,53 @@ export default function ClosureScreen() {
                     }}
                   />
                 </View>
+
+                <Pressable
+                  onPress={() => setIsPartial((v) => !v)}
+                  style={({ pressed }: { pressed: boolean }) => ({
+                    minHeight: 52,
+                    borderRadius: 18,
+                    borderCurve: 'continuous',
+                    backgroundColor: isPartial ? '#FFF8E7' : '#F7F7F7',
+                    borderWidth: 1,
+                    borderColor: isPartial ? '#FFD580' : '#EEEEEE',
+                    paddingHorizontal: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    opacity: pressed ? 0.72 : 1,
+                  })}
+                >
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>
+                      Cloture partielle
+                    </Text>
+                    <Text style={{ color: '#9A9A9A', fontSize: 12, fontWeight: '600' }}>
+                      Changement d&apos;equipe ou fermeture en cours de journee
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 26,
+                      borderRadius: 13,
+                      backgroundColor: isPartial ? '#F59E0B' : '#CCCCCC',
+                      justifyContent: 'center',
+                      paddingHorizontal: 3,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        backgroundColor: '#FFFFFF',
+                        alignSelf: isPartial ? 'flex-end' : 'flex-start',
+                      }}
+                    />
+                  </View>
+                </Pressable>
 
                 <View
                   style={{

@@ -5,18 +5,20 @@ import {
   deleteProduct,
   getCategories,
   getControlErrorMessage,
+  getProductSupplyHistory,
   getProducts,
   updateProduct,
   type CategoryRow,
   type ProductRow,
   type ProductUnit,
+  type StockMovementRow,
   type UpdateProductInput,
 } from '@/lib/control-data';
 import { useControlAuth } from '@/lib/control-auth';
 import { logControlError } from '@/lib/control-errors';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -98,6 +100,7 @@ function Field({
 export default function StockScreen() {
   const router = useRouter();
   const { session } = useControlAuth();
+  const scrollRef = useRef<{ scrollTo: (opts: { y: number; animated: boolean }) => void } | null>(null);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -133,6 +136,30 @@ export default function StockScreen() {
   const [editSellingPrice, setEditSellingPrice] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [deleteSaving, setDeleteSaving] = useState(false);
+  const [historyProduct, setHistoryProduct] = useState<ProductRow | null>(null);
+  const [newProductEmoji, setNewProductEmoji] = useState('');
+  const [historyMovements, setHistoryMovements] = useState<StockMovementRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  function openRestock(product: ProductRow) {
+    setSupplyMode('existing');
+    setSelectedProductId(product.$id);
+    setQuantity('');
+    setPurchaseUnitInput('');
+    setSellingUnitPrice(String(product.sellingUnitPrice));
+    setFormError('');
+    setSuccessMessage('');
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
+
+  async function openHistory(product: ProductRow) {
+    setHistoryProduct(product);
+    setHistoryMovements([]);
+    setHistoryLoading(true);
+    const movements = await getProductSupplyHistory(product.$id);
+    setHistoryMovements(movements);
+    setHistoryLoading(false);
+  }
 
   const filteredProducts = searchQuery.trim()
     ? products.filter((p) =>
@@ -259,7 +286,7 @@ export default function StockScreen() {
       shopId: isExistingSupply ? selectedProduct!.shopId : 'pending-shop',
       name: isExistingSupply ? selectedProduct!.name : name.trim(),
       category: isExistingSupply ? selectedProduct!.category : (selectedCategory?.name ?? ''),
-      emoji: isExistingSupply ? selectedProduct!.emoji : (selectedCategory?.emoji ?? '📦'),
+      emoji: isExistingSupply ? selectedProduct!.emoji : (newProductEmoji || selectedCategory?.emoji || '📦'),
       quantity: isExistingSupply ? selectedProduct!.quantity + parsedQuantity : parsedQuantity,
       unit: isExistingSupply ? selectedProduct!.unit : unit,
       purchaseUnitPrice: purchaseUnitPrice,
@@ -277,6 +304,7 @@ export default function StockScreen() {
     setSelectedProductId(tempProductId);
     setName('');
     setSelectedCategoryId('');
+    setNewProductEmoji('');
     setQuantity('');
     setUnit(defaultUnit);
     setPurchaseUnitInput('');
@@ -289,7 +317,7 @@ export default function StockScreen() {
         productId: isExistingSupply ? selectedProduct?.$id : undefined,
         name: isExistingSupply ? selectedProduct?.name ?? '' : name,
         category: isExistingSupply ? selectedProduct?.category ?? '' : (selectedCategory?.name ?? ''),
-        emoji: isExistingSupply ? selectedProduct?.emoji ?? '📦' : (selectedCategory?.emoji ?? '📦'),
+        emoji: isExistingSupply ? selectedProduct?.emoji ?? '📦' : (newProductEmoji || selectedCategory?.emoji || '📦'),
         quantity: parsedQuantity,
         unit: isExistingSupply ? selectedProduct?.unit ?? unit : unit,
         purchaseTotal: Math.round(parsedPurchaseTotal),
@@ -346,7 +374,15 @@ export default function StockScreen() {
     }
   }
 
-  const EMOJI_OPTIONS = ['🐟','🥩','🐔','🐑','🐷'];
+  const ALL_EMOJIS = [
+    '🍅','🥦','🧅','🧄','🌽','🥕',
+    '🍆','🥬','🍋','🍌','🍊','🍇',
+    '🍞','🥚','🧈','🌾','🫘','🥜',
+    '🐟','🥩','🐔','🐑','🐷','🦐',
+    '🥓','🧀','🥛','🧃','🫙','☕',
+    '🍫','🧴','🧹','🧺','🧻','🪣',
+    '💊','🏷️','📦','🛒',
+  ];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -355,6 +391,7 @@ export default function StockScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView
+          ref={scrollRef as any}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
             paddingHorizontal: 24,
@@ -528,6 +565,30 @@ export default function StockScreen() {
                 <>
                   <Field label="Nom" value={name} onChangeText={setName} placeholder="Poisson, boeuf, tripe" />
 
+                  <View style={{ gap: 8 }}>
+                    <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Emoji du produit</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {ALL_EMOJIS.map((emoji) => {
+                        const effectiveEmoji = newProductEmoji || selectedCategory?.emoji || '📦';
+                        const selected = effectiveEmoji === emoji;
+                        return (
+                          <Pressable
+                            key={emoji}
+                            onPress={() => setNewProductEmoji(emoji)}
+                            style={({ pressed }: { pressed: boolean }) => ({
+                              width: 44, height: 44, borderRadius: 14, borderCurve: 'continuous',
+                              backgroundColor: selected ? '#111111' : '#F2F2F2',
+                              alignItems: 'center', justifyContent: 'center',
+                              opacity: pressed ? 0.7 : 1,
+                            })}
+                          >
+                            <Text style={{ fontSize: 22 }}>{emoji}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
                   <View style={{ gap: 9 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Categorie</Text>
@@ -560,7 +621,7 @@ export default function StockScreen() {
                         />
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                           <View style={{ flexDirection: 'row', gap: 8 }}>
-                            {EMOJI_OPTIONS.map((emoji) => (
+                            {ALL_EMOJIS.map((emoji) => (
                               <Pressable
                                 key={emoji}
                                 onPress={() => setNewCategoryEmoji(emoji)}
@@ -833,6 +894,24 @@ export default function StockScreen() {
                           </View>
                         </View>
                         <Pressable
+                          onPress={() => openRestock(product)}
+                          style={({ pressed }: { pressed: boolean }) => ({
+                            width: 34, height: 34, borderRadius: 10, backgroundColor: '#E8F4FD',
+                            alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1,
+                          })}
+                        >
+                          <Feather name="plus-circle" size={14} color="#2A8DEB" />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => openHistory(product)}
+                          style={({ pressed }: { pressed: boolean }) => ({
+                            width: 34, height: 34, borderRadius: 10, backgroundColor: '#EBEBEB',
+                            alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1,
+                          })}
+                        >
+                          <Feather name="clock" size={14} color="#555555" />
+                        </Pressable>
+                        <Pressable
                           onPress={() => openEdit(product)}
                           style={({ pressed }: { pressed: boolean }) => ({
                             width: 34, height: 34, borderRadius: 10, backgroundColor: '#EBEBEB',
@@ -869,11 +948,29 @@ export default function StockScreen() {
 
             <View style={{ gap: 8 }}>
               <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Emoji</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {ALL_EMOJIS.map((emoji) => (
+                  <Pressable
+                    key={emoji}
+                    onPress={() => setEditEmoji(emoji)}
+                    style={({ pressed }: { pressed: boolean }) => ({
+                      width: 44, height: 44, borderRadius: 14, borderCurve: 'continuous',
+                      backgroundColor: editEmoji === emoji ? '#111111' : '#F2F2F2',
+                      alignItems: 'center', justifyContent: 'center',
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <Text style={{ fontSize: 22 }}>{emoji}</Text>
+                  </Pressable>
+                ))}
+              </View>
               <TextInput
                 value={editEmoji}
                 onChangeText={setEditEmoji}
                 maxLength={4}
-                style={{ height: 48, borderRadius: 14, backgroundColor: '#F7F7F7', paddingHorizontal: 14, fontSize: 22, color: '#111111' }}
+                placeholder="Ou tape un emoji personnalisé"
+                placeholderTextColor="#B4B4B4"
+                style={{ height: 44, borderRadius: 14, backgroundColor: '#F7F7F7', paddingHorizontal: 14, fontSize: 22, color: '#111111' }}
               />
             </View>
 
@@ -914,6 +1011,86 @@ export default function StockScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Modal Historique approvisionnements ───────────────────── */}
+      <Modal visible={historyProduct !== null} transparent animationType="slide" onRequestClose={() => setHistoryProduct(null)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.24)' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setHistoryProduct(null)} />
+          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 20, paddingBottom: 36, maxHeight: '75%' }}>
+            <View style={{ paddingHorizontal: 24, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }} numberOfLines={1}>
+                  {historyProduct?.emoji} {historyProduct?.name}
+                </Text>
+                <Text style={{ color: '#9A9A9A', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
+                  Historique des approvisionnements
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setHistoryProduct(null)}
+                style={({ pressed }: { pressed: boolean }) => ({ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F2F2F2', alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+              >
+                <Feather name="x" size={16} color="#555555" />
+              </Pressable>
+            </View>
+
+            {historyLoading ? (
+              <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+                <ActivityIndicator color="#2A8DEB" />
+              </View>
+            ) : historyMovements.length === 0 ? (
+              <View style={{ paddingHorizontal: 24, paddingVertical: 24, alignItems: 'center', gap: 6 }}>
+                <Feather name="package" size={32} color="#CCCCCC" />
+                <Text style={{ color: '#B4B4B4', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
+                  Aucun approvisionnement enregistre
+                </Text>
+              </View>
+            ) : (
+              <ScrollView contentContainerStyle={{ paddingHorizontal: 24, gap: 10 }} showsVerticalScrollIndicator={false}>
+                {historyMovements.map((m) => {
+                  const date = new Date(m.$createdAt);
+                  const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+                  const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                  return (
+                    <View
+                      key={m.$id}
+                      style={{
+                        backgroundColor: '#F7F7F7',
+                        borderRadius: 16,
+                        paddingHorizontal: 14,
+                        paddingVertical: 12,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                      }}
+                    >
+                      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#E8F4FD', alignItems: 'center', justifyContent: 'center' }}>
+                        <Feather name="plus-circle" size={16} color="#2A8DEB" />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>
+                          +{m.quantity} {m.unit}
+                        </Text>
+                        <Text style={{ color: '#9A9A9A', fontSize: 12, fontWeight: '600', marginTop: 1 }}>
+                          {dateStr} · {timeStr}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                        <Text style={{ color: '#111111', fontSize: 13, fontWeight: '800' }}>
+                          {formatMoney(m.totalCost)}
+                        </Text>
+                        <Text style={{ color: '#9A9A9A', fontSize: 11, fontWeight: '600' }}>
+                          {formatMoney(m.unitCost)} / {m.unit}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
       </Modal>
 
       {/* ── Modal Confirmation suppression ────────────────────────── */}

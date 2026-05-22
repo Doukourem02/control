@@ -86,8 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       logControlError('refresh-session', error);
 
-      if (error instanceof ControlApiError && error.status === 0) {
-        // Network unreachable — keep the cached session, don't force logout
+      if (error instanceof ControlApiError && error.status !== 401) {
+        // Network error or server error — keep the cached session, don't force logout
         setSession(storedSession);
         return;
       }

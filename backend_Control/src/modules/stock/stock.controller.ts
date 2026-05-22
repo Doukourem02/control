@@ -8,7 +8,8 @@ export async function listStockMovements(request: Request, response: Response) {
     getShopId(request),
     request.query.limit,
     request.query.type,
-    request.query.date
+    request.query.date,
+    request.query.productId
   );
 
   response.json({ movements });

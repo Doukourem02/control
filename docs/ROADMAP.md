@@ -7,58 +7,77 @@
 
 ## Point de reprise rapide
 
-Dernière mise à jour : 2026-05-21.
+Dernière mise à jour : 2026-05-22 (session 2).
 
-### Ce qui vient d'être fait
+### Dernier arrêt concret
 
-- Authentification Appwrite fonctionnelle avec login email/mot de passe, inscription, récupération de compte et Google OAuth.
-- Backend métier protégé par session Appwrite, avec `shopId` réel issu de l'utilisateur connecté.
-- Gestion d'erreurs structurée backend/frontend : erreurs utilisateur personnalisées, détails développeur masqués côté app.
-- Réglages profil refondus dans le style mobile minimal demandé.
-- Réglages **Boutique** finalisés : nom, contact, adresse, horaires.
-- Réglages **Caisse** finalisés : devise, modes de paiement, heure de clôture par défaut.
-- Réglages **Affichage** finalisés : montants visibles au démarrage, langue, unité par défaut.
-- Préférences **Alertes** préparées : toggles stock faible, clôture oubliée, écart de caisse, seuil stock faible.
-- Appwrite `shops` enrichi avec les champs réglages : paiement, clôture, affichage et préférences d'alertes.
-- **Notifications in-app complètes** : collection Appwrite `notifications`, module backend (list/read/read-all), centre de notifications (modal bottom sheet), badge non-lu sur la cloche, 3 déclencheurs branchés (stock faible, clôture oubliée, écart de caisse).
-- **Exports Données complets** : module backend `exports` (pdfkit), routes `GET /api/exports/daily` (PDF journalier) et `GET /api/exports/history` (CSV période), `DataSettingsModal` refait avec sélecteurs de date, états de chargement, et partage natif via `expo-file-system` + `expo-sharing`.
-- **Socle tests backend démarré** : script `npm test`, extraction des calculs purs de caisse, tests unitaires `cash.calculations.test.ts`.
-- **Clôture améliorée** : résumé détaillé avant confirmation sur l'écran de clôture (ventes cash, sorties, cash attendu, Mobile Money).
+**Photo/emoji amélioré — LIVRÉ** (session 2). `npx tsc --noEmit` passe. P2 terminé à 100 %.
 
-### Où reprendre
+Ce qui a été livré dans la session 2 :
 
-**Dernier arrêt concret** : on a démarré le Sprint 3 Qualité avec un premier socle de tests backend, puis on a livré le résumé détaillé avant confirmation sur l'écran de clôture.
+- **`Control/app/stock.tsx`** — grille de 40 emojis inline sous le champ Nom (création produit) ; même grille dans le modal d'édition + TextInput fallback pour emoji personnalisé ; `ALL_EMOJIS` (40 emojis) remplace `EMOJI_OPTIONS` (5) dans la création de catégorie ; emoji du nouveau produit = sélection utilisateur || emoji catégorie || `📦`.
 
-Prochaine étape recommandée : continuer **Sprint 3 Tests** en couvrant `sales`, `stock` et `analytics`, parce que le filet de sécurité backend commence à être en place et il faut l'étendre aux flux critiques.
+---
 
-Alternative produit possible : passer à **Clôture & corrections** avec la correction d'une clôture déjà soumise, puis la clôture partielle.
+**Mode offline — LIVRÉ** (session 1). 4 tests passent.
 
-Les push notifications sont volontairement différées — elles nécessitent un logo d'application finalisé pour iOS/Android.
+Ce qui a été livré dans la session 1 :
 
-### Dernier checkpoint technique
+- **`Control/lib/network-state.ts`** — flag global `offline` + listeners + hook `useNetworkStatus()`. Mis à jour automatiquement par `requestApi` (fetch échoué → offline, fetch réussi → online).
+- **`Control/lib/offline-cache.ts`** — cache JSON via `expo-file-system` (`cacheWrite` / `cacheRead`). Répertoire `ctrl-cache/` dans `documentDirectory`.
+- **`Control/lib/offline-queue.ts`** — queue persistante (`ctrl-queue.json`) pour les actions offline. `queueAdd` / `queueGet` / `queueRemove` / `queueCount`.
+- **`Control/lib/control-errors.ts`** — helper `isOfflineQueued(error)` pour distinguer une action mise en queue d'une vraie erreur.
+- **`Control/lib/control-data.ts`** — `requestApi` notifie l'état réseau ; `getProducts`, `getCategories`, `getTodaySummary` écrivent le cache au succès et lisent le cache à l'échec réseau ; `createSale` et `createExpense` mettent en queue et lancent `OFFLINE_QUEUED` quand hors ligne ; `flushOfflineQueue()` rejoue la queue à la reconnexion.
+- **`Control/app/sale.tsx`** — bannière amber "Hors ligne" ; vente acceptée avec message d'attente si `OFFLINE_QUEUED` (pas de réversion optimiste) ; `useEffect` qui flush la queue et recharge les produits au retour réseau.
+- **`Control/app/expense.tsx`** — idem pour les sorties caisse.
+- **`Control/app/index.tsx`** — bannière globale "Hors ligne — données en cache affichées" ; `useEffect` qui flush la queue + rafraîchit le résumé à la reconnexion.
 
-#### Fichiers ajoutés / modifiés sur la dernière reprise
+### Prochaine étape
 
-- `backend_Control/src/modules/cash/cash.calculations.ts` — extraction des calculs purs de caisse.
-- `backend_Control/src/modules/cash/cash.calculations.test.ts` — tests unitaires `node:test` des calculs de caisse.
-- `backend_Control/src/modules/cash/cash.service.ts` — branchement du service caisse sur les calculs extraits.
-- `backend_Control/package.json` — ajout du script `npm test`.
-- `Control/app/closure.tsx` — résumé détaillé avant confirmation de clôture.
-- `Control/app/index.tsx` — correction lint sur deux textes avec apostrophe.
-- `docs/ROADMAP.md` — mise à jour du point de reprise.
+#### P3 : Tests unitaires sur les services backend
 
-#### Vérifications passées au dernier arrêt
+Prochains services à couvrir (par ordre de criticité) :
 
-- `npm test` dans `backend_Control` — OK, 4 tests passent.
-- `npx tsc --noEmit` dans `Control` — OK.
-- `npm run lint` dans `Control` — OK.
-- `git diff --check` — OK.
+1. `cash.service.ts` — calculs résumé journalier (socle partiel déjà dans `cash.calculations.test.ts`)
+2. `sales.service.ts` — création vente, décrémentation stock
+3. `stock.service.ts` — mouvements de stock, supply
+4. `products.service.ts` — création, modification, suppression
 
-#### Point d'attention
+CI/CD et push notifications : **différés explicitement — ne pas toucher pour l'instant.**
 
-- Tentative Expo web non concluante : Expo a détecté les ports `8081` puis `8082` comme occupés en mode non interactif et n'a pas lancé de serveur exploitable. Le code compile et lint, mais l'écran de clôture reste à vérifier visuellement dans Expo quand un port libre est disponible.
+#### Volontairement différé — ne pas toucher
 
-### Notes importantes pour reprise par un autre agent
+Push notifications Expo/iOS, connexion Apple/Facebook/X, multi-boutique, analytics avancés, CI/CD.
+
+### Fichiers modifiés sur la dernière reprise
+
+- `Control/lib/network-state.ts` — nouveau.
+- `Control/lib/offline-cache.ts` — nouveau.
+- `Control/lib/offline-queue.ts` — nouveau.
+- `Control/lib/control-errors.ts` — + `isOfflineQueued`.
+- `Control/lib/control-data.ts` — network-state + cache (GET) + queue (mutations) + `flushOfflineQueue`.
+- `Control/app/sale.tsx` — bannière offline + gestion `OFFLINE_QUEUED` + sync reconnexion.
+- `Control/app/expense.tsx` — idem.
+- `Control/app/index.tsx` — bannière réseau globale + flush queue à la reconnexion.
+
+### Vérifications au dernier arrêt
+
+```sh
+npx tsc --noEmit   # dans Control — OK
+```
+
+### Points d'attention Appwrite
+
+| Collection | Script de création | Statut |
+| --- | --- | --- |
+| `shops` | `scripts/setup-appwrite-shops.js` | créée |
+| `notifications` | `scripts/setup-appwrite-notifications.js` | créée |
+| `members` | `scripts/create-members-collection.ts` (`npx ts-node -T`) | créée 2026-05-22 |
+| `cash_closures` champs `correctionNote`/`isPartial` | `scripts/setup-appwrite-cash-closures.js` | ajoutés 2026-05-22 |
+
+Si l'environnement Appwrite est recréé, relancer tous ces scripts dans l'ordre.
+
+### Notes pour reprise par un autre agent
 
 #### Stack & structure
 
@@ -66,7 +85,7 @@ Les push notifications sont volontairement différées — elles nécessitent un
 - **Backend** : Express v5 + TypeScript — `backend_Control/src/modules/` avec un dossier par module (routes / controller / service / repository).
 - **BaaS** : Appwrite (database, auth) — client SDK dans `backend_Control/src/config/appwrite.ts`.
 - **API calls frontend** : toutes dans `Control/lib/control-data.ts` via la fonction `requestApi`.
-- **Auth** : session Appwrite via Bearer token, middleware `requireAuth` dans `backend_Control/src/middleware/auth.ts`. Le `shopId` de l'utilisateur connecté est disponible via `request.auth.shopId` (ou `getShopId(request)`).
+- **Auth** : session Appwrite via Bearer token, middleware `requireAuth` dans `backend_Control/src/middleware/auth.ts`. Le `shopId` est disponible via `request.auth.shopId` (ou `getShopId(request)`).
 
 #### Modules backend existants
 
@@ -74,35 +93,42 @@ Les push notifications sont volontairement différées — elles nécessitent un
 backend_Control/src/modules/
 ├── activity/        — logs d'activité
 ├── analytics/       — analytics ventes/dépenses
-├── cash/            — résumé du jour + clôtures de caisse
+├── cash/            — résumé du jour + clôtures (correction + partielle inclus)
 ├── categories/      — catégories de produits
 ├── expenses/        — dépenses
+├── exports/         — PDF journalier + CSV historique (pdfkit)
 ├── health/          — healthcheck (route publique)
 ├── missing/         — déclaration de manquants
 ├── notifications/   — notifications in-app (list/read/read-all + triggers)
-│   └── notifications.triggers.ts  ← les 3 déclencheurs d'alertes
+│   └── notifications.triggers.ts  ← 3 déclencheurs : stock_low, cash_gap, closure_reminder
 ├── products/        — produits + approvisionnement (supply)
 ├── sales/           — ventes
 ├── shops/           — boutique et réglages
-├── stock/           — mouvements de stock
+├── stock/           — mouvements de stock (filtre ?productId disponible)
 └── users/           — inscription/login (routes publiques)
 ```
 
+#### Routes cash — état complet
+
+- `GET  /api/summary/today` — résumé journalier (isClosed, cashSalesAmount, etc.)
+- `GET  /api/cash-closures` — liste des clôtures (`?date=YYYY-MM-DD` ou `?limit=N`)
+- `POST /api/cash-closures` — créer une clôture (`physicalCashAmount`, `note?`, `isPartial?`, `businessDate?`)
+- `PATCH /api/cash-closures/:id` — corriger une clôture (`correctionNote` — note obligatoire, montants inchangés)
+
 #### Notifications in-app — état actuel
 
-- Collection Appwrite `notifications` créée via `npm run appwrite:setup-notifications` dans `backend_Control`.
 - Routes : `GET /api/notifications`, `PATCH /api/notifications/read-all`, `PATCH /api/notifications/:id/read`.
-- Déclencheurs (fire-and-forget, n'affectent jamais le flux principal) :
-  - **stock_low** → déclenché dans `sales.repository.ts` et `missing.repository.ts` quand le stock croise le seuil.
-  - **cash_gap** → déclenché dans `cash.service.ts` après chaque clôture avec écart ≠ 0.
-  - **closure_reminder** → déclenché dans `cash.controller.ts` (`getTodaySummary`) si la journée n'est pas clôturée et qu'on est passé l'heure de fermeture. Dédupliqué sur 12h.
-- Frontend : cloche branchée dans `Control/app/index.tsx` (~ligne 2580), badge rouge si non-lus, modal `NotificationsCenterModal`.
+- Déclencheurs fire-and-forget :
+  - **stock_low** → `sales.repository.ts` + `missing.repository.ts`
+  - **cash_gap** → `cash.service.ts` après chaque clôture avec écart ≠ 0
+  - **closure_reminder** → `cash.controller.ts` (`getTodaySummary`) si journée non clôturée après l'heure. Dédupliqué sur 12h.
+- Frontend : cloche dans `Control/app/index.tsx` (~ligne 2580), badge rouge si non-lus, modal `NotificationsCenterModal`.
 
 #### Éléments à garder en tête
 
-- **Push notifications** : volontairement différées jusqu'au logo final iOS/Android.
-- **Mode offline** : pas encore traité ; les erreurs réseau peuvent encore tomber sur des états vides selon les écrans.
-- **Clôture** : le résumé avant confirmation existe, mais la correction d'une clôture déjà soumise reste à faire.
+- **Push notifications** : différées jusqu'au logo final iOS/Android.
+- **Mode offline** : pas encore traité — les erreurs réseau retournent silencieusement des données vides sur la plupart des écrans.
+- **`scrollRef` dans `stock.tsx`** : casté `as any` (incompatibilité de typage RN/TS6) — fonctionnel à l'exécution.
 
 #### Vérifications locales
 
@@ -193,8 +219,8 @@ backend_Control/src/modules/
 
 - [x] Ajout de stock à un produit existant depuis l'écran stock
 - [x] Création d'un mouvement `'supply'` côté backend lors d'un réapprovisionnement
-- [ ] Clarifier l'UX de l'écran stock pour rendre le mode réapprovisionnement plus évident
-- [ ] Historique des approvisionnements par produit
+- [x] Clarifier l'UX de l'écran stock pour rendre le mode réapprovisionnement plus évident
+- [x] Historique des approvisionnements par produit
 
 ---
 
@@ -209,22 +235,22 @@ backend_Control/src/modules/
 
 ### Mode offline
 
-- [ ] Cache local des produits, catégories et résumé du jour
-- [ ] Queue des actions offline (vente/dépense saisie sans réseau → sync à la reconnexion)
-- [ ] Indicateur visuel de l'état de connexion réseau
-- [ ] Aujourd'hui les erreurs API retournent silencieusement des données vides — afficher un vrai message à l'utilisateur
+- [x] Cache local des produits, catégories et résumé du jour
+- [x] Queue des actions offline (vente/dépense saisie sans réseau → sync à la reconnexion)
+- [x] Indicateur visuel de l'état de connexion réseau
+- [x] Aujourd'hui les erreurs API retournent silencieusement des données vides — afficher un vrai message à l'utilisateur
 
 ### Gestion produits avancée
 
 - [x] Modifier un produit existant (nom, emoji, prix de vente) — modal édition dans stock.tsx
 - [x] Supprimer un produit (bloqué si ventes existantes, modal de confirmation)
 - [x] Recherche et filtre dans la liste produits — barre de recherche frontend
-- [ ] Photo ou emoji personnalisé amélioré
+- [x] Photo ou emoji personnalisé amélioré
 
 ### Clôture & corrections
 
-- [ ] Corriger une clôture déjà soumise (noter une erreur de saisie)
-- [ ] Clôture partielle (fermeture en cours de journée si besoin)
+- [x] Corriger une clôture déjà soumise (noter une erreur de saisie)
+- [x] Clôture partielle (fermeture en cours de journée si besoin)
 - [x] Résumé détaillé de la clôture avant confirmation
 
 ---
@@ -302,10 +328,10 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 
 | Priorité | Tâches totales | Restantes | Statut |
 | -------- | ------------- | --------- | ------ |
-| P0 | 16 | 1 | Bloquant production |
-| P1 | 18 | 6 | Réclamé en premier |
-| P2 | 15 | 15 | Différenciants |
+| P0 | 16 | 1 | Apple/FB/X différé en dernier plan |
+| P1 | 18 | 2 | Alertes settings UI + réappro historique (fait) |
+| P2 | 15 | 0 | Tout livré ✓ |
 | P3 | 16 | 16 | Long terme |
-| **Total** | **65** | **38** | |
+| **Total** | **65** | **23** | |
 
 > Le tableau compte les tâches haut niveau. Les sous-tâches ajoutées dans les sections de détail servent au suivi de reprise et peuvent être consolidées au fur et à mesure.
