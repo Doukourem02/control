@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'reset';
+type RegisterRole = 'owner' | 'seller';
 type SocialProvider = 'google' | 'facebook' | 'twitter' | 'apple';
 
 const socialProviders: {
@@ -94,6 +95,8 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [registerRole, setRegisterRole] = useState<RegisterRole>('owner');
+  const [inviteCode, setInviteCode] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -150,7 +153,17 @@ export default function AuthScreen() {
         setMode('login');
         setSocialMessage('Si un compte existe avec cet email, un lien de recuperation a ete envoye.');
       } else if (isRegister) {
-        await signUp({ name, email, password });
+        if (registerRole === 'seller' && !inviteCode.trim()) {
+          throw new Error("Renseigne le code d'invitation de la boutique.");
+        }
+
+        await signUp({
+          name,
+          email,
+          password,
+          accountRole: registerRole,
+          inviteCode: registerRole === 'seller' ? inviteCode.trim().toUpperCase() : undefined,
+        });
       } else {
         await signIn({ email, password });
       }
@@ -166,6 +179,7 @@ export default function AuthScreen() {
     setSocialMessage('');
     setPassword('');
     setPasswordConfirm('');
+    setInviteCode('');
     setMode((current) => (current === 'login' ? 'register' : 'login'));
   }
 
@@ -174,6 +188,7 @@ export default function AuthScreen() {
     setSocialMessage('');
     setPassword('');
     setPasswordConfirm('');
+    setInviteCode('');
     setMode('recover');
   }
 
@@ -182,6 +197,7 @@ export default function AuthScreen() {
     setSocialMessage('');
     setPassword('');
     setPasswordConfirm('');
+    setInviteCode('');
     setMode('login');
   }
 
@@ -257,28 +273,100 @@ export default function AuthScreen() {
 
               <View style={{ gap: 12 }}>
                 {isRegister ? (
-                  <View
-                    style={{
-                      height: 54,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 12,
-                      borderRadius: 14,
-                      borderCurve: 'continuous',
-                      backgroundColor: '#F5F5F5',
-                      paddingHorizontal: 16,
-                    }}
-                  >
-                    <Feather name="briefcase" size={21} color="#292929" />
-                    <TextInput
-                      value={name}
-                      onChangeText={setName}
-                      placeholder="Nom de la boutique"
-                      placeholderTextColor="#8A8A8A"
-                      autoCapitalize="words"
-                      style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
-                    />
-                  </View>
+                  <>
+                    <View
+                      style={{
+                        height: 48,
+                        flexDirection: 'row',
+                        gap: 4,
+                        borderRadius: 16,
+                        borderCurve: 'continuous',
+                        backgroundColor: '#F0F0F0',
+                        padding: 4,
+                      }}
+                    >
+                      {(['owner', 'seller'] as RegisterRole[]).map((role) => {
+                        const selected = registerRole === role;
+
+                        return (
+                          <Pressable
+                            key={role}
+                            onPress={() => setRegisterRole(role)}
+                            disabled={saving}
+                            style={({ pressed }: { pressed: boolean }) => ({
+                              flex: 1,
+                              borderRadius: 13,
+                              borderCurve: 'continuous',
+                              backgroundColor: selected ? '#FFFFFF' : 'transparent',
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 7,
+                              opacity: pressed ? 0.7 : 1,
+                            })}
+                          >
+                            <MaterialCommunityIcons
+                              name={role === 'owner' ? 'storefront-outline' : 'account-outline'}
+                              size={19}
+                              color={selected ? '#111111' : '#8A8A8A'}
+                            />
+                            <Text style={{ color: selected ? '#111111' : '#8A8A8A', fontSize: 14, fontWeight: '900' }}>
+                              {role === 'owner' ? 'Propriétaire' : 'Vendeur'}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    <View
+                      style={{
+                        height: 54,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        borderRadius: 14,
+                        borderCurve: 'continuous',
+                        backgroundColor: '#F5F5F5',
+                        paddingHorizontal: 16,
+                      }}
+                    >
+                      <Feather name={registerRole === 'owner' ? 'briefcase' : 'user'} size={21} color="#292929" />
+                      <TextInput
+                        value={name}
+                        onChangeText={setName}
+                        placeholder={registerRole === 'owner' ? 'Nom de la boutique' : 'Nom complet du vendeur'}
+                        placeholderTextColor="#8A8A8A"
+                        autoCapitalize="words"
+                        style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                      />
+                    </View>
+
+                    {registerRole === 'seller' ? (
+                      <View
+                        style={{
+                          height: 54,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 12,
+                          borderRadius: 14,
+                          borderCurve: 'continuous',
+                          backgroundColor: '#F5F5F5',
+                          paddingHorizontal: 16,
+                        }}
+                      >
+                        <Feather name="key" size={21} color="#292929" />
+                        <TextInput
+                          value={inviteCode}
+                          onChangeText={setInviteCode}
+                          placeholder="Code d'invitation boutique"
+                          placeholderTextColor="#8A8A8A"
+                          autoCapitalize="characters"
+                          autoCorrect={false}
+                          style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '700', letterSpacing: 1.4 }}
+                        />
+                      </View>
+                    ) : null}
+                  </>
                 ) : null}
 
                 {!isReset ? (

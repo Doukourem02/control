@@ -4,9 +4,13 @@ import {
   exportDailyReport,
   exportHistoryCSV,
   flushOfflineQueue,
+  getActivityLogs,
   getControlErrorMessage,
   getAnalytics,
+  getMyRole,
   getNotifications,
+  getProducts,
+  getRecentMissings,
   getRecentStockMovements,
   getTeamMembers,
   getTodaySummary,
@@ -16,10 +20,13 @@ import {
   markNotificationRead,
   removeTeamMember,
   updateCurrentShop,
+  type ActivityLogRow,
   type AnalyticsData,
   type AnalyticsType,
   type MemberRow,
+  type MissingRow,
   type NotificationRow,
+  type ProductRow,
   type ProductUnit,
   type StockMovementRow,
   type TodaySummary,
@@ -48,6 +55,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NavKey = 'home' | 'report' | 'missing' | 'profile';
+type ControlRole = 'owner' | 'seller';
 
 type NavIcon =
   | { family: 'asset'; name: 'home' | 'report' | 'missing' }
@@ -1478,6 +1486,302 @@ async function shareExportFile(path: string, options: { mimeType: string; dialog
   throw new Error('Partage indisponible dans ce build. Rebuild le development build pour activer expo-sharing.');
 }
 
+function OwnerMetricTile({
+  label,
+  value,
+  detail,
+  icon,
+  accent,
+  compact,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
+  accent: string;
+  compact: boolean;
+}) {
+  return (
+    <View
+      style={{
+        width: '48%',
+        minHeight: compact ? 128 : 140,
+        borderRadius: 24,
+        borderCurve: 'continuous',
+        backgroundColor: '#F7F7F7',
+        borderWidth: 1,
+        borderColor: '#EEEEEE',
+        padding: compact ? 14 : 16,
+        justifyContent: 'space-between',
+      }}
+    >
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 14,
+          borderCurve: 'continuous',
+          backgroundColor: accent,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <MaterialCommunityIcons name={icon} size={21} color="#FFFFFF" />
+      </View>
+      <View style={{ gap: 3 }}>
+        <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '700' }}>{label}</Text>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.72}
+          style={{ color: '#111111', fontSize: compact ? 21 : 23, fontWeight: '800', fontVariant: ['tabular-nums'] }}
+        >
+          {value}
+        </Text>
+        <Text numberOfLines={1} style={{ color: '#A4A4A4', fontSize: 12, fontWeight: '600' }}>
+          {detail}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function OwnerActionButton({
+  title,
+  icon,
+  onPress,
+}: {
+  title: string;
+  icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }: { pressed: boolean }) => ({
+        flex: 1,
+        minWidth: '30%',
+        height: 74,
+        borderRadius: 20,
+        borderCurve: 'continuous',
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#EEEEEE',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
+        opacity: pressed ? 0.68 : 1,
+        boxShadow: '0 8px 18px rgba(0, 0, 0, 0.025)',
+      })}
+    >
+      <MaterialCommunityIcons name={icon} size={24} color="#111111" />
+      <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: '#111111', fontSize: 12, fontWeight: '800' }}>
+        {title}
+      </Text>
+    </Pressable>
+  );
+}
+
+function OwnerSectionTitle({ title, action }: { title: string; action?: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Text style={{ color: '#111111', fontSize: 17, fontWeight: '800' }}>{title}</Text>
+      {action ? <Text style={{ color: '#2A8DEB', fontSize: 12, fontWeight: '800' }}>{action}</Text> : null}
+    </View>
+  );
+}
+
+function formatActivityTime(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function OwnerDashboard({
+  compact,
+  amountsVisible,
+  summary,
+  products,
+  activityLogs,
+  missings,
+  members,
+  notifications,
+  lowStockThreshold,
+  onOpenReport,
+  onOpenStock,
+  onOpenTeam,
+  onOpenData,
+  onOpenSettings,
+  onOpenMissing,
+}: {
+  compact: boolean;
+  amountsVisible: boolean;
+  summary: TodaySummary;
+  products: ProductRow[];
+  activityLogs: ActivityLogRow[];
+  missings: MissingRow[];
+  members: MemberRow[];
+  notifications: NotificationRow[];
+  lowStockThreshold: number;
+  onOpenReport: () => void;
+  onOpenStock: () => void;
+  onOpenTeam: () => void;
+  onOpenData: () => void;
+  onOpenSettings: () => void;
+  onOpenMissing: () => void;
+}) {
+  const activeMembers = members.filter((m) => m.status === 'active');
+  const pendingMembers = members.filter((m) => m.status === 'pending');
+  const unreadAlerts = notifications.filter((n) => n.read === 'false');
+  const lowStockProducts = products
+    .filter((product) => product.quantity <= lowStockThreshold)
+    .sort((a, b) => a.quantity - b.quantity)
+    .slice(0, 3);
+  const recentMissings = missings.slice(0, 2);
+  const hasCashGap = summary.latestCashGap !== 0;
+  const closureStatus = summary.isClosed ? 'Journée clôturée' : 'Clôture attendue';
+  const displayedSales = amountsVisible ? formatMoney(summary.cashSalesAmount + summary.mobileMoneySalesAmount) : '•••';
+  const displayedCash = amountsVisible ? formatMoney(summary.physicalCashExpected) : '•••';
+  const displayedGap = amountsVisible ? formatMoney(summary.latestCashGap) : '•••';
+
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingTop: compact ? 18 : 24, paddingBottom: compact ? 96 : 116, gap: 22 }}
+    >
+      <View style={{ gap: 6 }}>
+        <Text style={{ color: '#8D8D8D', fontSize: 15, fontWeight: '700' }}>Espace propriétaire</Text>
+        <Text style={{ color: '#050505', fontSize: compact ? 31 : 34, lineHeight: compact ? 36 : 39, fontWeight: '800' }}>
+          Pilotage boutique
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 }}>
+        <OwnerMetricTile
+          label="Ventes jour"
+          value={displayedSales}
+          detail={`${summary.salesCount} ticket${summary.salesCount > 1 ? 's' : ''}`}
+          icon="chart-line"
+          accent="#2A8DEB"
+          compact={compact}
+        />
+        <OwnerMetricTile
+          label="Cash attendu"
+          value={displayedCash}
+          detail={closureStatus}
+          icon="cash-register"
+          accent="#08784F"
+          compact={compact}
+        />
+        <OwnerMetricTile
+          label="Écart caisse"
+          value={displayedGap}
+          detail={hasCashGap ? 'À vérifier' : 'Aucun écart'}
+          icon={hasCashGap ? 'alert' : 'check-circle-outline'}
+          accent={hasCashGap ? '#E5484D' : '#34C875'}
+          compact={compact}
+        />
+        <OwnerMetricTile
+          label="Équipe"
+          value={`${activeMembers.length + 1}`}
+          detail={`${pendingMembers.length} invitation${pendingMembers.length > 1 ? 's' : ''}`}
+          icon="account-group"
+          accent="#6B5CFF"
+          compact={compact}
+        />
+      </View>
+
+      <View style={{ gap: 12 }}>
+        <OwnerSectionTitle title="Actions propriétaire" />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <OwnerActionButton title="Bilan" icon="chart-box-outline" onPress={onOpenReport} />
+          <OwnerActionButton title="Équipe" icon="account-multiple-outline" onPress={onOpenTeam} />
+          <OwnerActionButton title="Exports" icon="table-arrow-down" onPress={onOpenData} />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <OwnerActionButton title="Stock" icon="cube-outline" onPress={onOpenStock} />
+          <OwnerActionButton title="Écarts" icon="alert-outline" onPress={onOpenMissing} />
+          <OwnerActionButton title="Réglages" icon="cog-outline" onPress={onOpenSettings} />
+        </View>
+      </View>
+
+      <View style={{ gap: 12 }}>
+        <OwnerSectionTitle title="Alertes à traiter" action={`${unreadAlerts.length} non lue${unreadAlerts.length > 1 ? 's' : ''}`} />
+        {unreadAlerts.length === 0 && lowStockProducts.length === 0 && recentMissings.length === 0 ? (
+          <View style={{ borderRadius: 20, borderCurve: 'continuous', backgroundColor: '#F7F7F7', padding: 16 }}>
+            <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Tout est calme</Text>
+            <Text style={{ color: '#8E8E8E', fontSize: 13, fontWeight: '600', marginTop: 3 }}>
+              Aucune alerte urgente pour le moment.
+            </Text>
+          </View>
+        ) : (
+          <View style={{ gap: 10 }}>
+            {unreadAlerts.slice(0, 2).map((notification) => (
+              <View key={notification.$id} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: '#FFF7E8', padding: 13, flexDirection: 'row', gap: 10 }}>
+                <MaterialCommunityIcons name="bell-alert-outline" size={22} color="#B66A00" />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>{notification.title}</Text>
+                  <Text numberOfLines={2} style={{ color: '#7B5A22', fontSize: 12, fontWeight: '600', marginTop: 2 }}>{notification.message}</Text>
+                </View>
+              </View>
+            ))}
+            {lowStockProducts.map((product) => (
+              <View key={product.$id} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: '#F7F7F7', padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Text style={{ fontSize: 21 }}>{product.emoji || '•'}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>{product.name}</Text>
+                  <Text style={{ color: '#E5484D', fontSize: 12, fontWeight: '700', marginTop: 1 }}>
+                    Stock bas : {product.quantity.toLocaleString('fr-FR')} {product.unit}
+                  </Text>
+                </View>
+              </View>
+            ))}
+            {recentMissings.map((missing) => (
+              <View key={missing.$id} style={{ borderRadius: 18, borderCurve: 'continuous', backgroundColor: '#FFF0F0', padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <MaterialCommunityIcons name="package-variant-closed-remove" size={22} color="#E5484D" />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>{missing.productName}</Text>
+                  <Text style={{ color: '#B83236', fontSize: 12, fontWeight: '700', marginTop: 1 }}>
+                    Manquant : {missing.quantity.toLocaleString('fr-FR')} {missing.unit}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View style={{ gap: 12 }}>
+        <OwnerSectionTitle title="Activité récente" />
+        {activityLogs.length > 0 ? (
+          <View style={{ gap: 4 }}>
+            {activityLogs.slice(0, 5).map((log) => {
+              const activityTime = formatActivityTime(log.$createdAt);
+
+              return (
+                <View key={log.$id} style={{ minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0F4FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <MaterialCommunityIcons name="history" size={19} color="#2A5BE8" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>{log.message}</Text>
+                    <Text numberOfLines={1} style={{ color: '#9A9A9A', fontSize: 12, fontWeight: '600', marginTop: 1 }}>
+                      {log.actorName}{activityTime ? ` · ${activityTime}` : ''}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <Text style={{ color: '#A4A4A4', fontSize: 14, fontWeight: '600' }}>Aucune activité récente.</Text>
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+
 function DataSettingsModal({
   visible,
   compact,
@@ -2674,6 +2978,7 @@ function MissingMenu({
 
 function ProfileMenu({
   compact,
+  memberCount,
   onEditShop,
   onEditCash,
   onEditDisplay,
@@ -2682,6 +2987,7 @@ function ProfileMenu({
   onEditData,
 }: {
   compact: boolean;
+  memberCount: number;
   onEditShop: () => void;
   onEditCash: () => void;
   onEditDisplay: () => void;
@@ -2704,6 +3010,7 @@ function ProfileMenu({
   const displayPreference = `${amountsPreference} · ${formatLanguage(session?.shop.displayLanguage)}`;
   const defaultUnit = formatUnit(session?.shop.defaultUnit);
   const alertsSummary = formatAlertsSummary(session?.shop);
+  const teamValue = `${memberCount} membre${memberCount > 1 ? 's' : ''}`;
 
   return (
     <ScrollView
@@ -2780,7 +3087,7 @@ function ProfileMenu({
           <SettingsRow icon="bell-outline" title="Alertes" value={alertsSummary} onPress={onEditAlerts} />
           <SettingsRow icon="eye-outline" title="Affichage" value={displayPreference} onPress={onEditDisplay} />
           <SettingsRow icon="ruler-square" title="Unité" value={defaultUnit} onPress={onEditDisplay} />
-          <SettingsRow icon="account-group" title="Équipe" value="1 membre" onPress={onEditTeam} />
+          <SettingsRow icon="account-group" title="Équipe" value={teamValue} onPress={onEditTeam} />
           <SettingsRow icon="database-outline" title="Données" value="Exports" onPress={onEditData} />
         </SettingsSection>
 
@@ -3001,9 +3308,14 @@ export default function HomeScreen() {
   const isOffline = useNetworkStatus();
   const prevOfflineRef = useRef(false);
   const [activeMenu, setActiveMenu] = useState<NavKey>('home');
+  const [role, setRole] = useState<ControlRole>('owner');
   const [amountsVisible, setAmountsVisible] = useState(true);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [dashboardProducts, setDashboardProducts] = useState<ProductRow[]>([]);
+  const [dashboardMissings, setDashboardMissings] = useState<MissingRow[]>([]);
+  const [dashboardActivity, setDashboardActivity] = useState<ActivityLogRow[]>([]);
+  const [dashboardMembers, setDashboardMembers] = useState<MemberRow[]>([]);
   const [shopSettingsVisible, setShopSettingsVisible] = useState(false);
   const [cashSettingsVisible, setCashSettingsVisible] = useState(false);
   const [displaySettingsVisible, setDisplaySettingsVisible] = useState(false);
@@ -3054,6 +3366,8 @@ export default function HomeScreen() {
         : activeMenu === 'profile'
           ? 'Réglages'
           : '';
+  const effectiveRole: ControlRole =
+    session && session.user.id !== session.shop.$id ? 'seller' : role;
 
   function handleTabChange(key: NavKey) {
     if (key === activeMenu) return;
@@ -3073,6 +3387,12 @@ export default function HomeScreen() {
   useFocusEffect(useCallback(() => {
     let isMounted = true;
 
+    getMyRole().then((nextRole) => {
+      if (isMounted) setRole(nextRole);
+    }).catch((error) => {
+      logControlError('home-role', error);
+    });
+
     getTodaySummary().then((summary) => {
       if (isMounted) setTodaySummary(summary);
     }).catch((error) => {
@@ -3083,6 +3403,21 @@ export default function HomeScreen() {
       if (isMounted) setNotifications(list);
     }).catch((error) => {
       logControlError('home-notifications', error);
+    });
+
+    Promise.all([
+      getProducts(),
+      getRecentMissings(4),
+      getActivityLogs(6),
+      getTeamMembers(),
+    ]).then(([products, missings, activity, members]) => {
+      if (!isMounted) return;
+      setDashboardProducts(products);
+      setDashboardMissings(missings);
+      setDashboardActivity(activity);
+      setDashboardMembers(members);
+    }).catch((error) => {
+      logControlError('home-owner-dashboard', error);
     });
 
     return () => {
@@ -3222,107 +3557,127 @@ export default function HomeScreen() {
               }}
             >
               {activeMenu === 'home' ? (
-                <>
-                  <View style={{ marginTop: compact ? 20 : 28, gap: compact ? 8 : 10 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Text style={{ color: '#8D8D8D', fontSize: 16, fontWeight: '600' }}>
-                        Caisse du jour
-                      </Text>
-                      <Pressable
-                        onPress={() => setAmountsVisible((visible) => !visible)}
-                        style={({ pressed }: { pressed: boolean }) => ({
-                          width: 30,
-                          height: 30,
-                          borderRadius: 15,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: pressed ? 0.62 : 1,
-                        })}
-                      >
-                        <Feather name={amountsVisible ? 'eye' : 'eye-off'} size={18} color="#A7A7A7" />
-                      </Pressable>
-                    </View>
-
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 14 }}>
-                      <Text
-                        selectable
-                        style={{
-                          color: '#050505',
-                          fontSize: compact ? 43 : 46,
-                          lineHeight: compact ? 48 : 52,
-                          fontWeight: '700',
-                          fontVariant: ['tabular-nums'],
-                        }}
-                      >
-                        {displayedCashAmount}
-                      </Text>
-                      <Text
-                        style={{
-                          color: expectedCashAmount >= 0 ? '#34C875' : '#E5484D',
-                          fontSize: 15,
-                          lineHeight: 29,
-                          fontWeight: '700',
-                        }}
-                      >
-                        {amountsVisible ? (expectedCashAmount >= 0 ? '↗' : '↘') : '•'} {cashTrendText}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Pressable
-                    onPress={() => handleTabChange('report')}
-                    style={({ pressed }: { pressed: boolean }) => ({
-                      height: compact ? 62 : 66,
-                      marginTop: compact ? 22 : 30,
-                      borderRadius: 26,
-                      borderCurve: 'continuous',
-                      backgroundColor: '#FFFFFF',
-                      paddingHorizontal: compact ? 13 : 15,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: compact ? 12 : 14,
-                      opacity: pressed ? 0.72 : 1,
-                      boxShadow: '0 12px 30px rgba(0, 0, 0, 0.035)',
-                    })}
-                  >
-                    <View
-                      style={{
-                        width: compact ? 42 : 46,
-                        height: compact ? 42 : 46,
-                        borderRadius: compact ? 21 : 23,
-                        backgroundColor: '#F1FAF5',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Feather name="arrow-down-left" size={22} color="#32C171" />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text
-                        numberOfLines={1}
-                        style={{ color: '#111111', fontSize: compact ? 15 : 16, fontWeight: '600' }}
-                      >
-                        {alertText}
-                      </Text>
-                      <Text
-                        numberOfLines={1}
-                        style={{ color: '#A8A8A8', fontSize: compact ? 13 : 14, fontWeight: '400' }}
-                      >
-                        {dailySummary}
-                      </Text>
-                    </View>
-                    <Feather name="arrow-right" size={22} color="#111111" />
-                  </Pressable>
-
-                  <HomeMenu
+                effectiveRole === 'owner' ? (
+                  <OwnerDashboard
                     compact={compact}
+                    amountsVisible={amountsVisible}
+                    summary={todaySummary}
+                    products={dashboardProducts}
+                    missings={dashboardMissings}
+                    activityLogs={dashboardActivity}
+                    members={dashboardMembers}
+                    notifications={notifications}
+                    lowStockThreshold={Number(session?.shop.defaultLowStockThreshold ?? 3) || 3}
                     onOpenReport={() => handleTabChange('report')}
                     onOpenStock={() => router.push('/stock' as never)}
-                    onOpenSale={() => router.push('/sale' as never)}
-                    onOpenClosure={() => router.push('/closure' as never)}
-                    onOpenExpense={() => router.push('/expense' as never)}
+                    onOpenTeam={() => setTeamSettingsVisible(true)}
+                    onOpenData={() => setDataSettingsVisible(true)}
+                    onOpenSettings={() => handleTabChange('profile')}
+                    onOpenMissing={() => handleTabChange('missing')}
                   />
-                </>
+                ) : (
+                  <>
+                    <View style={{ marginTop: compact ? 20 : 28, gap: compact ? 8 : 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={{ color: '#8D8D8D', fontSize: 16, fontWeight: '600' }}>
+                          Caisse du jour
+                        </Text>
+                        <Pressable
+                          onPress={() => setAmountsVisible((visible) => !visible)}
+                          style={({ pressed }: { pressed: boolean }) => ({
+                            width: 30,
+                            height: 30,
+                            borderRadius: 15,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: pressed ? 0.62 : 1,
+                          })}
+                        >
+                          <Feather name={amountsVisible ? 'eye' : 'eye-off'} size={18} color="#A7A7A7" />
+                        </Pressable>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 14 }}>
+                        <Text
+                          selectable
+                          style={{
+                            color: '#050505',
+                            fontSize: compact ? 43 : 46,
+                            lineHeight: compact ? 48 : 52,
+                            fontWeight: '700',
+                            fontVariant: ['tabular-nums'],
+                          }}
+                        >
+                          {displayedCashAmount}
+                        </Text>
+                        <Text
+                          style={{
+                            color: expectedCashAmount >= 0 ? '#34C875' : '#E5484D',
+                            fontSize: 15,
+                            lineHeight: 29,
+                            fontWeight: '700',
+                          }}
+                        >
+                          {amountsVisible ? (expectedCashAmount >= 0 ? '↗' : '↘') : '•'} {cashTrendText}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Pressable
+                      onPress={() => handleTabChange('report')}
+                      style={({ pressed }: { pressed: boolean }) => ({
+                        height: compact ? 62 : 66,
+                        marginTop: compact ? 22 : 30,
+                        borderRadius: 26,
+                        borderCurve: 'continuous',
+                        backgroundColor: '#FFFFFF',
+                        paddingHorizontal: compact ? 13 : 15,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: compact ? 12 : 14,
+                        opacity: pressed ? 0.72 : 1,
+                        boxShadow: '0 12px 30px rgba(0, 0, 0, 0.035)',
+                      })}
+                    >
+                      <View
+                        style={{
+                          width: compact ? 42 : 46,
+                          height: compact ? 42 : 46,
+                          borderRadius: compact ? 21 : 23,
+                          backgroundColor: '#F1FAF5',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Feather name="arrow-down-left" size={22} color="#32C171" />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          numberOfLines={1}
+                          style={{ color: '#111111', fontSize: compact ? 15 : 16, fontWeight: '600' }}
+                        >
+                          {alertText}
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          style={{ color: '#A8A8A8', fontSize: compact ? 13 : 14, fontWeight: '400' }}
+                        >
+                          {dailySummary}
+                        </Text>
+                      </View>
+                      <Feather name="arrow-right" size={22} color="#111111" />
+                    </Pressable>
+
+                    <HomeMenu
+                      compact={compact}
+                      onOpenReport={() => handleTabChange('report')}
+                      onOpenStock={() => router.push('/stock' as never)}
+                      onOpenSale={() => router.push('/sale' as never)}
+                      onOpenClosure={() => router.push('/closure' as never)}
+                      onOpenExpense={() => router.push('/expense' as never)}
+                    />
+                  </>
+                )
               ) : activeMenu === 'report' ? (
                 <ReportMenu
                   compact={compact}
@@ -3341,6 +3696,7 @@ export default function HomeScreen() {
               ) : (
                 <ProfileMenu
                   compact={compact}
+                  memberCount={dashboardMembers.filter((m) => m.status === 'active').length + 1}
                   onEditShop={() => setShopSettingsVisible(true)}
                   onEditCash={() => setCashSettingsVisible(true)}
                   onEditDisplay={() => setDisplaySettingsVisible(true)}

@@ -4,6 +4,8 @@ import { adminAccount, createSessionAccount, users } from '../../config/appwrite
 import { env } from '../../config/env';
 import { devError, userError } from '../../utils/http';
 import { getOrCreateCurrentShop } from '../shops/shops.service';
+import { getMemberByInviteCode } from '../team/team.repository';
+import { joinShop } from '../team/team.service';
 
 const SUPPORTED_OAUTH_PROVIDERS = ['google', 'facebook', 'twitter', 'apple'] as const;
 type OAuthProvider = (typeof SUPPORTED_OAUTH_PROVIDERS)[number];
@@ -12,6 +14,8 @@ type AuthInput = {
   email: unknown;
   password: unknown;
   name?: unknown;
+  accountRole?: unknown;
+  inviteCode?: unknown;
 };
 
 function readEmail(value: unknown) {
@@ -40,6 +44,14 @@ function readCredentials(input: AuthInput) {
   return { email, password, name };
 }
 
+function readAccountRole(value: unknown): 'owner' | 'seller' {
+  const role = String(value ?? 'owner').trim().toLowerCase();
+
+  if (role === 'owner' || role === 'seller') return role;
+
+  throw userError('Selectionne proprietaire ou vendeur.', 400, 'AUTH_ROLE_INVALID');
+}
+
 async function createSessionPayload(sessionSecret: string) {
   const account = createSessionAccount(sessionSecret);
   const user = await account.get();
@@ -62,18 +74,47 @@ function isSessionAuthError(error: unknown) {
 
 export async function registerUser(input: AuthInput) {
   const { email, password, name } = readCredentials(input);
+  const accountRole = readAccountRole(input.accountRole);
+  const inviteCode = String(input.inviteCode ?? '').trim().toUpperCase();
 
   if (!name) {
-    throw userError('Renseigne le nom de la boutique ou du proprietaire.', 400, 'AUTH_NAME_REQUIRED');
+    throw userError(
+      accountRole === 'seller' ? 'Renseigne le nom du vendeur.' : 'Renseigne le nom de la boutique.',
+      400,
+      'AUTH_NAME_REQUIRED'
+    );
   }
 
+  if (accountRole === 'seller' && !inviteCode) {
+    throw userError('Renseigne le code d\'invitation de la boutique.', 400, 'TEAM_CODE_REQUIRED');
+  }
+
+  if (accountRole === 'seller') {
+    const invite = await getMemberByInviteCode(inviteCode);
+
+    if (!invite) {
+      throw userError('Code d\'invitation invalide.', 404, 'TEAM_CODE_INVALID');
+    }
+
+    if (invite.status === 'removed') {
+      throw userError('Cette invitation a ete revoquee.', 410, 'TEAM_CODE_REVOKED');
+    }
+
+    if (invite.status === 'active') {
+      throw userError('Ce code a deja ete utilise.', 409, 'TEAM_CODE_USED');
+    }
+  }
+
+  let createdUserId = '';
+
   try {
-    await users.create({
+    const createdUser = await users.create({
       userId: ID.unique(),
       email,
       password,
       name,
     });
+    createdUserId = createdUser.$id;
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 409) {
       throw userError('Un compte existe deja avec cet email.', 409, 'AUTH_ACCOUNT_EXISTS');
@@ -82,7 +123,23 @@ export async function registerUser(input: AuthInput) {
     throw error;
   }
 
-  return loginUser({ email, password });
+  let session;
+
+  try {
+    session = await adminAccount.createEmailPasswordSession({ email, password });
+  } catch {
+    throw devError('Impossible de creer une session Appwrite.', 502, 'AUTH_SESSION_CREATE_FAILED');
+  }
+
+  if (!session.secret) {
+    throw devError('Impossible de creer une session Appwrite.', 502, 'AUTH_SESSION_CREATE_FAILED');
+  }
+
+  if (accountRole === 'seller') {
+    await joinShop(createdUserId, { inviteCode });
+  }
+
+  return createSessionPayload(session.secret);
 }
 
 export async function loginUser(input: AuthInput) {

@@ -19,6 +19,8 @@ type AuthModeInput = {
   email: string;
   password: string;
   name?: string;
+  accountRole?: 'owner' | 'seller';
+  inviteCode?: string;
 };
 
 type AuthContextValue = {

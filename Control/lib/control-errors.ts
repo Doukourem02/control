@@ -25,6 +25,7 @@ const userMessagesByCode: Record<string, string> = {
   AUTH_RECOVERY_TOKEN_INVALID: 'Lien de recuperation invalide ou expire.',
   AUTH_RECOVERY_URL_REQUIRED: 'Lien de recuperation invalide.',
   AUTH_REQUIRED: 'Connecte-toi pour continuer.',
+  AUTH_ROLE_INVALID: 'Selectionne proprietaire ou vendeur.',
   AUTH_SESSION_EXPIRED: defaultSessionMessage,
   CASH_AMOUNT_INVALID: 'Le montant compte doit etre valide.',
   CATEGORY_ID_REQUIRED: 'Categorie introuvable.',
@@ -53,6 +54,10 @@ const userMessagesByCode: Record<string, string> = {
   SHOP_PAYMENT_METHODS_REQUIRED: 'Active au moins un mode de paiement.',
   SHOP_REQUIRED: 'Boutique active introuvable.',
   STOCK_INSUFFICIENT: 'Stock insuffisant pour cette operation.',
+  TEAM_CODE_INVALID: 'Code d’invitation invalide.',
+  TEAM_CODE_REQUIRED: 'Renseigne le code d’invitation de la boutique.',
+  TEAM_CODE_REVOKED: 'Cette invitation a été révoquée.',
+  TEAM_CODE_USED: 'Ce code a déjà été utilisé.',
   UNIT_INVALID: 'Selectionne une unite valide.',
 };
 

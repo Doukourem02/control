@@ -7,9 +7,25 @@
 
 ## Point de reprise rapide
 
-Dernière mise à jour : 2026-05-22 (session 5).
+Dernière mise à jour : 2026-06-01 (vue propriétaire).
 
 ### État global actuel
+
+La prochaine phase active est maintenant la **vue propriétaire** : transformer CONTROL d'une app surtout opérationnelle pour vendeuses en outil de pilotage pour le propriétaire.
+
+Checklist propriétaire en cours :
+
+- [x] Détecter le rôle `owner` / `seller` côté app.
+- [x] Ajouter un choix explicite `Propriétaire` / `Vendeur` à l'inscription.
+- [x] Garder l'accueil actuel pour les vendeuses.
+- [x] Créer une première Home propriétaire avec ventes du jour, cash attendu, écart caisse, équipe, alertes, stock bas et activité récente.
+- [x] Donner au propriétaire des raccourcis directs vers bilan, équipe, exports, stock, écarts et réglages.
+- [ ] Attribuer chaque vente/dépense/clôture/manquant à l'utilisateur qui l'a créé (`actorUserId`, `actorName`).
+- [ ] Afficher les performances par vendeuse.
+- [ ] Verrouiller les permissions backend par rôle sur toutes les routes sensibles.
+- [ ] Préparer le modèle multi-boutique propriétaire.
+
+### État précédent
 
 Tout ce qui devait être fait avant les sujets différés est terminé et vérifié.
 
