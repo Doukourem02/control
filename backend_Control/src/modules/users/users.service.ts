@@ -1,4 +1,4 @@
-import { ID, Query } from 'node-appwrite';
+import { AppwriteException, ID, Query } from 'node-appwrite';
 
 import { adminAccount, createSessionAccount, users } from '../../config/appwrite';
 import { env } from '../../config/env';
@@ -56,6 +56,10 @@ async function createSessionPayload(sessionSecret: string) {
   };
 }
 
+function isSessionAuthError(error: unknown) {
+  return error instanceof AppwriteException && (error.code === 401 || error.code === 403);
+}
+
 export async function registerUser(input: AuthInput) {
   const { email, password, name } = readCredentials(input);
 
@@ -107,14 +111,29 @@ export async function loginUser(input: AuthInput) {
 }
 
 export async function getCurrentUser(sessionSecret: string) {
+  const account = createSessionAccount(sessionSecret);
+  let user;
+
   try {
-    return await createSessionPayload(sessionSecret);
+    user = await account.get();
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 401) {
+    if (isSessionAuthError(error)) {
       throw userError('Session expiree. Reconnecte-toi.', 401, 'AUTH_SESSION_EXPIRED');
     }
     throw error;
   }
+
+  const shop = await getOrCreateCurrentShop(user.$id, user.name || user.email);
+
+  return {
+    sessionSecret,
+    user: {
+      id: user.$id,
+      email: user.email,
+      name: user.name,
+    },
+    shop,
+  };
 }
 
 export async function logoutUser(sessionSecret: string) {

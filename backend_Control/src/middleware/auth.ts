@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { AppwriteException } from 'node-appwrite';
 
 import { createSessionAccount } from '../config/appwrite';
 import { getOrCreateCurrentShop } from '../modules/shops/shops.service';
@@ -14,6 +15,10 @@ function getBearerToken(request: Request) {
   return header.slice('Bearer '.length).trim();
 }
 
+function isSessionAuthError(error: unknown) {
+  return error instanceof AppwriteException && (error.code === 401 || error.code === 403);
+}
+
 export async function requireAuth(request: Request, response: Response, next: NextFunction) {
   const sessionSecret = getBearerToken(request);
 
@@ -25,7 +30,14 @@ export async function requireAuth(request: Request, response: Response, next: Ne
   try {
     const account = createSessionAccount(sessionSecret);
     const user = await account.get();
-    const shop = await getOrCreateCurrentShop(user.$id, user.name || user.email);
+    let shop;
+
+    try {
+      shop = await getOrCreateCurrentShop(user.$id, user.name || user.email);
+    } catch (error) {
+      next(error);
+      return;
+    }
 
     request.auth = {
       userId: user.$id,
@@ -36,7 +48,12 @@ export async function requireAuth(request: Request, response: Response, next: Ne
     };
 
     next();
-  } catch {
+  } catch (error) {
+    if (!isSessionAuthError(error)) {
+      next(error);
+      return;
+    }
+
     sendError(response, 401, 'Session expiree ou invalide.', 'AUTH_SESSION_EXPIRED');
   }
 }

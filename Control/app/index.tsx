@@ -24,6 +24,7 @@ import {
   type StockMovementRow,
   type TodaySummary,
 } from '@/lib/control-data';
+import { logControlError } from '@/lib/control-errors';
 import { useNetworkStatus } from '@/lib/network-state';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -3074,10 +3075,14 @@ export default function HomeScreen() {
 
     getTodaySummary().then((summary) => {
       if (isMounted) setTodaySummary(summary);
+    }).catch((error) => {
+      logControlError('home-summary', error);
     });
 
     getNotifications().then((list) => {
       if (isMounted) setNotifications(list);
+    }).catch((error) => {
+      logControlError('home-notifications', error);
     });
 
     return () => {
@@ -3108,7 +3113,9 @@ export default function HomeScreen() {
   useEffect(() => {
     if (prevOfflineRef.current && !isOffline) {
       flushOfflineQueue().then(() => {
-        getTodaySummary().then((s) => setTodaySummary(s));
+        return getTodaySummary().then((s) => setTodaySummary(s));
+      }).catch((error) => {
+        logControlError('offline-flush', error);
       });
     }
     prevOfflineRef.current = isOffline;

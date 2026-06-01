@@ -1,5 +1,6 @@
 import { getAuthErrorMessage, useControlAuth } from '@/lib/control-auth';
 import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -17,6 +18,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'reset';
+type SocialProvider = 'google' | 'facebook' | 'twitter' | 'apple';
+
+const socialProviders: {
+  provider: SocialProvider;
+  label: string;
+  icon: 'google' | 'facebook' | 'x' | 'apple';
+  color: string;
+}[] = [
+  { provider: 'google', label: 'Google', icon: 'google', color: '#4285F4' },
+  { provider: 'facebook', label: 'Facebook', icon: 'facebook', color: '#1877F2' },
+  { provider: 'twitter', label: 'X', icon: 'x', color: '#000000' },
+  { provider: 'apple', label: 'Apple', icon: 'apple', color: '#000000' },
+];
 
 function GoogleLogo({ size = 26 }: { size?: number }) {
   return (
@@ -39,6 +53,35 @@ function GoogleLogo({ size = 26 }: { size?: number }) {
       />
     </Svg>
   );
+}
+
+function XLogo({ size = 26 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        fill="#000000"
+        d="M18.9 2h3.3l-7.3 8.3L23.5 22h-6.7l-5.2-6.8L5.6 22H2.3l7.8-8.9L1.9 2h6.9l4.7 6.2L18.9 2Zm-1.2 17.9h1.8L7.8 4H5.9l11.8 15.9Z"
+      />
+    </Svg>
+  );
+}
+
+function SocialProviderIcon({
+  icon,
+  color,
+}: {
+  icon: (typeof socialProviders)[number]['icon'];
+  color: string;
+}) {
+  if (icon === 'google') {
+    return <GoogleLogo size={27} />;
+  }
+
+  if (icon === 'x') {
+    return <XLogo size={25} />;
+  }
+
+  return <MaterialCommunityIcons name={icon} size={28} color={color} />;
 }
 
 export default function AuthScreen() {
@@ -142,7 +185,7 @@ export default function AuthScreen() {
     setMode('login');
   }
 
-  async function handleSocialPress(provider: 'google' | 'facebook' | 'twitter' | 'apple') {
+  async function handleSocialPress(provider: SocialProvider) {
     setErrorMessage('');
     setSocialMessage('');
     setSaving(true);
@@ -370,43 +413,54 @@ export default function AuthScreen() {
 
               {!isRecover && !isReset ? (
                 <View style={{ gap: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ flex: 1, height: 1, backgroundColor: '#E5E5E5' }} />
-                  <Text style={{ color: '#8A8A8A', fontSize: 13, fontWeight: '700' }}>ou</Text>
-                  <View style={{ flex: 1, height: 1, backgroundColor: '#E5E5E5' }} />
-                </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ flex: 1, height: 1, backgroundColor: '#E5E5E5' }} />
+                    <Text style={{ color: '#8A8A8A', fontSize: 13, fontWeight: '700' }}>ou</Text>
+                    <View style={{ flex: 1, height: 1, backgroundColor: '#E5E5E5' }} />
+                  </View>
 
-                <Text
-                  style={{
-                    color: '#3A3A3A',
-                    fontSize: 13,
-                    lineHeight: 18,
-                    textAlign: 'center',
-                    fontWeight: '700',
-                  }}
-                >
-                  Continuer avec Google
-                </Text>
-
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-                  <Pressable
-                    onPress={() => handleSocialPress('google')}
-                    style={({ pressed }: { pressed: boolean }) => ({
-                      flex: 1,
-                      height: 54,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 15,
-                      borderCurve: 'continuous',
-                      backgroundColor: '#F7F7F7',
-                      opacity: pressed ? 0.7 : 1,
-                    })}
+                  <Text
+                    style={{
+                      color: '#3A3A3A',
+                      fontSize: 13,
+                      lineHeight: 18,
+                      textAlign: 'center',
+                      fontWeight: '800',
+                    }}
                   >
-                    <GoogleLogo size={27} />
-                  </Pressable>
+                    Continuer avec vos réseaux préférés
+                  </Text>
 
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      gap: 16,
+                    }}
+                  >
+                    {socialProviders.map((item) => (
+                      <Pressable
+                        key={item.provider}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Continuer avec ${item.label}`}
+                        onPress={() => handleSocialPress(item.provider)}
+                        disabled={saving}
+                        style={({ pressed }: { pressed: boolean }) => ({
+                          width: 58,
+                          height: 58,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 14,
+                          borderCurve: 'continuous',
+                          backgroundColor: '#F7F7F7',
+                          opacity: saving ? 0.45 : pressed ? 0.7 : 1,
+                        })}
+                      >
+                        <SocialProviderIcon icon={item.icon} color={item.color} />
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
-              </View>
               ) : null}
             </View>
 
