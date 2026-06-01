@@ -12,8 +12,9 @@ export async function inviteMemberHandler(request: Request, response: Response):
   if (!request.auth) { response.status(401).json({ error: 'Non autorise.', code: 'AUTH_REQUIRED' }); return; }
   const shopId = getShopId(request);
   const userId = request.auth.userId;
+  const role = await getMyRole(shopId, userId);
 
-  if (userId !== shopId) {
+  if (role !== 'owner') {
     response.status(403).json({ error: 'Seul le proprietaire peut inviter des membres.', code: 'TEAM_OWNER_ONLY' });
     return;
   }
@@ -27,8 +28,9 @@ export async function removeMemberHandler(request: Request, response: Response):
   const shopId = getShopId(request);
   const userId = request.auth.userId;
   const memberId = String(request.params['memberId'] ?? '');
+  const role = await getMyRole(shopId, userId);
 
-  if (userId !== shopId) {
+  if (role !== 'owner') {
     response.status(403).json({ error: 'Seul le proprietaire peut retirer des membres.', code: 'TEAM_OWNER_ONLY' });
     return;
   }

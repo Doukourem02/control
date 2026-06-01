@@ -6,6 +6,7 @@ import {
   shouldSurfaceControlError,
 } from '@/lib/control-errors';
 import { getStoredSessionSecret } from '@/lib/control-auth-storage';
+import type { ControlAuthSession } from '@/lib/control-auth-storage';
 import { cacheRead, cacheWrite } from '@/lib/offline-cache';
 import { getIsOffline, notifyNetworkOffline, notifyNetworkOnline } from '@/lib/network-state';
 import { queueAdd, queueGet, queueRemove } from '@/lib/offline-queue';
@@ -694,6 +695,13 @@ export async function getMyRole(): Promise<'owner' | 'seller'> {
   } catch {
     return 'owner';
   }
+}
+
+export async function defineAccountRole(accountRole: 'owner' | 'seller'): Promise<ControlAuthSession> {
+  return requestApi<ControlAuthSession>('/api/auth/role', {
+    method: 'POST',
+    body: JSON.stringify({ accountRole }),
+  });
 }
 
 export type InviteMemberInput = { email: string; name: string };

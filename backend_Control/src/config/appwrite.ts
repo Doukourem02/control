@@ -22,6 +22,7 @@ export function createSessionAccount(sessionSecret: string) {
 export const DATABASE_ID = env.appwriteDatabaseId;
 
 export const COLLECTIONS = {
+  userProfiles: 'user_profiles',
   shops: 'shops',
   products: 'products',
   stockMovements: 'stock_movements',

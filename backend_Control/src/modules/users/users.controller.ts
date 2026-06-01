@@ -3,12 +3,14 @@ import type { Request, Response } from 'express';
 import {
   confirmPasswordRecovery,
   createOAuthSession,
+  defineAccountRole,
   getCurrentUser,
   getOAuthUrl,
   loginUser,
   logoutUser,
   registerUser,
   requestPasswordRecovery,
+  verifySellerInvite,
 } from './users.service';
 import { sendError } from '../../utils/http';
 
@@ -27,6 +29,11 @@ export async function register(request: Request, response: Response) {
   response.status(201).json(session);
 }
 
+export async function verifyInvite(request: Request, response: Response) {
+  const result = await verifySellerInvite(request.body);
+  response.json(result);
+}
+
 export async function login(request: Request, response: Response) {
   const session = await loginUser(request.body);
   response.json(session);
@@ -41,6 +48,18 @@ export async function me(request: Request, response: Response) {
   }
 
   const session = await getCurrentUser(sessionSecret);
+  response.json(session);
+}
+
+export async function role(request: Request, response: Response) {
+  const sessionSecret = getBearerToken(request);
+
+  if (!sessionSecret) {
+    sendError(response, 401, 'Session requise.', 'AUTH_REQUIRED');
+    return;
+  }
+
+  const session = await defineAccountRole(sessionSecret, request.body);
   response.json(session);
 }
 

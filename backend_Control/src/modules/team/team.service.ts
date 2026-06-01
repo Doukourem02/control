@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import { userError } from '../../utils/http';
+import { getUserProfileByUserId, upsertUserProfile } from '../users/users.repository';
 import {
   createMember,
   getActiveMemberByUserId,
@@ -83,10 +84,21 @@ export async function joinShop(userId: string, body: Record<string, unknown>) {
     throw userError('Ce code a deja ete utilise.', 409, 'TEAM_CODE_USED');
   }
 
-  return updateMember(member.$id, { userId, status: 'active' });
+  const updatedMember = await updateMember(member.$id, { userId, status: 'active' });
+  await upsertUserProfile({
+    userId,
+    accountRole: 'seller',
+    shopId: updatedMember.shopId,
+    onboardingCompleted: 'true',
+  });
+
+  return updatedMember;
 }
 
 export async function getMyRole(shopId: string, userId: string): Promise<'owner' | 'seller'> {
+  const profile = await getUserProfileByUserId(userId);
+  if (profile) return profile.accountRole;
+
   return userId === shopId ? 'owner' : 'seller';
 }
 

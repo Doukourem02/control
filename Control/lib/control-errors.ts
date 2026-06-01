@@ -55,6 +55,7 @@ const userMessagesByCode: Record<string, string> = {
   SHOP_REQUIRED: 'Boutique active introuvable.',
   STOCK_INSUFFICIENT: 'Stock insuffisant pour cette operation.',
   TEAM_CODE_INVALID: 'Code d’invitation invalide.',
+  TEAM_CODE_EMAIL_MISMATCH: 'Ce code ne correspond pas a cet email.',
   TEAM_CODE_REQUIRED: 'Renseigne le code d’invitation de la boutique.',
   TEAM_CODE_REVOKED: 'Cette invitation a été révoquée.',
   TEAM_CODE_USED: 'Ce code a déjà été utilisé.',

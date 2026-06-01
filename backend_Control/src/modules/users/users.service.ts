@@ -4,8 +4,14 @@ import { adminAccount, createSessionAccount, users } from '../../config/appwrite
 import { env } from '../../config/env';
 import { devError, userError } from '../../utils/http';
 import { getOrCreateCurrentShop } from '../shops/shops.service';
-import { getMemberByInviteCode } from '../team/team.repository';
+import { getShopById, type ShopRow } from '../shops/shops.repository';
+import { getActiveMemberByUserId, getMemberByInviteCode } from '../team/team.repository';
 import { joinShop } from '../team/team.service';
+import {
+  getUserProfileByUserId,
+  upsertUserProfile,
+  type AccountRole,
+} from './users.repository';
 
 const SUPPORTED_OAUTH_PROVIDERS = ['google', 'facebook', 'twitter', 'apple'] as const;
 type OAuthProvider = (typeof SUPPORTED_OAUTH_PROVIDERS)[number];
@@ -16,6 +22,11 @@ type AuthInput = {
   name?: unknown;
   accountRole?: unknown;
   inviteCode?: unknown;
+};
+
+type InviteCheckInput = {
+  email: unknown;
+  inviteCode: unknown;
 };
 
 function readEmail(value: unknown) {
@@ -44,7 +55,7 @@ function readCredentials(input: AuthInput) {
   return { email, password, name };
 }
 
-function readAccountRole(value: unknown): 'owner' | 'seller' {
+function readAccountRole(value: unknown): AccountRole {
   const role = String(value ?? 'owner').trim().toLowerCase();
 
   if (role === 'owner' || role === 'seller') return role;
@@ -52,10 +63,54 @@ function readAccountRole(value: unknown): 'owner' | 'seller' {
   throw userError('Selectionne proprietaire ou vendeur.', 400, 'AUTH_ROLE_INVALID');
 }
 
+function needsCompletedShop(shopName: string, ownerName: string) {
+  const name = shopName.trim();
+  const owner = ownerName.trim();
+
+  return !!name && name !== 'Ma boutique' && (!owner || name.toLowerCase() !== `boutique ${owner}`.toLowerCase());
+}
+
+function createPendingSellerShop(ownerName: string): ShopRow {
+  return {
+    $id: '',
+    $createdAt: '',
+    $updatedAt: '',
+    ownerUserId: '',
+    ownerName,
+    name: '',
+    currency: 'FCFA',
+    contact: '',
+    address: '',
+    openingHours: '',
+    paymentMethods: 'Cash,Mobile Money',
+    defaultClosingTime: '20:00',
+    amountsVisibleByDefault: 'true',
+    displayLanguage: 'fr',
+    defaultUnit: 'piece',
+    stockLowAlertsEnabled: 'true',
+    closureReminderEnabled: 'true',
+    cashGapAlertsEnabled: 'true',
+    defaultLowStockThreshold: '5',
+  };
+}
+
 async function createSessionPayload(sessionSecret: string) {
   const account = createSessionAccount(sessionSecret);
   const user = await account.get();
-  const shop = await getOrCreateCurrentShop(user.$id, user.name || user.email);
+  const [profile, membership] = await Promise.all([
+    getUserProfileByUserId(user.$id),
+    getActiveMemberByUserId(user.$id),
+  ]);
+  const accountRole = profile?.accountRole ?? (membership ? 'seller' : null);
+  let shop = profile?.shopId ? await getShopById(profile.shopId) : null;
+
+  if (!shop && membership) {
+    shop = await getShopById(membership.shopId);
+  }
+
+  if (!shop && accountRole !== 'seller') {
+    shop = await getOrCreateCurrentShop(user.$id, user.name || user.email);
+  }
 
   return {
     sessionSecret,
@@ -63,8 +118,9 @@ async function createSessionPayload(sessionSecret: string) {
       id: user.$id,
       email: user.email,
       name: user.name,
+      accountRole,
     },
-    shop,
+    shop: shop ?? createPendingSellerShop(user.name || user.email),
   };
 }
 
@@ -76,6 +132,7 @@ export async function registerUser(input: AuthInput) {
   const { email, password, name } = readCredentials(input);
   const accountRole = readAccountRole(input.accountRole);
   const inviteCode = String(input.inviteCode ?? '').trim().toUpperCase();
+  let sellerInviteShopId = '';
 
   if (!name) {
     throw userError(
@@ -103,6 +160,12 @@ export async function registerUser(input: AuthInput) {
     if (invite.status === 'active') {
       throw userError('Ce code a deja ete utilise.', 409, 'TEAM_CODE_USED');
     }
+
+    if (invite.email.toLowerCase().trim() !== email) {
+      throw userError('Ce code ne correspond pas a cet email.', 403, 'TEAM_CODE_EMAIL_MISMATCH');
+    }
+
+    sellerInviteShopId = invite.shopId;
   }
 
   let createdUserId = '';
@@ -136,10 +199,91 @@ export async function registerUser(input: AuthInput) {
   }
 
   if (accountRole === 'seller') {
-    await joinShop(createdUserId, { inviteCode });
+    const member = await joinShop(createdUserId, { inviteCode });
+    await upsertUserProfile({
+      userId: createdUserId,
+      accountRole: 'seller',
+      shopId: member.shopId || sellerInviteShopId,
+      onboardingCompleted: 'true',
+    });
+  } else {
+    const shop = await getOrCreateCurrentShop(createdUserId, name);
+    await upsertUserProfile({
+      userId: createdUserId,
+      accountRole: 'owner',
+      shopId: shop.$id,
+      onboardingCompleted: 'false',
+    });
   }
 
   return createSessionPayload(session.secret);
+}
+
+export async function verifySellerInvite(input: InviteCheckInput) {
+  const email = readEmail(input.email);
+  const inviteCode = String(input.inviteCode ?? '').trim().toUpperCase();
+
+  if (!inviteCode) {
+    throw userError('Renseigne le code d\'invitation de la boutique.', 400, 'TEAM_CODE_REQUIRED');
+  }
+
+  const invite = await getMemberByInviteCode(inviteCode);
+
+  if (!invite) {
+    throw userError('Code d\'invitation invalide.', 404, 'TEAM_CODE_INVALID');
+  }
+
+  if (invite.status === 'removed') {
+    throw userError('Cette invitation a ete revoquee.', 410, 'TEAM_CODE_REVOKED');
+  }
+
+  if (invite.status === 'active') {
+    throw userError('Ce code a deja ete utilise.', 409, 'TEAM_CODE_USED');
+  }
+
+  if (invite.email.toLowerCase().trim() !== email) {
+    throw userError('Ce code ne correspond pas a cet email.', 403, 'TEAM_CODE_EMAIL_MISMATCH');
+  }
+
+  const shop = await getShopById(invite.shopId);
+
+  return {
+    ok: true,
+    invite: {
+      email: invite.email,
+      name: invite.name,
+      shopId: invite.shopId,
+      shopName: shop?.name ?? 'la boutique',
+    },
+  };
+}
+
+export async function defineAccountRole(sessionSecret: string, input: { accountRole: unknown }) {
+  const account = createSessionAccount(sessionSecret);
+  const user = await account.get();
+  const accountRole = readAccountRole(input.accountRole);
+
+  if (accountRole === 'seller') {
+    const member = await getActiveMemberByUserId(user.$id);
+    await upsertUserProfile({
+      userId: user.$id,
+      accountRole: 'seller',
+      shopId: member?.shopId ?? '',
+      onboardingCompleted: member ? 'true' : 'false',
+    });
+
+    return createSessionPayload(sessionSecret);
+  }
+
+  const shop = await getOrCreateCurrentShop(user.$id, user.name || user.email);
+  await upsertUserProfile({
+    userId: user.$id,
+    accountRole: 'owner',
+    shopId: shop.$id,
+    onboardingCompleted: needsCompletedShop(shop.name, user.name || user.email) ? 'true' : 'false',
+  });
+
+  return createSessionPayload(sessionSecret);
 }
 
 export async function loginUser(input: AuthInput) {
@@ -169,10 +313,9 @@ export async function loginUser(input: AuthInput) {
 
 export async function getCurrentUser(sessionSecret: string) {
   const account = createSessionAccount(sessionSecret);
-  let user;
 
   try {
-    user = await account.get();
+    await account.get();
   } catch (error) {
     if (isSessionAuthError(error)) {
       throw userError('Session expiree. Reconnecte-toi.', 401, 'AUTH_SESSION_EXPIRED');
@@ -180,17 +323,7 @@ export async function getCurrentUser(sessionSecret: string) {
     throw error;
   }
 
-  const shop = await getOrCreateCurrentShop(user.$id, user.name || user.email);
-
-  return {
-    sessionSecret,
-    user: {
-      id: user.$id,
-      email: user.email,
-      name: user.name,
-    },
-    shop,
-  };
+  return createSessionPayload(sessionSecret);
 }
 
 export async function logoutUser(sessionSecret: string) {

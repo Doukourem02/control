@@ -23,6 +23,13 @@ type AuthModeInput = {
   inviteCode?: string;
 };
 
+export type SellerInvitePreview = {
+  email: string;
+  name: string;
+  shopId: string;
+  shopName: string;
+};
+
 type AuthContextValue = {
   session: ControlAuthSession | null;
   loading: boolean;
@@ -62,6 +69,18 @@ async function authRequest<ResponseBody = ControlAuthSession>(path: string, opti
   }
 
   return response.json() as Promise<ResponseBody>;
+}
+
+export async function verifySellerInvite(input: {
+  email: string;
+  inviteCode: string;
+}): Promise<SellerInvitePreview> {
+  const response = await authRequest<{ ok: true; invite: SellerInvitePreview }>('/api/auth/invite/verify', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+
+  return response.invite;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

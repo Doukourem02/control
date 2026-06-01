@@ -1,10 +1,11 @@
-import { getAuthErrorMessage, useControlAuth } from '@/lib/control-auth';
+import { getAuthErrorMessage, useControlAuth, verifySellerInvite, type SellerInvitePreview } from '@/lib/control-auth';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -95,8 +96,9 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [registerRole, setRegisterRole] = useState<RegisterRole>('owner');
+  const [registerRole, setRegisterRole] = useState<RegisterRole | null>(null);
   const [inviteCode, setInviteCode] = useState('');
+  const [sellerInvite, setSellerInvite] = useState<SellerInvitePreview | null>(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -105,14 +107,33 @@ export default function AuthScreen() {
   const isRegister = mode === 'register';
   const isRecover = mode === 'recover';
   const isReset = mode === 'reset';
+  const isRegisterRoleChoice = isRegister && !registerRole;
+  const isSellerInviteStep = isRegister && registerRole === 'seller' && !sellerInvite;
   const compact = height < 760;
   const screenTitle = isReset
     ? 'Nouveau mot de passe'
     : isRecover
       ? 'Mot de passe oublié'
       : isRegister
-        ? 'Créer un compte'
+        ? registerRole === 'owner'
+          ? 'Créer une boutique'
+          : registerRole === 'seller'
+            ? 'Rejoindre une boutique'
+            : 'Votre statut'
         : 'Connexion';
+  const headerSubtitle = isReset
+    ? 'Choisis un nouveau mot de passe pour sécuriser ton compte.'
+    : isRecover
+      ? 'Entre ton email pour recevoir un lien de récupération.'
+      : isRegister
+        ? registerRole === 'owner'
+          ? 'Crée ton espace boutique et commence à suivre tes ventes.'
+          : registerRole === 'seller'
+            ? sellerInvite
+              ? `Invitation validée pour ${sellerInvite.shopName}. Crée ton mot de passe.`
+              : 'Entre ton email et le code donné par le propriétaire.'
+            : 'Choisis comment tu veux utiliser CONTROL.'
+        : 'CONTROL, plateforme de gestion commerciale pour boutiques.';
 
   useEffect(() => {
     if (params.mode === 'reset' && params.userId && params.secret) {
@@ -153,8 +174,16 @@ export default function AuthScreen() {
         setMode('login');
         setSocialMessage('Si un compte existe avec cet email, un lien de recuperation a ete envoye.');
       } else if (isRegister) {
+        if (!registerRole) {
+          throw new Error('Choisis proprietaire ou vendeur.');
+        }
+
         if (registerRole === 'seller' && !inviteCode.trim()) {
           throw new Error("Renseigne le code d'invitation de la boutique.");
+        }
+
+        if (registerRole === 'seller' && !sellerInvite) {
+          throw new Error("Valide d'abord ton invitation.");
         }
 
         await signUp({
@@ -180,6 +209,8 @@ export default function AuthScreen() {
     setPassword('');
     setPasswordConfirm('');
     setInviteCode('');
+    setSellerInvite(null);
+    setRegisterRole(null);
     setMode((current) => (current === 'login' ? 'register' : 'login'));
   }
 
@@ -189,6 +220,8 @@ export default function AuthScreen() {
     setPassword('');
     setPasswordConfirm('');
     setInviteCode('');
+    setSellerInvite(null);
+    setRegisterRole(null);
     setMode('recover');
   }
 
@@ -198,7 +231,43 @@ export default function AuthScreen() {
     setPassword('');
     setPasswordConfirm('');
     setInviteCode('');
+    setSellerInvite(null);
+    setRegisterRole(null);
     setMode('login');
+  }
+
+  function backToRoleChoice() {
+    setErrorMessage('');
+    setSocialMessage('');
+    setName('');
+    setPassword('');
+    setPasswordConfirm('');
+    setInviteCode('');
+    setSellerInvite(null);
+    setRegisterRole(null);
+  }
+
+  async function handleVerifySellerInvite() {
+    setErrorMessage('');
+    setSocialMessage('');
+    setSaving(true);
+
+    try {
+      const invite = await verifySellerInvite({
+        email,
+        inviteCode: inviteCode.trim().toUpperCase(),
+      });
+
+      setSellerInvite(invite);
+      setName(invite.name);
+      setEmail(invite.email);
+      setInviteCode(inviteCode.trim().toUpperCase());
+      setSocialMessage(`Invitation validée pour ${invite.shopName}.`);
+    } catch (error) {
+      setErrorMessage(getAuthErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleSocialPress(provider: SocialProvider) {
@@ -226,39 +295,68 @@ export default function AuthScreen() {
           contentContainerStyle={{
             flexGrow: 1,
             paddingHorizontal: 22,
-            paddingTop: compact ? 16 : 24,
+            paddingTop: compact ? 18 : 48,
             paddingBottom: 24,
           }}
         >
           <View
             style={{
               flex: 1,
-              justifyContent: compact ? 'flex-start' : 'center',
+              justifyContent: 'flex-start',
               gap: compact ? 18 : 22,
             }}
           >
-            <View style={{ gap: compact ? 18 : 24 }}>
-              <Text style={{ color: '#111111', fontSize: 16, fontWeight: '900' }}>CONTROL</Text>
+            <View style={{ gap: compact ? 22 : 30 }}>
+              <View
+                style={{
+                  width: 92,
+                  height: 92,
+                  overflow: 'hidden',
+                  alignSelf: 'center',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Image
+                  source={require('../assets/images/logo.png')}
+                  accessibilityLabel="CONTROL"
+                  style={{ width: 156, height: 156, resizeMode: 'contain' }}
+                />
+              </View>
 
-              <View style={{ gap: 8 }}>
+              <View style={{ gap: 10, alignItems: 'center' }}>
                 <Text
                   style={{
                     color: '#111111',
                     fontSize: compact ? 29 : 32,
                     lineHeight: compact ? 34 : 37,
-                    fontWeight: '900',
+                    fontWeight: '800',
+                    textAlign: 'center',
                   }}
                 >
                   {screenTitle}
                 </Text>
+                <Text
+                  style={{
+                    maxWidth: 330,
+                    color: '#8A8A8A',
+                    fontSize: 15,
+                    lineHeight: 22,
+                    fontWeight: '500',
+                    textAlign: 'center',
+                  }}
+                >
+                  {headerSubtitle}
+                </Text>
                 {!isRecover && !isReset ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 5, rowGap: 2 }}>
-                    <Text style={{ color: '#646464', fontSize: 15 }}>
-                      {isRegister ? 'Déjà inscrit ?' : 'Nouveau sur CONTROL ?'}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 6, rowGap: 3, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#9A9A9A', fontSize: 13, lineHeight: 19, fontWeight: '500' }}>
+                      {isRegister ? 'Déjà inscrit' : 'Nouveau ici'}
                     </Text>
+                    <Text style={{ color: '#C8C8C8', fontSize: 13, lineHeight: 19 }}>·</Text>
                     <Pressable onPress={toggleMode} disabled={saving} hitSlop={8}>
-                      <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
-                        {isRegister ? 'Se connecter' : 'Créer une boutique'}
+                      <Text style={{ color: '#111111', fontSize: 13, lineHeight: 19, fontWeight: '700' }}>
+                        {isRegister ? 'Connexion' : 'Créer un compte'}
                       </Text>
                     </Pressable>
                   </View>
@@ -273,103 +371,179 @@ export default function AuthScreen() {
 
               <View style={{ gap: 12 }}>
                 {isRegister ? (
-                  <>
-                    <View
-                      style={{
-                        height: 48,
-                        flexDirection: 'row',
-                        gap: 4,
-                        borderRadius: 16,
-                        borderCurve: 'continuous',
-                        backgroundColor: '#F0F0F0',
-                        padding: 4,
-                      }}
-                    >
-                      {(['owner', 'seller'] as RegisterRole[]).map((role) => {
-                        const selected = registerRole === role;
-
-                        return (
-                          <Pressable
-                            key={role}
-                            onPress={() => setRegisterRole(role)}
-                            disabled={saving}
-                            style={({ pressed }: { pressed: boolean }) => ({
-                              flex: 1,
-                              borderRadius: 13,
+                  isRegisterRoleChoice ? (
+                    <View style={{ gap: 12 }}>
+                      {(['owner', 'seller'] as RegisterRole[]).map((role) => (
+                        <Pressable
+                          key={role}
+                          onPress={() => {
+                            setRegisterRole(role);
+                            setSellerInvite(null);
+                            setSocialMessage('');
+                            setErrorMessage('');
+                          }}
+                          disabled={saving}
+                          style={({ pressed }: { pressed: boolean }) => ({
+                            minHeight: 92,
+                            borderRadius: 22,
+                            borderCurve: 'continuous',
+                            backgroundColor: '#F5F5F5',
+                            borderWidth: 1,
+                            borderColor: '#ECECEC',
+                            paddingHorizontal: 16,
+                            paddingVertical: 14,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 14,
+                            opacity: pressed ? 0.72 : 1,
+                          })}
+                        >
+                          <View
+                            style={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: 18,
                               borderCurve: 'continuous',
-                              backgroundColor: selected ? '#FFFFFF' : 'transparent',
-                              flexDirection: 'row',
+                              backgroundColor: role === 'owner' ? '#E8F4EF' : '#F0F4FF',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: 7,
-                              opacity: pressed ? 0.7 : 1,
-                            })}
+                            }}
                           >
                             <MaterialCommunityIcons
                               name={role === 'owner' ? 'storefront-outline' : 'account-outline'}
-                              size={19}
-                              color={selected ? '#111111' : '#8A8A8A'}
+                              size={25}
+                              color={role === 'owner' ? '#08784F' : '#2A5BE8'}
                             />
-                            <Text style={{ color: selected ? '#111111' : '#8A8A8A', fontSize: 14, fontWeight: '900' }}>
-                              {role === 'owner' ? 'Propriétaire' : 'Vendeur'}
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={{ color: '#111111', fontSize: 17, fontWeight: '900' }}>
+                              {role === 'owner' ? 'Je suis propriétaire' : 'Je suis vendeur'}
                             </Text>
-                          </Pressable>
-                        );
-                      })}
+                            <Text style={{ color: '#777777', fontSize: 13, lineHeight: 18, fontWeight: '600', marginTop: 3 }}>
+                              {role === 'owner'
+                                ? 'Créer et gérer ma boutique.'
+                                : 'Rejoindre une boutique avec un code.'}
+                            </Text>
+                          </View>
+                          <Feather name="chevron-right" size={22} color="#A0A0A0" />
+                        </Pressable>
+                      ))}
                     </View>
+                  ) : (
+                    <>
+                      {isSellerInviteStep ? (
+                        <>
+                          <View
+                            style={{
+                              height: 54,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 12,
+                              borderRadius: 14,
+                              borderCurve: 'continuous',
+                              backgroundColor: '#F5F5F5',
+                              paddingHorizontal: 16,
+                            }}
+                          >
+                            <Feather name="mail" size={21} color="#292929" />
+                            <TextInput
+                              value={email}
+                              onChangeText={setEmail}
+                              placeholder="Email invité"
+                              placeholderTextColor="#8A8A8A"
+                              keyboardType="email-address"
+                              autoCapitalize="none"
+                              autoCorrect={false}
+                              textContentType="emailAddress"
+                              style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                            />
+                          </View>
+                          <View
+                            style={{
+                              height: 54,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 12,
+                              borderRadius: 14,
+                              borderCurve: 'continuous',
+                              backgroundColor: '#F5F5F5',
+                              paddingHorizontal: 16,
+                            }}
+                          >
+                            <Feather name="key" size={21} color="#292929" />
+                            <TextInput
+                              value={inviteCode}
+                              onChangeText={(value) => setInviteCode(value.toUpperCase())}
+                              placeholder="Code d'invitation"
+                              placeholderTextColor="#8A8A8A"
+                              autoCapitalize="characters"
+                              autoCorrect={false}
+                              style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '800', letterSpacing: 1.4 }}
+                            />
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          {registerRole === 'seller' && sellerInvite ? (
+                            <View
+                              style={{
+                                borderRadius: 16,
+                                borderCurve: 'continuous',
+                                backgroundColor: '#EAF8F0',
+                                paddingHorizontal: 14,
+                                paddingVertical: 12,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 10,
+                              }}
+                            >
+                              <Feather name="check-circle" size={20} color="#08784F" />
+                              <View style={{ flex: 1, minWidth: 0 }}>
+                                <Text style={{ color: '#08784F', fontSize: 14, fontWeight: '900' }}>
+                                  Invitation validée
+                                </Text>
+                                <Text numberOfLines={1} style={{ color: '#08784F', fontSize: 12, fontWeight: '700', marginTop: 1 }}>
+                                  {sellerInvite.shopName}
+                                </Text>
+                              </View>
+                            </View>
+                          ) : null}
 
-                    <View
-                      style={{
-                        height: 54,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 12,
-                        borderRadius: 14,
-                        borderCurve: 'continuous',
-                        backgroundColor: '#F5F5F5',
-                        paddingHorizontal: 16,
-                      }}
-                    >
-                      <Feather name={registerRole === 'owner' ? 'briefcase' : 'user'} size={21} color="#292929" />
-                      <TextInput
-                        value={name}
-                        onChangeText={setName}
-                        placeholder={registerRole === 'owner' ? 'Nom de la boutique' : 'Nom complet du vendeur'}
-                        placeholderTextColor="#8A8A8A"
-                        autoCapitalize="words"
-                        style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
-                      />
-                    </View>
+                          <View
+                            style={{
+                              height: 54,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 12,
+                              borderRadius: 14,
+                              borderCurve: 'continuous',
+                              backgroundColor: '#F5F5F5',
+                              paddingHorizontal: 16,
+                            }}
+                          >
+                            <Feather name={registerRole === 'owner' ? 'briefcase' : 'user'} size={21} color="#292929" />
+                            <TextInput
+                              value={name}
+                              onChangeText={setName}
+                              placeholder={registerRole === 'owner' ? 'Nom de la boutique' : 'Nom complet du vendeur'}
+                              placeholderTextColor="#8A8A8A"
+                              autoCapitalize="words"
+                              style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                            />
+                          </View>
+                        </>
+                      )}
 
-                    {registerRole === 'seller' ? (
-                      <View
-                        style={{
-                          height: 54,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 12,
-                          borderRadius: 14,
-                          borderCurve: 'continuous',
-                          backgroundColor: '#F5F5F5',
-                          paddingHorizontal: 16,
-                        }}
-                      >
-                        <Feather name="key" size={21} color="#292929" />
-                        <TextInput
-                          value={inviteCode}
-                          onChangeText={setInviteCode}
-                          placeholder="Code d'invitation boutique"
-                          placeholderTextColor="#8A8A8A"
-                          autoCapitalize="characters"
-                          autoCorrect={false}
-                          style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '700', letterSpacing: 1.4 }}
-                        />
-                      </View>
-                    ) : null}
-                  </>
+                      <Pressable onPress={backToRoleChoice} disabled={saving} hitSlop={8}>
+                        <Text style={{ color: '#252525', fontSize: 14, fontWeight: '800' }}>
+                          Changer de statut
+                        </Text>
+                      </Pressable>
+                    </>
+                  )
                 ) : null}
 
-                {!isReset ? (
+                {!isReset && !isRegisterRoleChoice && !isSellerInviteStep ? (
                   <View
                     style={{
                       height: 54,
@@ -397,7 +571,7 @@ export default function AuthScreen() {
                   </View>
                 ) : null}
 
-                {!isRecover ? (
+                {!isRecover && !isRegisterRoleChoice && !isSellerInviteStep ? (
                   <View
                     style={{
                       height: 54,
@@ -472,34 +646,38 @@ export default function AuthScreen() {
                 ) : null}
               </View>
 
-              <Pressable
-                onPress={handleSubmit}
-                disabled={saving}
-                style={({ pressed }: { pressed: boolean }) => ({
-                  height: 56,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 28,
-                  backgroundColor: saving ? '#2A2A2A' : '#000000',
-                  opacity: pressed ? 0.86 : 1,
-                })}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>
-                    {isReset
-                      ? 'Mettre a jour'
-                      : isRecover
-                        ? 'Envoyer le lien'
-                        : isRegister
-                          ? 'Créer le compte'
-                          : 'Se connecter'}
-                  </Text>
-                )}
-              </Pressable>
+              {!isRegisterRoleChoice ? (
+                <Pressable
+                  onPress={isSellerInviteStep ? handleVerifySellerInvite : handleSubmit}
+                  disabled={saving}
+                  style={({ pressed }: { pressed: boolean }) => ({
+                    height: 56,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 28,
+                    backgroundColor: saving ? '#2A2A2A' : '#000000',
+                    opacity: pressed ? 0.86 : 1,
+                  })}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>
+                      {isReset
+                        ? 'Mettre a jour'
+                        : isRecover
+                          ? 'Envoyer le lien'
+                          : isSellerInviteStep
+                            ? "Valider l'invitation"
+                          : isRegister
+                            ? 'Créer le compte'
+                            : 'Se connecter'}
+                    </Text>
+                  )}
+                </Pressable>
+              ) : null}
 
-              {!isRecover && !isReset ? (
+              {!isRecover && !isReset && !isRegisterRoleChoice && !isSellerInviteStep ? (
                 <View style={{ gap: 14 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <View style={{ flex: 1, height: 1, backgroundColor: '#E5E5E5' }} />

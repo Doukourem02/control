@@ -4,6 +4,7 @@ export type ControlAuthSession = {
     id: string;
     email: string;
     name: string;
+    accountRole?: 'owner' | 'seller' | null;
   };
   shop: {
     $id: string;
