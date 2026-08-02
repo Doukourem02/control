@@ -2,10 +2,10 @@ import type { NextFunction, Request, Response } from 'express';
 import { AppwriteException } from 'node-appwrite';
 
 import { createSessionAccount } from '../config/appwrite';
-import { getShopById } from '../modules/shops/shops.repository';
-import { getActiveShopForOwner } from '../modules/shops/shops.service';
-import { getActiveMemberByUserId } from '../modules/team/team.repository';
-import { getUserProfileByUserId, type AccountRole } from '../modules/users/users.repository';
+import { getShopById } from '../services/shopsService';
+import { getActiveShopForOwner } from '../services/shopsService';
+import { getActiveMemberByUserId } from '../services/teamService';
+import { getUserProfileByUserId, type AccountRole } from '../services/usersService';
 import { sendError } from '../utils/http';
 
 function getBearerToken(request: Request) {

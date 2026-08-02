@@ -1,4 +1,4 @@
-import type { AccountRole } from '../modules/users/users.repository';
+import type { AccountRole } from '../services/usersService';
 
 declare global {
   namespace Express {

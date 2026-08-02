@@ -1,26 +1,26 @@
 import cors from 'cors';
 import express from 'express';
 
-import { activityRouter } from './modules/activity/activity.routes';
-import { analyticsRouter } from './modules/analytics/analytics.routes';
-import { categoriesRouter } from './modules/categories/categories.routes';
-import { cashRouter } from './modules/cash/cash.routes';
-import { expensesRouter } from './modules/expenses/expenses.routes';
-import { healthRouter } from './modules/health/health.routes';
-import { missingRouter } from './modules/missing/missing.routes';
-import { exportsRouter } from './modules/exports/exports.routes';
-import { teamRouter } from './modules/team/team.routes';
-import { notificationsRouter } from './modules/notifications/notifications.routes';
-import { organizationsRouter } from './modules/organizations/organizations.routes';
-import { productsRouter } from './modules/products/products.routes';
-import { salesRouter } from './modules/sales/sales.routes';
-import { shopsRouter } from './modules/shops/shops.routes';
-import { stockRouter } from './modules/stock/stock.routes';
-import { usersRouter } from './modules/users/users.routes';
-import { errorHandler } from './middleware/error-handler';
+import { activityRouter } from './routes/activityRoutes';
+import { analyticsRouter } from './routes/analyticsRoutes';
+import { categoriesRouter } from './routes/categoriesRoutes';
+import { cashRouter } from './routes/cashRoutes';
+import { expensesRouter } from './routes/expensesRoutes';
+import { healthRouter } from './routes/healthRoutes';
+import { missingRouter } from './routes/missingRoutes';
+import { exportsRouter } from './routes/exportsRoutes';
+import { teamRouter } from './routes/teamRoutes';
+import { notificationsRouter } from './routes/notificationsRoutes';
+import { organizationsRouter } from './routes/organizationsRoutes';
+import { productsRouter } from './routes/productsRoutes';
+import { salesRouter } from './routes/salesRoutes';
+import { shopsRouter } from './routes/shopsRoutes';
+import { stockRouter } from './routes/stockRoutes';
+import { usersRouter } from './routes/usersRoutes';
+import { errorHandler } from './middleware/errorHandler';
 import { requireAuth } from './middleware/auth';
-import { apiVersionAlias } from './middleware/api-version';
-import { createRateLimiter } from './middleware/rate-limit';
+import { apiVersionAlias } from './middleware/apiVersion';
+import { createRateLimiter } from './middleware/rateLimit';
 
 export const app = express();
 

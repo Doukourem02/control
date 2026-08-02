@@ -5,8 +5,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
-    "test": "npm run build && node --test $(find dist -name '*.test.js' | sort)",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "tsc -p tsconfig.json && node --test $(find dist-test/tests -name '*.test.js' | sort)",
     "start": "node dist/server.js",
     "appwrite:setup-shops": "node scripts/setup-appwrite-shops.js",
     "appwrite:setup-notifications": "node scripts/setup-appwrite-notifications.js",
