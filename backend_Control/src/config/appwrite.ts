@@ -1,4 +1,4 @@
-import { Account, Client, Databases, Users } from 'node-appwrite';
+import { Account, Client, Databases, Storage, Users } from 'node-appwrite';
 import { env } from './env';
 
 const client = new Client()
@@ -9,6 +9,15 @@ const client = new Client()
 export const databases = new Databases(client);
 export const users = new Users(client);
 export const adminAccount = new Account(client);
+export const storage = new Storage(client);
+
+// Un seul bucket Storage partage entre logos boutique et recus de depenses
+// (meme modele de securite : prive, jamais d'URL publique, servi uniquement
+// via un proxy backend authentifie). Le plan Appwrite limite le nombre de
+// buckets ; inutile d'en payer/creer un deuxieme pour un besoin identique.
+export const BUCKETS = {
+  photos: 'shop_logos',
+} as const;
 
 export function createSessionAccount(sessionSecret: string) {
   const sessionClient = new Client()

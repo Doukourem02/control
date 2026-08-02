@@ -2,7 +2,7 @@ import { AppwriteException, Query } from 'node-appwrite';
 
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 
-export type AccountRole = 'owner' | 'seller';
+export type AccountRole = 'owner' | 'manager' | 'seller' | 'comptable';
 
 export type UserProfileRow = {
   $id: string;

@@ -7,11 +7,13 @@
 
 ## Point de reprise rapide
 
-Dernière mise à jour : 2026-06-01 (vue propriétaire).
+Dernière mise à jour : 2026-08-02 (fusion du cahier des charges).
 
 ### État global actuel
 
-La prochaine phase active est maintenant la **vue propriétaire** : transformer CONTROL d'une app surtout opérationnelle pour vendeuses en outil de pilotage pour le propriétaire.
+Les écarts identifiés dans [`CAHIER_DES_CHARGES.md`](./CAHIER_DES_CHARGES.md) (conversion du PDF `CONTROL_SaaS_Cahier_Des_Charges_V3.pdf`) ont été fusionnés dans les sections P1/P2/P3 ci-dessous. **Multi-boutique** et **Analytics avancés** ne sont donc plus des blocs différés : ce sont maintenant des chantiers actifs, enrichis avec le détail du cahier des charges (entité `Organization`, `organizationId`/`storeId`, rentabilité, monétisation SaaS, vision long terme). Les cases se cochent au fur et à mesure qu'un point est réellement livré et vérifié — pas avant.
+
+La prochaine phase active était la **vue propriétaire** : transformer CONTROL d'une app surtout opérationnelle pour vendeuses en outil de pilotage pour le propriétaire.
 
 Checklist propriétaire en cours :
 
@@ -34,10 +36,8 @@ Il reste uniquement les blocs volontairement mis de côté :
 - Push notifications Expo/iOS.
 - CI/CD.
 - Connexion sociale Apple / Facebook / X.
-- Multi-boutique.
-- Analytics avancés.
 
-Ne pas reprendre d'autre chantier avant décision explicite sur l'un de ces blocs.
+Multi-boutique et Analytics avancés sont sortis de cette liste (voir note ci-dessus) : ce sont maintenant des chantiers actifs en P3, à traiter selon leurs propres dépendances internes.
 
 ### Dernier arrêt concret
 
@@ -303,7 +303,7 @@ backend_Control/src/modules/
 
 ### Écrans Settings
 
-- [x] **Boutique** — modifier nom, contact, adresse, horaires
+- [x] **Boutique** — modifier nom, contact, adresse, horaires, logo/avatar (photo caméra ou galerie, remplace les initiales dans l'accueil et le profil — session 2026-08-02, hors cahier des charges initial)
 - [x] **Caisse** — configurer devise, modes de paiement, heure de clôture par défaut
 - [x] **Équipe** — invitations avec code, rôles propriétaire/vendeuse, contrôle d'accès backend, modal interactif
 - [x] **Alertes** — activer/désactiver alertes stock faible, rappel clôture oubliée, écarts de caisse
@@ -334,6 +334,8 @@ backend_Control/src/modules/
 - [x] Notification in-app en cas d'écart de caisse détecté
 - [x] Centre de notifications in-app (liste des alertes récentes)
 - [x] Badge non-lu sur la cloche
+- [ ] Alerte "ventes suspectes" (cahier des charges §10)
+- [ ] Alerte "baisse d'activité inhabituelle" (cahier des charges §10)
 - [ ] Push notifications Expo/iOS — différé (logo app requis, à faire en dernier)
 
 ### Réapprovisionnement produit (Supply)
@@ -374,6 +376,42 @@ backend_Control/src/modules/
 - [x] Clôture partielle (fermeture en cours de journée si besoin)
 - [x] Résumé détaillé de la clôture avant confirmation
 
+### Rôles étendus (manager / comptable)
+
+> Cahier des charges §11. LIVRÉ (session 2026-08-02).
+
+- [x] Ajouter le rôle `manager` — hérite de l'expérience UI `owner` (`toExperienceRole` dans `Control/lib/control-auth.tsx`).
+- [x] Ajouter le rôle `comptable` — hérite de l'expérience UI `seller`.
+- [x] Définir les permissions fines par rôle — `comptable` en lecture seule côté backend sur les actions opérationnelles (ventes, dépenses, manquants, clôtures, produits) via le middleware `requireOperationalRole` (`backend_Control/src/middleware/roles.ts`) ; invite/retrait d'équipe reste réservé à `owner` (déjà en place, maintenant correctement étendu à manager/comptable aussi).
+
+Détail livré :
+- `AccountRole` (backend `users.repository.ts`) et `MemberRole` (backend `team.repository.ts`) élargis à `manager`/`comptable`.
+- Invitation d'équipe : sélecteur de rôle dans `team-settings-modal.tsx`, propagé jusqu'à `POST /api/team/invite` (`role` dans le body, validé côté service).
+- Le rôle réellement assigné à l'inscription/join vient de l'invitation (`member.role`), plus jamais hardcodé à `'seller'`.
+- Middleware `requireAuth` : la résolution du `shopId` par appartenance à une équipe (au lieu de la création d'une boutique propre) s'applique maintenant à tout rôle `!== 'owner'`, pas seulement `'seller'`.
+- Simplification assumée et documentée dans le code : pas encore d'écran dédié comptable (vue lecture seule des rapports) — `comptable` réutilise l'écran vendeur/seller pour l'instant, seule l'écriture est bloquée côté API.
+
+### Dépenses avancées
+
+> Cahier des charges §8. LIVRÉ (session 2026-08-02).
+
+- [x] Catégoriser les dépenses en fixes / variables — mapping statique catégorie → `fixed`/`variable` (`getExpenseKind` dans `types/control.ts`, pas de nouveau champ à saisir). Visible dans le Bilan (onglet Sorties) et le Journal via le `sub` des transactions.
+- [x] Photo justificative par dépense — champ `receiptFileId` sur `expenses`, upload en base64 à la création (`POST /api/expenses`), stocké dans un bucket Appwrite Storage **privé** (`expense_receipts`), servi uniquement via un proxy backend authentifié et scopé à la boutique (`GET /api/expenses/:id/receipt`) — jamais d'URL Appwrite publique. Capture caméra ou galerie dans `app/expense.tsx` (`expo-image-picker`), visualisation via `ReceiptViewerModal` dans le Journal et le Bilan (icône caméra sur les sorties qui ont une photo).
+
+> ⚠️ Actions manuelles requises avant que la photo justificative fonctionne :
+> 1. `node scripts/setup-appwrite-expense-receipts.js` dans `backend_Control` — crée le bucket Storage + l'attribut `receiptFileId`.
+> 2. **Rebuild natif obligatoire** (`expo-image-picker` est un nouveau module natif, pas juste un reload JS) : `npx expo run:ios` / `run:android`, ou un nouveau build `eas build --profile development`. Impossible de tester la capture photo avant ce rebuild.
+
+### Stock avancé
+
+> Cahier des charges §7. LIVRÉ (session 2026-08-02).
+
+- [x] Champ fournisseur sur les entrées de stock — `supplier` optionnel sur `stock_movements` (backend `products.repository.ts`/`products.service.ts`, script `scripts/setup-appwrite-stock-supplier.js` à lancer pour créer l'attribut Appwrite), champ dans le formulaire d'appro (`app/stock.tsx`), affiché dans l'historique produit et le détail des mouvements (`StockMovementItem`).
+- [x] Distinguer les types de sortie (produit abîmé / consommation interne / erreur d'inventaire) — en fait **déjà fait avant cette session** : `missingReasons = ['perdu', 'abime', 'erreur', 'consommation interne']` existait déjà côté backend (`types/control.ts`) et frontend (`app/missing.tsx`), le gap identifié dans le cahier des charges était une fausse alerte de mon analyse initiale.
+- [x] Détection d'anomalie de stock — nouveau déclencheur `triggerStockAnomalyAlert` (`notifications.triggers.ts`) : alerte quand une seule déclaration de manquant retire ≥ 50 % du stock restant (sur un stock d'au moins 5 unités). Nouveau type de notification `stock_anomaly`, affiché dans le centre de notifications.
+
+> ⚠️ Action manuelle requise avant que le champ fournisseur fonctionne en prod : lancer `node scripts/setup-appwrite-stock-supplier.js` dans `backend_Control` pour créer l'attribut sur la collection Appwrite `stock_movements`.
+
 ---
 
 ## P3 — Stabilité & long terme
@@ -387,16 +425,49 @@ backend_Control/src/modules/
 
 ### Multi-boutique
 
-- [ ] Un utilisateur peut gérer plusieurs boutiques
+> Cahier des charges §3-4-6. Le plus gros chantier structurel : débloque la vue globale entreprise, la rentabilité par boutique, les permissions par boutique et la monétisation par palier.
+
+- [ ] Introduire l'entité `Organization` (entreprise) au-dessus de `Shop`
+- [ ] Un utilisateur peut gérer plusieurs boutiques (`Store`) au sein d'une organisation
+- [ ] Migrer le modèle de données : isolation par `organizationId` + `storeId` (au lieu du `shopId` unique actuel)
 - [ ] Sélecteur de boutique active dans l'app
 - [ ] Isolation stricte des données entre boutiques
+- [ ] Vue globale entreprise (toutes boutiques confondues) dans le dashboard
+- [ ] Vue par boutique dans le dashboard
 
 ### Analytics avancés
 
+> Cahier des charges §9.
+
+- [ ] Prix d'achat sur les produits (prérequis pour calculer une marge)
 - [ ] Marge brute par produit (prix achat vs prix vente)
+- [ ] Bénéfice net (CA − dépenses − coût d'achat)
+- [ ] Taux de perte
 - [ ] Classement des produits les plus vendus
+- [ ] Classement des produits les plus rentables
 - [ ] Tendance hebdomadaire / mensuelle
 - [ ] Comparaison entre deux périodes
+- [ ] Comparaison des boutiques les plus performantes (dépend du multi-boutique)
+
+### Monétisation SaaS
+
+> Cahier des charges §13. N'a de sens complet qu'une fois le multi-boutique en place.
+
+- [ ] Définir les paliers Free / Pro / Business
+- [ ] Infrastructure de facturation / limitation par palier
+
+### Vision long terme (hors périmètre proche)
+
+> Cahier des charges §15.
+
+- [x] Génération de rapports PDF — déjà livré (export bilan journalier, voir P2 "Export des données")
+- [ ] IA de prédiction de ventes
+- [ ] Vraie intégration Mobile Money (API opérateur — aujourd'hui c'est juste un libellé de mode de paiement)
+- [ ] Export comptable
+- [ ] Synchronisation bancaire
+- [ ] Gestion fournisseurs
+- [ ] Gestion dettes clients
+- [ ] Marketplace B2B
 
 ### CI/CD & qualité
 
@@ -450,9 +521,10 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 | Priorité | Tâches totales | Restantes | Statut |
 | -------- | ------------- | --------- | ------ |
 | P0 | 16 | 1 | Apple/FB/X différé en dernier plan |
-| P1 | 18 | 1 | Push notifications différées |
-| P2 | 15 | 0 | Tout livré ✓ |
-| P3 | 16 | 8 | Hors CI/CD, multi-boutique et analytics : livré ✓ |
-| **Total** | **65** | **10** | Uniquement les blocs différés |
+| P1 | 27 | 4 | Push notifications différées + 2 alertes cahier des charges |
+| P2 | 23 | 0 | Tout livré ✓ (rôles étendus, stock avancé, dépenses avancées) |
+| P3 | 35 | 26 | Multi-boutique, analytics, monétisation, vision long terme (cahier des charges) |
+| **Total** | **101** | **31** | P2 entièrement fermé le 2026-08-02 — reste uniquement P0 (Apple/FB/X), P1 (push) et P3 |
 
 > Le tableau compte les tâches haut niveau. Les sous-tâches ajoutées dans les sections de détail servent au suivi de reprise et peuvent être consolidées au fur et à mesure.
+> Le saut de 10 → 38 tâches restantes vient de la fusion des écarts de [`CAHIER_DES_CHARGES.md`](./CAHIER_DES_CHARGES.md), pas d'une régression : ce sont des tâches qui existaient déjà dans la vision produit mais n'étaient pas encore transcrites ici.

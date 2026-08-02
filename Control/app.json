@@ -42,7 +42,14 @@
       ],
       "expo-secure-store",
       "expo-web-browser",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CONTROL a besoin d'accéder à tes photos pour joindre un justificatif à une dépense.",
+          "cameraPermission": "CONTROL a besoin de la caméra pour photographier un justificatif de dépense."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

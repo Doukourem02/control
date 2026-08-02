@@ -2,7 +2,7 @@ import { ID, Query } from 'node-appwrite';
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 
 export type MemberStatus = 'pending' | 'active' | 'removed';
-export type MemberRole = 'seller';
+export type MemberRole = 'seller' | 'manager' | 'comptable';
 
 export type MemberRow = {
   $id: string;
@@ -40,6 +40,7 @@ export async function createMember(input: {
   shopId: string;
   email: string;
   name: string;
+  role: MemberRole;
   inviteCode: string;
 }): Promise<MemberRow> {
   const doc = await databases.createDocument(DATABASE_ID, COLLECTIONS.members, ID.unique(), {
@@ -47,7 +48,7 @@ export async function createMember(input: {
     email: input.email.toLowerCase().trim(),
     name: input.name,
     userId: null,
-    role: 'seller',
+    role: input.role,
     inviteCode: input.inviteCode,
     status: 'pending',
     expiresAt: createInviteExpiryDate(),

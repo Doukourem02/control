@@ -10,6 +10,7 @@ import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEffect, useState, type ComponentProps } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ReceiptViewerModal } from './receipt-viewer-modal';
 import { DashedVerticalLine } from './shared-ui';
 import {
   buildCalendarDays,
@@ -196,7 +197,7 @@ export function StockMovementItem({
   const bg = isDecrease ? colors.dangerSoft : colors.successSoft;
   const iconName: ComponentProps<typeof Feather>['name'] = isDecrease ? 'arrow-up-right' : 'arrow-down-left';
   const signedQuantity = `${isDecrease ? '-' : '+'}${Math.abs(movement.quantity).toLocaleString('fr-FR')} ${movement.unit}`;
-  const details = [getStockMovementLabel(movement.type), formatStockMovementDate(movement.$createdAt)]
+  const details = [getStockMovementLabel(movement.type), movement.supplier, formatStockMovementDate(movement.$createdAt)]
     .filter(Boolean)
     .join(' · ');
 
@@ -276,6 +277,7 @@ export function ReportSectionTitle({
 
 export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amountsVisible: boolean }) {
   const [type, setType] = useState<AnalyticsType>('sales');
+  const [viewingReceiptId, setViewingReceiptId] = useState<string | null>(null);
   const [days] = useState(15);
   const [selectedDate, setSelectedDate] = useState(() => dateToKey(new Date()));
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12));
@@ -335,6 +337,7 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
   }
 
   return (
+    <>
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: compact ? 104 : 118 }}
@@ -645,6 +648,23 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
                     </Text>
                   ) : null}
                 </View>
+                {type === 'expenses' && t.hasReceipt ? (
+                  <Pressable
+                    onPress={() => setViewingReceiptId(t.id)}
+                    hitSlop={8}
+                    style={({ pressed }: { pressed: boolean }) => ({
+                      width: 30,
+                      height: 30,
+                      borderRadius: 15,
+                      backgroundColor: colors.gray100,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: pressed ? 0.65 : 1,
+                    })}
+                  >
+                    <Feather name="camera" size={14} color={colors.gray600} />
+                  </Pressable>
+                ) : null}
                 <Text style={{ color: colors.gray900, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
                   {amountsVisible ? formatMoney(t.amount) : '•••'}
                 </Text>
@@ -672,5 +692,7 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
         </View>
       )}
     </ScrollView>
+    <ReceiptViewerModal expenseId={viewingReceiptId} onClose={() => setViewingReceiptId(null)} />
+    </>
   );
 }

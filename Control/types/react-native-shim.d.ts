@@ -136,3 +136,11 @@ export const Platform: {
 
 export function useColorScheme(): ColorSchemeName;
 export function useWindowDimensions(): { width: number; height: number; scale: number; fontScale: number };
+
+export const Alert: {
+  alert: (
+    title: string,
+    message?: string,
+    buttons?: { text?: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' }[]
+  ) => void;
+};

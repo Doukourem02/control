@@ -1,6 +1,10 @@
+import { BUCKETS } from '../../config/appwrite';
 import { userError } from '../../utils/http';
+import { decodeBase64Photo, getPhotoFile, replacePhoto } from '../../utils/photo-storage';
 import { getActiveMemberByUserId } from '../team/team.repository';
 import { createShopForUser, getShopById, updateShopById, type UpdateShopInput } from './shops.repository';
+
+const MAX_LOGO_BYTES = 4 * 1024 * 1024; // 4 Mo — la photo est deja compressee cote app
 
 export async function getOrCreateCurrentShop(userId: string, ownerName: string) {
   // Seller: look up active membership in another shop first
@@ -166,5 +170,32 @@ export async function updateCurrentShop(userId: string, body: Record<string, unk
   if (typeof cashGapAlertsEnabled !== 'undefined') input.cashGapAlertsEnabled = cashGapAlertsEnabled;
   if (typeof defaultLowStockThreshold !== 'undefined') input.defaultLowStockThreshold = defaultLowStockThreshold;
 
+  const logo = decodeBase64Photo(body.logoPhoto, body.logoPhotoType, MAX_LOGO_BYTES);
+  if (logo) {
+    const currentShop = await getShopById(userId);
+    input.logoFileId = await replacePhoto(
+      BUCKETS.photos,
+      currentShop?.logoFileId || undefined,
+      logo.buffer,
+      `${userId}-${Date.now()}.${logo.mimeType.split('/')[1] ?? 'jpg'}`
+    );
+  }
+
   return updateShopById(userId, input);
+}
+
+export async function getShopLogo(shopId: string) {
+  const shop = await getShopById(shopId);
+
+  if (!shop || !shop.logoFileId) {
+    throw userError('Logo introuvable.', 404, 'SHOP_LOGO_NOT_FOUND');
+  }
+
+  const file = await getPhotoFile(BUCKETS.photos, shop.logoFileId);
+
+  if (!file) {
+    throw userError('Logo introuvable.', 404, 'SHOP_LOGO_NOT_FOUND');
+  }
+
+  return file;
 }

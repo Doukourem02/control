@@ -1,16 +1,16 @@
 import { ControlHomeScreen } from '@/components/control-home-screen';
-import { useControlAuth } from '@/lib/control-auth';
+import { toExperienceRole, useControlAuth } from '@/lib/control-auth';
 import { Redirect } from 'expo-router';
 
 export default function HomeRoute() {
   const { session } = useControlAuth();
-  const role = session?.user.accountRole ?? null;
+  const experience = toExperienceRole(session?.user.accountRole);
 
-  if (role === 'owner') {
+  if (experience === 'owner') {
     return <Redirect href="/owner" />;
   }
 
-  if (role === 'seller') {
+  if (experience === 'seller') {
     return <Redirect href="/seller" />;
   }
 

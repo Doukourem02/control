@@ -4,6 +4,7 @@ import {
   inviteTeamMember,
   joinShop,
   removeTeamMember,
+  type MemberRole,
   type MemberRow,
 } from '@/lib/control-data';
 import { getControlErrorMessage } from '@/lib/control-errors';
@@ -12,6 +13,14 @@ import Feather from '@expo/vector-icons/Feather';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { formatInviteExpiry, getInitials } from '../utils';
+
+const INVITE_ROLES: MemberRole[] = ['seller', 'manager', 'comptable'];
+
+const ROLE_LABELS: Record<MemberRole, string> = {
+  seller: 'Vendeuse',
+  manager: 'Manager',
+  comptable: 'Comptable',
+};
 
 export function TeamSettingsModal({
   visible,
@@ -41,6 +50,7 @@ export function TeamSettingsModal({
   const [joinVisible, setJoinVisible] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<MemberRole>('seller');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [joinLoading, setJoinLoading] = useState(false);
@@ -70,10 +80,11 @@ export function TeamSettingsModal({
     if (inviteLoading) return;
     setInviteLoading(true);
     try {
-      const member = await inviteTeamMember({ name: inviteName, email: inviteEmail });
+      const member = await inviteTeamMember({ name: inviteName, email: inviteEmail, role: inviteRole });
       setMembers((prev) => [member, ...prev]);
       setInviteName('');
       setInviteEmail('');
+      setInviteRole('seller');
       setInviteVisible(false);
       flash(`Code d'invitation : ${member.inviteCode}`, true);
     } catch (err: any) {
@@ -163,7 +174,7 @@ export function TeamSettingsModal({
             <ActivityIndicator size="small" color={colors.primary} style={{ alignSelf: 'center', marginVertical: 8 }} />
           ) : activeMembers.length > 0 ? (
             <View style={{ gap: 8 }}>
-              <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Vendeuses actives</Text>
+              <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Membres actifs</Text>
               {activeMembers.map((m) => (
                 <View key={m.$id} style={{ borderRadius: 16, backgroundColor: colors.gray50, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
@@ -173,6 +184,7 @@ export function TeamSettingsModal({
                     <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>{m.name || m.email}</Text>
                     {m.name ? <Text numberOfLines={1} style={{ color: colors.gray600, fontSize: 12, fontWeight: '600' }}>{m.email}</Text> : null}
                   </View>
+                  <Text style={{ color: colors.gray500, fontSize: 11, fontWeight: '800' }}>{ROLE_LABELS[m.role]}</Text>
                   {isOwner ? (
                     <Pressable
                       onPress={() => handleRemove(m.$id)}
@@ -196,7 +208,10 @@ export function TeamSettingsModal({
                     <Feather name="clock" size={15} color={colors.accentDeep} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>{m.name || m.email}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>{m.name || m.email}</Text>
+                      <Text style={{ color: colors.gray500, fontSize: 10, fontWeight: '800' }}>· {ROLE_LABELS[m.role]}</Text>
+                    </View>
                     <Text style={{ color: colors.accentDeep, fontSize: 12, fontWeight: '700', marginTop: 1 }}>Code : {m.inviteCode}</Text>
                     <Text style={{ color: colors.gray600, fontSize: 11, fontWeight: '700', marginTop: 1 }}>
                       {formatInviteExpiry(m.expiresAt, m.$createdAt)}
@@ -217,7 +232,7 @@ export function TeamSettingsModal({
           {isOwner ? (
             inviteVisible ? (
               <View style={{ borderRadius: 16, backgroundColor: colors.gray50, padding: 14, gap: 10 }}>
-                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Inviter une vendeuse</Text>
+                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Inviter un membre</Text>
                 <TextInput
                   placeholder="Nom"
                   value={inviteName}
@@ -235,8 +250,31 @@ export function TeamSettingsModal({
                   style={{ height: 44, borderRadius: 12, backgroundColor: colors.white, paddingHorizontal: 14, fontSize: 14, color: colors.gray900, fontWeight: '600' }}
                 />
                 <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {INVITE_ROLES.map((role) => {
+                    const selected = inviteRole === role;
+                    return (
+                      <Pressable
+                        key={role}
+                        onPress={() => setInviteRole(role)}
+                        style={{
+                          flex: 1,
+                          height: 38,
+                          borderRadius: 12,
+                          backgroundColor: selected ? colors.primary : colors.white,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ color: selected ? colors.white : colors.gray600, fontSize: 12, fontWeight: '700' }}>
+                          {ROLE_LABELS[role]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
-                    onPress={() => { setInviteVisible(false); setInviteName(''); setInviteEmail(''); }}
+                    onPress={() => { setInviteVisible(false); setInviteName(''); setInviteEmail(''); setInviteRole('seller'); }}
                     style={{ flex: 1, height: 42, borderRadius: 12, backgroundColor: colors.gray200, alignItems: 'center', justifyContent: 'center' }}
                   >
                     <Text style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>Annuler</Text>
@@ -260,7 +298,7 @@ export function TeamSettingsModal({
                 })}
               >
                 <Feather name="user-plus" size={16} color={colors.white} />
-                <Text style={{ color: colors.white, fontSize: 14, fontWeight: '700' }}>Inviter une vendeuse</Text>
+                <Text style={{ color: colors.white, fontSize: 14, fontWeight: '700' }}>Inviter un membre</Text>
               </Pressable>
             )
           ) : null}

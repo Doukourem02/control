@@ -40,6 +40,7 @@ export type StockMovementRow = {
   unitCost: number;
   totalCost: number;
   note: string;
+  supplier: string;
 };
 
 export type SaleRow = {
@@ -68,6 +69,30 @@ export const expenseCategories = [
 
 export type ExpenseCategory = (typeof expenseCategories)[number];
 
+export const expenseKinds = ['fixed', 'variable'] as const;
+
+export type ExpenseKind = (typeof expenseKinds)[number];
+
+/**
+ * Cahier des charges §8 : depenses fixes (loyer, electricite, eau, internet,
+ * salaires) vs variables (achats fournisseurs, transport, glace, carburant,
+ * reparations). Mappe sur les categories existantes plutot que de demander
+ * une saisie supplementaire a l'utilisateur.
+ */
+const EXPENSE_CATEGORY_KIND: Record<ExpenseCategory, ExpenseKind> = {
+  salaire: 'fixed',
+  courant: 'fixed',
+  eau: 'fixed',
+  transport: 'variable',
+  sachets: 'variable',
+  nettoyage: 'variable',
+  imprevu: 'variable',
+};
+
+export function getExpenseKind(category: ExpenseCategory): ExpenseKind {
+  return EXPENSE_CATEGORY_KIND[category];
+}
+
 export type ExpenseRow = {
   $id: string;
   $createdAt: string;
@@ -76,6 +101,7 @@ export type ExpenseRow = {
   category: ExpenseCategory;
   amount: number;
   note: string;
+  receiptFileId: string;
 };
 
 export type CashClosureRow = {

@@ -91,6 +91,7 @@ function createPendingSellerShop(ownerName: string): ShopRow {
     closureReminderEnabled: 'true',
     cashGapAlertsEnabled: 'true',
     defaultLowStockThreshold: '5',
+    logoFileId: '',
   };
 }
 
@@ -196,7 +197,7 @@ export async function registerUser(input: AuthInput) {
     const member = await joinShop(createdUserId, { inviteCode });
     await upsertUserProfile({
       userId: createdUserId,
-      accountRole: 'seller',
+      accountRole: member.role,
       shopId: member.shopId || sellerInviteShopId,
       onboardingCompleted: 'true',
     });
@@ -255,7 +256,7 @@ export async function defineAccountRole(sessionSecret: string, input: { accountR
     const member = await getActiveMemberByUserId(user.$id);
     await upsertUserProfile({
       userId: user.$id,
-      accountRole: 'seller',
+      accountRole: member?.role ?? 'seller',
       shopId: member?.shopId ?? '',
       onboardingCompleted: member ? 'true' : 'false',
     });

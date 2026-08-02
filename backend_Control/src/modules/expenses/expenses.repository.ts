@@ -1,5 +1,6 @@
-import { ID, Query, type Models } from 'node-appwrite';
-import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
+import { AppwriteException, ID, Query, type Models } from 'node-appwrite';
+import { BUCKETS, COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
+import { getPhotoFile, uploadPhoto } from '../../utils/photo-storage';
 import type { ExpenseCategory, ExpenseRow } from '../../types/control';
 
 export type CreateExpenseInput = {
@@ -7,6 +8,7 @@ export type CreateExpenseInput = {
   category: ExpenseCategory;
   amount: number;
   note: string;
+  receiptFileId?: string;
 };
 
 function toExpenseRow(doc: any): ExpenseRow {
@@ -18,7 +20,26 @@ function toExpenseRow(doc: any): ExpenseRow {
     category: doc['category'] as ExpenseCategory,
     amount: doc['amount'] as number,
     note: doc['note'] as string,
+    receiptFileId: (doc['receiptFileId'] ?? '') as string,
   };
+}
+
+export async function uploadReceiptPhoto(buffer: Buffer, filename: string): Promise<string> {
+  return uploadPhoto(BUCKETS.photos, buffer, filename);
+}
+
+export async function getReceiptFile(fileId: string): Promise<{ bytes: ArrayBuffer; mimeType: string } | null> {
+  return getPhotoFile(BUCKETS.photos, fileId);
+}
+
+export async function getExpenseById(expenseId: string): Promise<ExpenseRow | null> {
+  try {
+    const doc = await databases.getDocument(DATABASE_ID, COLLECTIONS.expenses, expenseId);
+    return toExpenseRow(doc);
+  } catch (error) {
+    if (error instanceof AppwriteException && error.code === 404) return null;
+    throw error;
+  }
 }
 
 export async function createExpenseRecord(input: CreateExpenseInput): Promise<ExpenseRow> {
@@ -27,6 +48,7 @@ export async function createExpenseRecord(input: CreateExpenseInput): Promise<Ex
     category: input.category,
     amount: input.amount,
     note: input.note,
+    receiptFileId: input.receiptFileId ?? '',
   });
 
   await databases.createDocument(DATABASE_ID, COLLECTIONS.activityLogs, ID.unique(), {

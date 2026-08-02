@@ -12,6 +12,7 @@ export type SaveProductInput = {
   unit: ProductUnit;
   purchaseTotal: number;
   sellingUnitPrice: number;
+  supplier?: string;
 };
 
 function toProductRow(doc: any): ProductRow {
@@ -106,6 +107,7 @@ export async function saveProductSupply(input: SaveProductInput): Promise<Produc
     unitCost: incomingUnitCost,
     totalCost: input.purchaseTotal,
     note: movementType === 'initial' ? 'Stock initial' : 'Approvisionnement',
+    supplier: input.supplier || '',
   });
 
   await databases.createDocument(DATABASE_ID, COLLECTIONS.activityLogs, ID.unique(), {

@@ -1,7 +1,9 @@
 import { Router } from 'express';
 
-import { createExpenseController } from './expenses.controller';
+import { requireOperationalRole } from '../../middleware/roles';
+import { createExpenseController, getExpenseReceiptController } from './expenses.controller';
 
 export const expensesRouter = Router();
 
-expensesRouter.post('/api/expenses', createExpenseController);
+expensesRouter.get('/api/expenses/:id/receipt', getExpenseReceiptController);
+expensesRouter.post('/api/expenses', requireOperationalRole, createExpenseController);

@@ -29,6 +29,7 @@ function expense(amount: number): ExpenseRow {
     category: 'transport',
     amount,
     note: '',
+    receiptFileId: '',
   };
 }
 

@@ -3,8 +3,24 @@ import {
   ensureAuthStorageAvailable,
   getStoredAuthSession,
   saveStoredAuthSession,
+  type AccountRole,
   type ControlAuthSession,
 } from '@/lib/control-auth-storage';
+
+export type { AccountRole } from '@/lib/control-auth-storage';
+
+/**
+ * Un accountRole (owner/manager/seller/comptable) se resout vers l'une des
+ * deux experiences d'ecran existantes : "owner" (pilotage) ou "seller"
+ * (operationnel). manager herite de l'experience owner, comptable de
+ * l'experience seller — c'est une simplification volontaire tant qu'il n'y a
+ * pas d'ecran dedie par role.
+ */
+export function toExperienceRole(accountRole?: AccountRole | null): 'owner' | 'seller' | null {
+  if (accountRole === 'owner' || accountRole === 'manager') return 'owner';
+  if (accountRole === 'seller' || accountRole === 'comptable') return 'seller';
+  return null;
+}
 import {
   ControlApiError,
   createApiError,

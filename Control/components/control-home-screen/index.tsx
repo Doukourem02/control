@@ -1,9 +1,10 @@
-import { useControlAuth } from '@/lib/control-auth';
+import { toExperienceRole, useControlAuth } from '@/lib/control-auth';
 import {
   defineAccountRole,
   flushOfflineQueue,
   getNotifications,
   getRecentStockMovements,
+  getShopLogoUri,
   getTeamMembers,
   getTodaySummary,
   markAllNotificationsRead,
@@ -21,7 +22,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MissingMenu } from './missing-menu';
 import { NotificationsCenterModal } from './notifications-center-modal';
@@ -43,7 +44,7 @@ export type { ControlExperienceRole } from './shared-ui';
 export function ControlHomeScreen({ experienceRole }: { experienceRole?: ControlExperienceRole }) {
   const router = useRouter();
   const { session, refreshSession } = useControlAuth();
-  const activeRole = experienceRole ?? session?.user.accountRole ?? null;
+  const activeRole = experienceRole ?? toExperienceRole(session?.user.accountRole) ?? null;
   const isOffline = useNetworkStatus();
   const prevOfflineRef = useRef(false);
   const [activeMenu, setActiveMenu] = useState<NavKey>('home');
@@ -142,6 +143,26 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
   const cashTrendText = amountsVisible ? 'à encaisser' : 'masqué';
   const firstName = session?.user.name?.trim().split(/\s+/)[0] ?? '';
   const avatarInitials = getInitials(session?.user.name || session?.shop.name || 'C');
+  const logoFileId = session?.shop.logoFileId;
+  const [avatarLogoUri, setAvatarLogoUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!logoFileId) {
+      setAvatarLogoUri(null);
+      return;
+    }
+    let cancelled = false;
+    getShopLogoUri()
+      .then((uri) => {
+        if (!cancelled) setAvatarLogoUri(uri);
+      })
+      .catch(() => {
+        if (!cancelled) setAvatarLogoUri(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [logoFileId]);
   const totalSalesAmount = PREVIEW_MODE
     ? previewCashSales + previewMobileSales
     : todaySummary.cashSalesAmount + todaySummary.mobileMoneySalesAmount;
@@ -360,13 +381,18 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                       width: 44,
                       height: 44,
                       borderRadius: 22,
-                      backgroundColor: colors.primarySoft,
+                      backgroundColor: avatarLogoUri ? colors.gray100 : colors.primarySoft,
                       alignItems: 'center',
                       justifyContent: 'center',
                       opacity: pressed ? 0.62 : 1,
+                      overflow: 'hidden',
                     })}
                   >
-                    <Text style={{ color: colors.primary, fontSize: 15, fontWeight: '800' }}>{avatarInitials}</Text>
+                    {avatarLogoUri ? (
+                      <Image source={{ uri: avatarLogoUri }} style={{ width: 44, height: 44 }} />
+                    ) : (
+                      <Text style={{ color: colors.primary, fontSize: 15, fontWeight: '800' }}>{avatarInitials}</Text>
+                    )}
                   </Pressable>
                 ) : null}
               </View>

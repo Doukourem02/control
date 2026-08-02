@@ -1,5 +1,8 @@
+import { getExpenseKind } from '../../types/control';
 import { listExpensesInRange } from '../expenses/expenses.repository';
 import { listSalesInRange } from '../sales/sales.repository';
+
+const EXPENSE_KIND_LABEL = { fixed: 'Fixe', variable: 'Variable' } as const;
 
 export type ChartPoint = { date: string; amount: number };
 
@@ -9,6 +12,7 @@ export type AnalyticsTransaction = {
   label: string;
   amount: number;
   sub: string;
+  hasReceipt?: boolean;
 };
 
 export type AnalyticsData = {
@@ -127,7 +131,8 @@ export async function getAnalytics(
         date: e.$createdAt,
         label: e.category,
         amount: e.amount,
-        sub: e.note ?? '',
+        sub: [e.note, EXPENSE_KIND_LABEL[getExpenseKind(e.category)]].filter(Boolean).join(' · '),
+        hasReceipt: Boolean(e.receiptFileId),
       }));
 
     return { total, previousTotal, chartData: buildChartData(days, amountsByDate, date), transactions };

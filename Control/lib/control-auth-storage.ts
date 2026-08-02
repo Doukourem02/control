@@ -1,10 +1,12 @@
+export type AccountRole = 'owner' | 'manager' | 'seller' | 'comptable';
+
 export type ControlAuthSession = {
   sessionSecret: string;
   user: {
     id: string;
     email: string;
     name: string;
-    accountRole?: 'owner' | 'seller' | null;
+    accountRole?: AccountRole | null;
   };
   shop: {
     $id: string;
@@ -26,6 +28,7 @@ export type ControlAuthSession = {
     closureReminderEnabled: string;
     cashGapAlertsEnabled: string;
     defaultLowStockThreshold: string;
+    logoFileId?: string;
   };
 };
 

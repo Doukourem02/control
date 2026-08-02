@@ -1,10 +1,13 @@
 import { createExpense, flushOfflineQueue, getControlErrorMessage, isOfflineQueued, type ExpenseCategory } from '@/lib/control-data';
 import { useNetworkStatus } from '@/lib/network-state';
 import Feather from '@expo/vector-icons/Feather';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +18,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/lib/theme';
+
+type ReceiptPhoto = { uri: string; base64: string; mimeType: string };
 
 const categories: { label: string; value: ExpenseCategory }[] = [
   { label: 'Transport', value: 'transport' },
@@ -43,10 +48,48 @@ export default function ExpenseScreen() {
   const [category, setCategory] = useState<ExpenseCategory>('transport');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [receiptPhoto, setReceiptPhoto] = useState<ReceiptPhoto | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const parsedAmount = parseAmount(amount);
+
+  async function pickReceiptPhoto(source: 'camera' | 'library') {
+    const permission =
+      source === 'camera'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Permission refusée',
+        source === 'camera'
+          ? "Autorise l'accès à la caméra pour photographier un justificatif."
+          : "Autorise l'accès aux photos pour joindre un justificatif."
+      );
+      return;
+    }
+
+    const options: ImagePicker.ImagePickerOptions = {
+      mediaTypes: 'images',
+      base64: true,
+      quality: 0.5,
+      allowsEditing: true,
+    };
+
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
+
+    if (result.canceled || !result.assets[0]?.base64) return;
+
+    const asset = result.assets[0];
+    setReceiptPhoto({
+      uri: asset.uri,
+      base64: asset.base64!,
+      mimeType: asset.mimeType || 'image/jpeg',
+    });
+  }
 
   useEffect(() => {
     if (prevOfflineRef.current && !isOffline) {
@@ -71,15 +114,18 @@ export default function ExpenseScreen() {
         category,
         amount: Math.round(parsedAmount),
         note: note.trim(),
+        receiptPhoto: receiptPhoto ? { base64: receiptPhoto.base64, mimeType: receiptPhoto.mimeType } : undefined,
       });
 
       setAmount('');
       setNote('');
+      setReceiptPhoto(null);
       setSuccessMessage(`Sortie enregistree : ${formatMoney(expense.amount)}.`);
     } catch (error) {
       if (isOfflineQueued(error)) {
         setAmount('');
         setNote('');
+        setReceiptPhoto(null);
         setSuccessMessage('En attente de connexion — sera synchronisée.');
       } else {
         setFormError(getControlErrorMessage(error));
@@ -233,6 +279,73 @@ export default function ExpenseScreen() {
                     fontWeight: '600',
                   }}
                 />
+              </View>
+
+              <View style={{ gap: 7 }}>
+                <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>
+                  Photo justificative (optionnel)
+                </Text>
+                {receiptPhoto ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Image
+                      source={{ uri: receiptPhoto.uri }}
+                      style={{ width: 64, height: 64, borderRadius: 14, backgroundColor: colors.gray100 }}
+                    />
+                    <Pressable
+                      onPress={() => setReceiptPhoto(null)}
+                      style={({ pressed }: { pressed: boolean }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        opacity: pressed ? 0.65 : 1,
+                      })}
+                    >
+                      <Feather name="trash-2" size={15} color={colors.danger} />
+                      <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>Retirer</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <Pressable
+                      onPress={() => pickReceiptPhoto('camera')}
+                      style={({ pressed }: { pressed: boolean }) => ({
+                        flex: 1,
+                        height: 46,
+                        borderRadius: 14,
+                        backgroundColor: colors.gray50,
+                        borderWidth: 1,
+                        borderColor: colors.gray100,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                    >
+                      <Feather name="camera" size={15} color={colors.gray600} />
+                      <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '700' }}>Caméra</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => pickReceiptPhoto('library')}
+                      style={({ pressed }: { pressed: boolean }) => ({
+                        flex: 1,
+                        height: 46,
+                        borderRadius: 14,
+                        backgroundColor: colors.gray50,
+                        borderWidth: 1,
+                        borderColor: colors.gray100,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                    >
+                      <Feather name="image" size={15} color={colors.gray600} />
+                      <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '700' }}>Galerie</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
 
               <View

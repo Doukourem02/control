@@ -25,6 +25,7 @@ export async function createOrSupplyProduct(body: Record<string, unknown>, shopI
   const quantity = parseAmount(body.quantity);
   const purchaseTotal = Math.round(parseAmount(body.purchaseTotal));
   const sellingUnitPrice = Math.round(parseAmount(body.sellingUnitPrice));
+  const supplier = String(body.supplier ?? '').trim();
   const unit = body.unit;
 
   if (!productId && (!name || !category)) {
@@ -57,6 +58,7 @@ export async function createOrSupplyProduct(body: Record<string, unknown>, shopI
     unit: unit as ProductUnit,
     purchaseTotal,
     sellingUnitPrice,
+    supplier,
   });
 
   return {

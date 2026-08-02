@@ -16,6 +16,7 @@ function toStockMovementRow(doc: any): StockMovementRow {
     unitCost: doc['unitCost'] as number,
     totalCost: doc['totalCost'] as number,
     note: doc['note'] as string,
+    supplier: (doc['supplier'] ?? '') as string,
   };
 }
 

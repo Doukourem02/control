@@ -1,11 +1,14 @@
 import { useControlAuth } from '@/lib/control-auth';
-import { updateCurrentShop } from '@/lib/control-data';
+import { getShopLogoUri, updateCurrentShop } from '@/lib/control-data';
 import { getControlErrorMessage } from '@/lib/control-errors';
 import Feather from '@expo/vector-icons/Feather';
+import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
-import { needsShopSetup } from '../utils';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { getInitials, needsShopSetup } from '../utils';
 import { colors } from '@/lib/theme';
+
+type LogoPhoto = { uri: string; base64: string; mimeType: string };
 
 export function ShopSettingsModal({
   visible,
@@ -23,6 +26,8 @@ export function ShopSettingsModal({
   const [contact, setContact] = useState('');
   const [address, setAddress] = useState('');
   const [openingHours, setOpeningHours] = useState('');
+  const [logoUri, setLogoUri] = useState<string | null>(null);
+  const [logoPhoto, setLogoPhoto] = useState<LogoPhoto | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -33,8 +38,49 @@ export function ShopSettingsModal({
     setContact(session.shop.contact ?? '');
     setAddress(session.shop.address ?? '');
     setOpeningHours(session.shop.openingHours ?? '');
+    setLogoPhoto(null);
     setErrorMessage('');
+
+    if (session.shop.logoFileId) {
+      getShopLogoUri().then(setLogoUri).catch(() => setLogoUri(null));
+    } else {
+      setLogoUri(null);
+    }
   }, [session, visible]);
+
+  async function pickLogoPhoto(source: 'camera' | 'library') {
+    const permission =
+      source === 'camera'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Permission refusée',
+        source === 'camera'
+          ? "Autorise l'accès à la caméra pour prendre une photo."
+          : "Autorise l'accès aux photos pour en choisir une."
+      );
+      return;
+    }
+
+    const options: ImagePicker.ImagePickerOptions = {
+      mediaTypes: 'images',
+      base64: true,
+      quality: 0.6,
+      allowsEditing: true,
+      aspect: [1, 1],
+    };
+
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
+
+    if (result.canceled || !result.assets[0]?.base64) return;
+
+    const asset = result.assets[0];
+    setLogoPhoto({ uri: asset.uri, base64: asset.base64!, mimeType: asset.mimeType || 'image/jpeg' });
+  }
 
   async function handleSave() {
     const trimmedName = name.trim();
@@ -53,6 +99,7 @@ export function ShopSettingsModal({
         contact,
         address,
         openingHours,
+        logoPhoto: logoPhoto ? { base64: logoPhoto.base64, mimeType: logoPhoto.mimeType } : undefined,
       });
       await onSaved();
       onClose();
@@ -108,6 +155,70 @@ export function ShopSettingsModal({
             </Pressable>
           </View>
 
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            {logoPhoto || logoUri ? (
+              <Image
+                source={{ uri: logoPhoto?.uri ?? logoUri ?? undefined }}
+                style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: colors.gray100 }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 20,
+                  backgroundColor: colors.primarySoft,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: colors.primary, fontSize: 22, fontWeight: '800' }}>
+                  {getInitials(name || 'Boutique')}
+                </Text>
+              </View>
+            )}
+            <View style={{ flex: 1, flexDirection: 'row', gap: 8 }}>
+              <Pressable
+                onPress={() => pickLogoPhoto('camera')}
+                style={({ pressed }: { pressed: boolean }) => ({
+                  flex: 1,
+                  height: 40,
+                  borderRadius: 13,
+                  backgroundColor: colors.gray50,
+                  borderWidth: 1,
+                  borderColor: colors.gray100,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Feather name="camera" size={13} color={colors.gray600} />
+                <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '700' }}>Caméra</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => pickLogoPhoto('library')}
+                style={({ pressed }: { pressed: boolean }) => ({
+                  flex: 1,
+                  height: 40,
+                  borderRadius: 13,
+                  backgroundColor: colors.gray50,
+                  borderWidth: 1,
+                  borderColor: colors.gray100,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Feather name="image" size={13} color={colors.gray600} />
+                <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '700' }}>Galerie</Text>
+              </Pressable>
+            </View>
+          </View>
+
           {[
             { label: 'Nom de la boutique', value: name, onChangeText: setName, placeholder: 'Ex. Chez Awa' },
             { label: 'Contact', value: contact, onChangeText: setContact, placeholder: 'Téléphone ou WhatsApp' },
@@ -144,7 +255,7 @@ export function ShopSettingsModal({
             style={({ pressed }: { pressed: boolean }) => ({
               height: 56,
               borderRadius: 16,
-              backgroundColor: colors.ink,
+              backgroundColor: colors.primary,
               alignItems: 'center',
               justifyContent: 'center',
               opacity: pressed || saving ? 0.72 : 1,

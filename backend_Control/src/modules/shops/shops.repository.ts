@@ -22,6 +22,7 @@ export type ShopRow = {
   closureReminderEnabled: string;
   cashGapAlertsEnabled: string;
   defaultLowStockThreshold: string;
+  logoFileId: string;
 };
 
 export type UpdateShopInput = {
@@ -39,6 +40,7 @@ export type UpdateShopInput = {
   closureReminderEnabled?: string;
   cashGapAlertsEnabled?: string;
   defaultLowStockThreshold?: string;
+  logoFileId?: string;
 };
 
 function toShopRow(doc: any): ShopRow {
@@ -62,6 +64,7 @@ function toShopRow(doc: any): ShopRow {
     closureReminderEnabled: doc.closureReminderEnabled ?? 'true',
     cashGapAlertsEnabled: doc.cashGapAlertsEnabled ?? 'true',
     defaultLowStockThreshold: doc.defaultLowStockThreshold ?? '5',
+    logoFileId: doc.logoFileId ?? '',
   };
 }
 

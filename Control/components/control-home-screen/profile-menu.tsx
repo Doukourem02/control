@@ -1,6 +1,8 @@
 import { useControlAuth } from '@/lib/control-auth';
+import { getShopLogoUri } from '@/lib/control-data';
 import { colors } from '@/lib/theme';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SettingsRow, SettingsSection, type ControlExperienceRole } from './shared-ui';
 import {
   formatAlertsSummary,
@@ -49,6 +51,26 @@ export function ProfileMenu({
   const alertsSummary = formatAlertsSummary(session?.shop);
   const teamValue = `${memberCount} membre${memberCount > 1 ? 's' : ''}`;
   const isOwner = role === 'owner';
+  const logoFileId = session?.shop.logoFileId;
+  const [logoUri, setLogoUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!logoFileId) {
+      setLogoUri(null);
+      return;
+    }
+    let cancelled = false;
+    getShopLogoUri()
+      .then((uri) => {
+        if (!cancelled) setLogoUri(uri);
+      })
+      .catch(() => {
+        if (!cancelled) setLogoUri(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [logoFileId]);
 
   return (
     <ScrollView
@@ -60,22 +82,34 @@ export function ProfileMenu({
       }}
     >
       <View style={{ alignItems: 'center', gap: 9 }}>
-        <View
-          style={{
-            width: compact ? 78 : 86,
-            height: compact ? 78 : 86,
-            borderRadius: compact ? 39 : 43,
-            backgroundColor: colors.primarySoft,
-            borderWidth: 1,
-            borderColor: colors.primaryDisabled,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ color: colors.primary, fontSize: 24, fontWeight: '800' }}>
-            {getInitials(shopName)}
-          </Text>
-        </View>
+        {logoUri ? (
+          <Image
+            source={{ uri: logoUri }}
+            style={{
+              width: compact ? 78 : 86,
+              height: compact ? 78 : 86,
+              borderRadius: compact ? 39 : 43,
+              backgroundColor: colors.gray100,
+            }}
+          />
+        ) : (
+          <View
+            style={{
+              width: compact ? 78 : 86,
+              height: compact ? 78 : 86,
+              borderRadius: compact ? 39 : 43,
+              backgroundColor: colors.primarySoft,
+              borderWidth: 1,
+              borderColor: colors.primaryDisabled,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: colors.primary, fontSize: 24, fontWeight: '800' }}>
+              {getInitials(shopName)}
+            </Text>
+          </View>
+        )}
         <View style={{ alignItems: 'center', gap: 2 }}>
           <Text
             numberOfLines={1}

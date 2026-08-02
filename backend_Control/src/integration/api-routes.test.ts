@@ -71,6 +71,7 @@ const requireAuth = mock.fn((request: Request, _response: Response, next: NextFu
     name: 'Owner',
     shopId: AUTH_SHOP_ID,
     sessionSecret: 'test-session',
+    accountRole: 'owner',
   };
   next();
 });

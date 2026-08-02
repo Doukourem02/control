@@ -2,7 +2,7 @@ import { AppwriteException, ID, Query } from 'node-appwrite';
 
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 
-export type NotificationType = 'stock_low' | 'closure_reminder' | 'cash_gap';
+export type NotificationType = 'stock_low' | 'closure_reminder' | 'cash_gap' | 'stock_anomaly';
 
 export type NotificationRow = {
   $id: string;

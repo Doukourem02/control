@@ -120,6 +120,7 @@ export default function StockScreen() {
   const [unit, setUnit] = useState<ProductUnit>(defaultUnit);
   const [purchaseUnitInput, setPurchaseUnitInput] = useState('');
   const [sellingUnitPrice, setSellingUnitPrice] = useState('');
+  const [supplier, setSupplier] = useState('');
   const parsedQuantity = parseAmount(quantity);
   const parsedPurchaseUnit = parseAmount(purchaseUnitInput);
   const parsedPurchaseTotal = parsedPurchaseUnit > 0 && parsedQuantity > 0
@@ -147,6 +148,7 @@ export default function StockScreen() {
     setSelectedProductId(product.$id);
     setQuantity('');
     setPurchaseUnitInput('');
+    setSupplier('');
     setSellingUnitPrice(String(product.sellingUnitPrice));
     setFormError('');
     setSuccessMessage('');
@@ -309,6 +311,7 @@ export default function StockScreen() {
     setQuantity('');
     setUnit(defaultUnit);
     setPurchaseUnitInput('');
+    setSupplier('');
     setSellingUnitPrice(isExistingSupply ? String(Math.round(parsedSellingPrice)) : '');
 
     setSaving(true);
@@ -323,6 +326,7 @@ export default function StockScreen() {
         unit: isExistingSupply ? selectedProduct?.unit ?? unit : unit,
         purchaseTotal: Math.round(parsedPurchaseTotal),
         sellingUnitPrice: Math.round(parsedSellingPrice),
+        supplier: supplier.trim() || undefined,
       });
 
       setProducts((prev) =>
@@ -718,6 +722,13 @@ export default function StockScreen() {
                 </View>
               </View>
 
+              <Field
+                label="Fournisseur (optionnel)"
+                value={supplier}
+                onChangeText={setSupplier}
+                placeholder="Ex. Grossiste Cocody"
+              />
+
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Field
@@ -1042,7 +1053,7 @@ export default function StockScreen() {
                           +{m.quantity} {m.unit}
                         </Text>
                         <Text style={{ color: colors.gray500, fontSize: 12, fontWeight: '600', marginTop: 1 }}>
-                          {dateStr} · {timeStr}
+                          {dateStr} · {timeStr}{m.supplier ? ` · ${m.supplier}` : ''}
                         </Text>
                       </View>
                       <View style={{ alignItems: 'flex-end', gap: 2 }}>

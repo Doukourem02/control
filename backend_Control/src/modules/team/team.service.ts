@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { userError } from '../../utils/http';
-import { getUserProfileByUserId, upsertUserProfile } from '../users/users.repository';
+import { getUserProfileByUserId, upsertUserProfile, type AccountRole } from '../users/users.repository';
 import {
   createMember,
   getActiveMemberByUserId,
@@ -8,10 +8,23 @@ import {
   getMemberByInviteCode,
   listMembersByShop,
   updateMember,
+  type MemberRole,
 } from './team.repository';
+
+const INVITE_ROLES: MemberRole[] = ['seller', 'manager', 'comptable'];
 
 function generateInviteCode(): string {
   return randomBytes(5).toString('hex').toUpperCase();
+}
+
+function readInviteRole(value: unknown): MemberRole {
+  const role = String(value ?? 'seller').trim().toLowerCase();
+
+  if ((INVITE_ROLES as string[]).includes(role)) {
+    return role as MemberRole;
+  }
+
+  throw userError('Selectionne un role valide (vendeuse, manager ou comptable).', 400, 'TEAM_ROLE_INVALID');
 }
 
 export function isInviteExpired(expiresAt: string, createdAt?: string) {
@@ -42,13 +55,14 @@ export async function getTeamMembers(shopId: string) {
 export async function inviteMember(shopId: string, body: Record<string, unknown>) {
   const email = String(body.email ?? '').trim().toLowerCase();
   const name = String(body.name ?? '').trim();
+  const role = readInviteRole(body.role);
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw userError('Adresse email invalide.', 400, 'TEAM_EMAIL_INVALID');
   }
 
   if (!name || name.length < 2) {
-    throw userError('Renseigne le nom de la vendeuse.', 400, 'TEAM_NAME_REQUIRED');
+    throw userError('Renseigne le nom du membre.', 400, 'TEAM_NAME_REQUIRED');
   }
 
   const existing = await listMembersByShop(shopId);
@@ -62,7 +76,7 @@ export async function inviteMember(shopId: string, body: Record<string, unknown>
 
   const inviteCode = generateInviteCode();
 
-  return createMember({ shopId, email, name, inviteCode });
+  return createMember({ shopId, email, name, role, inviteCode });
 }
 
 export async function removeMember(shopId: string, memberId: string) {
@@ -102,7 +116,7 @@ export async function joinShop(userId: string, body: Record<string, unknown>) {
   const updatedMember = await updateMember(member.$id, { userId, status: 'active' });
   await upsertUserProfile({
     userId,
-    accountRole: 'seller',
+    accountRole: updatedMember.role,
     shopId: updatedMember.shopId,
     onboardingCompleted: 'true',
   });
@@ -110,7 +124,7 @@ export async function joinShop(userId: string, body: Record<string, unknown>) {
   return updatedMember;
 }
 
-export async function getMyRole(shopId: string, userId: string): Promise<'owner' | 'seller'> {
+export async function getMyRole(shopId: string, userId: string): Promise<AccountRole> {
   const profile = await getUserProfileByUserId(userId);
   if (profile) return profile.accountRole;
 

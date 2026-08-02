@@ -8,6 +8,7 @@ import {
   type MissingRow,
   type TodaySummary,
 } from '@/lib/control-data';
+import { ReceiptViewerModal } from '@/components/control-home-screen/receipt-viewer-modal';
 import Feather from '@expo/vector-icons/Feather';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
@@ -31,6 +32,7 @@ type JournalEntry =
       title: string;
       subtitle: string;
       amount: number;
+      receiptExpenseId?: string;
     }
   | {
       id: string;
@@ -160,6 +162,7 @@ function buildExpenseEntries(transactions: AnalyticsTransaction[]): JournalEntry
     title: expense.label,
     subtitle: expense.sub || 'Sortie caisse',
     amount: -expense.amount,
+    receiptExpenseId: expense.hasReceipt ? expense.id : undefined,
   }));
 }
 
@@ -209,7 +212,7 @@ function EntryIcon({ kind }: { kind: JournalEntry['kind'] }) {
   );
 }
 
-function JournalRow({ entry }: { entry: JournalEntry }) {
+function JournalRow({ entry, onViewReceipt }: { entry: JournalEntry; onViewReceipt: (expenseId: string) => void }) {
   const isMoneyEntry = 'amount' in entry;
   const amountColor =
     isMoneyEntry && entry.amount < 0
@@ -217,6 +220,7 @@ function JournalRow({ entry }: { entry: JournalEntry }) {
       : isMoneyEntry && entry.amount > 0
         ? colors.gray900
         : colors.gray600;
+  const receiptExpenseId = entry.kind === 'expense' ? entry.receiptExpenseId : undefined;
 
   return (
     <View
@@ -237,6 +241,23 @@ function JournalRow({ entry }: { entry: JournalEntry }) {
           {formatTime(entry.date)} · {entry.subtitle}
         </Text>
       </View>
+      {receiptExpenseId ? (
+        <Pressable
+          onPress={() => onViewReceipt(receiptExpenseId)}
+          hitSlop={8}
+          style={({ pressed }: { pressed: boolean }) => ({
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            backgroundColor: colors.gray100,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.65 : 1,
+          })}
+        >
+          <Feather name="camera" size={14} color={colors.gray600} />
+        </Pressable>
+      ) : null}
       <Text
         numberOfLines={1}
         adjustsFontSizeToFit
@@ -263,6 +284,7 @@ export default function JournalScreen() {
   const [businessDate, setBusinessDate] = useState(todayKey);
   const [summary, setSummary] = useState<TodaySummary>(emptySummary);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [viewingReceiptId, setViewingReceiptId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadJournal = useCallback(async () => {
@@ -431,7 +453,9 @@ export default function JournalScreen() {
                 }}
               >
                 {entries.length > 0 ? (
-                  entries.map((entry) => <JournalRow key={entry.id} entry={entry} />)
+                  entries.map((entry) => (
+                    <JournalRow key={entry.id} entry={entry} onViewReceipt={setViewingReceiptId} />
+                  ))
                 ) : (
                   <View style={{ minHeight: 96, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ color: colors.gray400, fontSize: 14, fontWeight: '700' }}>
@@ -444,6 +468,7 @@ export default function JournalScreen() {
           )}
         </View>
       </ScrollView>
+      <ReceiptViewerModal expenseId={viewingReceiptId} onClose={() => setViewingReceiptId(null)} />
     </SafeAreaView>
   );
 }

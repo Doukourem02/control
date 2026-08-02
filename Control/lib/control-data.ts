@@ -6,7 +6,7 @@ import {
   shouldSurfaceControlError,
 } from '@/lib/control-errors';
 import { getStoredSessionSecret } from '@/lib/control-auth-storage';
-import type { ControlAuthSession } from '@/lib/control-auth-storage';
+import type { AccountRole, ControlAuthSession } from '@/lib/control-auth-storage';
 import { cacheRead, cacheWrite } from '@/lib/offline-cache';
 import { getIsOffline, notifyNetworkOffline, notifyNetworkOnline } from '@/lib/network-state';
 import { queueAdd, queueGet, queueRemove } from '@/lib/offline-queue';
@@ -46,6 +46,7 @@ type ExpenseRow = BaseRow & {
   category: ExpenseCategory;
   amount: number;
   note: string;
+  receiptFileId?: string;
 };
 
 export type CashClosureRow = BaseRow & {
@@ -108,6 +109,7 @@ export type StockMovementRow = BaseRow & {
   unitCost: number;
   totalCost: number;
   note: string;
+  supplier?: string;
 };
 
 export type ShopRow = BaseRow & {
@@ -127,6 +129,7 @@ export type ShopRow = BaseRow & {
   closureReminderEnabled: string;
   cashGapAlertsEnabled: string;
   defaultLowStockThreshold: string;
+  logoFileId?: string;
 };
 
 export type CreateProductInput = {
@@ -138,6 +141,7 @@ export type CreateProductInput = {
   unit: ProductUnit;
   purchaseTotal: number;
   sellingUnitPrice: number;
+  supplier?: string;
 };
 
 export type CreateCategoryInput = {
@@ -158,6 +162,7 @@ export type CreateExpenseInput = {
   category: ExpenseCategory;
   amount: number;
   note?: string;
+  receiptPhoto?: { base64: string; mimeType: string };
 };
 
 export type CreateMissingInput = {
@@ -189,6 +194,7 @@ export type UpdateShopInput = {
   closureReminderEnabled?: boolean;
   cashGapAlertsEnabled?: boolean;
   defaultLowStockThreshold?: string;
+  logoPhoto?: { base64: string; mimeType: string };
 };
 
 export type TodaySummary = {
@@ -330,9 +336,21 @@ export async function createSale(input: CreateSaleInput) {
   return response.sale;
 }
 
+function buildExpenseRequestBody(input: CreateExpenseInput) {
+  return {
+    category: input.category,
+    amount: input.amount,
+    note: input.note,
+    receiptPhoto: input.receiptPhoto?.base64,
+    receiptPhotoType: input.receiptPhoto?.mimeType,
+  };
+}
+
 export async function createExpense(input: CreateExpenseInput) {
+  const body = buildExpenseRequestBody(input);
+
   if (getIsOffline()) {
-    await queueAdd({ type: 'expense', payload: input });
+    await queueAdd({ type: 'expense', payload: body });
     throw new ControlApiError(
       'Sortie mise en attente — sera envoyée à la reconnexion.',
       0,
@@ -342,7 +360,7 @@ export async function createExpense(input: CreateExpenseInput) {
   }
   const response = await requestApi<{ expense: ExpenseRow }>('/api/expenses', {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   });
   return response.expense;
 }
@@ -521,6 +539,7 @@ export type AnalyticsTransaction = {
   label: string;
   amount: number;
   sub: string;
+  hasReceipt?: boolean;
 };
 
 export type AnalyticsData = {
@@ -581,15 +600,51 @@ export async function getTodaySummary(
 }
 
 export async function updateCurrentShop(input: UpdateShopInput): Promise<ShopRow> {
+  const { logoPhoto, ...rest } = input;
+  const body = {
+    ...rest,
+    logoPhoto: logoPhoto?.base64,
+    logoPhotoType: logoPhoto?.mimeType,
+  };
+
   const response = await requestApi<{ shop: ShopRow }>('/api/shops/current', {
     method: 'PATCH',
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   });
 
   return response.shop;
 }
 
-export type NotificationType = 'stock_low' | 'closure_reminder' | 'cash_gap';
+export async function getShopLogoUri(): Promise<string | null> {
+  const sessionSecret = await getStoredSessionSecret();
+
+  let response: Response;
+  try {
+    response = await fetch(`${backendBaseUrl}/api/shops/current/logo`, {
+      headers: sessionSecret ? { Authorization: `Bearer ${sessionSecret}` } : {},
+    });
+  } catch (error) {
+    throw createNetworkError(error);
+  }
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw await createApiError(response);
+  }
+
+  const mimeType = response.headers.get('Content-Type') ?? 'image/jpeg';
+  const arrayBuffer = await response.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  let binary = '';
+  for (let i = 0; i < uint8Array.byteLength; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  const base64 = btoa(binary);
+
+  return `data:${mimeType};base64,${base64}`;
+}
+
+export type NotificationType = 'stock_low' | 'closure_reminder' | 'cash_gap' | 'stock_anomaly';
 
 export type NotificationRow = BaseRow & {
   shopId: string;
@@ -655,6 +710,35 @@ async function downloadApiFile(path: string): Promise<{ data: string; filename: 
   return { data: base64, filename };
 }
 
+export async function getExpenseReceiptUri(expenseId: string): Promise<string | null> {
+  const sessionSecret = await getStoredSessionSecret();
+
+  let response: Response;
+  try {
+    response = await fetch(`${backendBaseUrl}/api/expenses/${expenseId}/receipt`, {
+      headers: sessionSecret ? { Authorization: `Bearer ${sessionSecret}` } : {},
+    });
+  } catch (error) {
+    throw createNetworkError(error);
+  }
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw await createApiError(response);
+  }
+
+  const mimeType = response.headers.get('Content-Type') ?? 'image/jpeg';
+  const arrayBuffer = await response.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  let binary = '';
+  for (let i = 0; i < uint8Array.byteLength; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  const base64 = btoa(binary);
+
+  return `data:${mimeType};base64,${base64}`;
+}
+
 export async function exportDailyReport(date: string): Promise<{ data: string; filename: string }> {
   return downloadApiFile(`/api/exports/daily?date=${encodeURIComponent(date)}`);
 }
@@ -666,13 +750,14 @@ export async function exportHistoryCSV(from: string, to: string): Promise<{ data
 // ── Team ─────────────────────────────────────────────────────────────────────
 
 export type MemberStatus = 'pending' | 'active' | 'removed';
+export type MemberRole = 'seller' | 'manager' | 'comptable';
 
 export type MemberRow = BaseRow & {
   shopId: string;
   email: string;
   name: string;
   userId: string | null;
-  role: 'seller';
+  role: MemberRole;
   inviteCode: string;
   status: MemberStatus;
   expiresAt?: string;
@@ -689,9 +774,9 @@ export async function getTeamMembers(): Promise<MemberRow[]> {
   }
 }
 
-export async function getMyRole(): Promise<'owner' | 'seller'> {
+export async function getMyRole(): Promise<AccountRole> {
   try {
-    const response = await requestApi<{ role: 'owner' | 'seller' }>('/api/team/role');
+    const response = await requestApi<{ role: AccountRole }>('/api/team/role');
     return response.role;
   } catch {
     return 'owner';
@@ -705,7 +790,7 @@ export async function defineAccountRole(accountRole: 'owner' | 'seller'): Promis
   });
 }
 
-export type InviteMemberInput = { email: string; name: string };
+export type InviteMemberInput = { email: string; name: string; role: MemberRole };
 
 export async function inviteTeamMember(input: InviteMemberInput): Promise<MemberRow> {
   const response = await requestApi<{ member: MemberRow }>('/api/team/invite', {

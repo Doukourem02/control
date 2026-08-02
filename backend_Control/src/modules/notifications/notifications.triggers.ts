@@ -31,6 +31,35 @@ export async function triggerStockLowAlert(
   );
 }
 
+/**
+ * Anomalie de stock : une seule sortie (manquant/perte) qui retire d'un coup
+ * une grosse part du stock restant. Ce n'est pas "stock faible" (qui se
+ * declenche sur le niveau final) mais un signal sur l'ampleur du mouvement
+ * lui-meme — potentiellement une erreur de saisie ou un vol.
+ */
+export async function triggerStockAnomalyAlert(
+  shopId: string,
+  productName: string,
+  removedQuantity: number,
+  previousQuantity: number
+): Promise<void> {
+  const shop = await getShopById(shopId);
+  if (!shop || shop.stockLowAlertsEnabled !== 'true') return;
+
+  const MIN_STOCK_FOR_CHECK = 5;
+  const ANOMALY_RATIO = 0.5;
+
+  if (previousQuantity < MIN_STOCK_FOR_CHECK) return;
+  if (removedQuantity / previousQuantity < ANOMALY_RATIO) return;
+
+  await createNotification(
+    shopId,
+    'stock_anomaly',
+    'Mouvement de stock inhabituel',
+    `"${productName}" : ${removedQuantity} unités retirées d'un coup (sur ${previousQuantity} en stock). Vérifie que c'est correct.`
+  );
+}
+
 export async function triggerCashGapAlert(
   shopId: string,
   businessDate: string,

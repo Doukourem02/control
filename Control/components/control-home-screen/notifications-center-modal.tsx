@@ -25,6 +25,7 @@ export function NotificationsCenterModal({
     stock_low: 'Stock faible',
     closure_reminder: 'Clôture oubliée',
     cash_gap: 'Écart de caisse',
+    stock_anomaly: 'Mouvement inhabituel',
   };
 
   function formatRelativeDate(iso: string) {
@@ -153,7 +154,9 @@ export function NotificationsCenterModal({
                           ? 'package-variant-closed'
                           : notif.type === 'cash_gap'
                             ? 'cash-minus'
-                            : 'bell-ring-outline'
+                            : notif.type === 'stock_anomaly'
+                              ? 'alert-outline'
+                              : 'bell-ring-outline'
                       }
                       size={18}
                       color={notif.read === 'false' ? colors.primaryMuted : colors.gray500}

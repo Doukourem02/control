@@ -5,7 +5,7 @@ import { createSessionAccount } from '../config/appwrite';
 import { getShopById } from '../modules/shops/shops.repository';
 import { getOrCreateCurrentShop } from '../modules/shops/shops.service';
 import { getActiveMemberByUserId } from '../modules/team/team.repository';
-import { getUserProfileByUserId } from '../modules/users/users.repository';
+import { getUserProfileByUserId, type AccountRole } from '../modules/users/users.repository';
 import { sendError } from '../utils/http';
 
 function getBearerToken(request: Request) {
@@ -34,6 +34,7 @@ export async function requireAuth(request: Request, response: Response, next: Ne
     const account = createSessionAccount(sessionSecret);
     const user = await account.get();
     let shopId = '';
+    let accountRole: AccountRole | null = null;
 
     try {
       const [profile, membership] = await Promise.all([
@@ -41,10 +42,14 @@ export async function requireAuth(request: Request, response: Response, next: Ne
         getActiveMemberByUserId(user.$id),
       ]);
 
-      if (profile?.accountRole === 'seller') {
-        const sellerShopId = profile.shopId || membership?.shopId || '';
-        const sellerShop = sellerShopId ? await getShopById(sellerShopId) : null;
-        shopId = sellerShop?.$id ?? sellerShopId;
+      accountRole = profile?.accountRole ?? null;
+
+      // Le proprietaire cree/possede sa propre boutique ; tous les autres roles
+      // (seller/manager/comptable) rejoignent une boutique via une invitation d'equipe.
+      if (profile && profile.accountRole !== 'owner') {
+        const memberShopId = profile.shopId || membership?.shopId || '';
+        const memberShop = memberShopId ? await getShopById(memberShopId) : null;
+        shopId = memberShop?.$id ?? memberShopId;
       } else {
         const shop = await getOrCreateCurrentShop(user.$id, user.name || user.email);
         shopId = shop.$id;
@@ -60,6 +65,7 @@ export async function requireAuth(request: Request, response: Response, next: Ne
       name: user.name,
       shopId,
       sessionSecret,
+      accountRole,
     };
 
     next();

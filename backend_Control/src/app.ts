@@ -24,7 +24,9 @@ import { createRateLimiter } from './middleware/rate-limit';
 export const app = express();
 
 app.use(cors());
-app.use(express.json());
+// Limite relevee (defaut 100kb) pour accueillir la photo justificative des
+// depenses, envoyee en base64 dans le corps JSON de POST /api/expenses.
+app.use(express.json({ limit: '5mb' }));
 app.use(apiVersionAlias);
 app.use('/api', createRateLimiter());
 
