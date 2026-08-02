@@ -132,7 +132,7 @@ export default function AuthScreen() {
           : registerRole === 'seller'
             ? sellerInvite
               ? `Invitation validée pour ${sellerInvite.shopName}. Crée ton mot de passe.`
-              : 'Entre ton email et le code donné par le propriétaire.'
+              : 'Entre ton email et le code donné par le manager.'
             : 'Choisis comment tu veux utiliser CONTROL.'
         : 'CONTROL, gardez le contrôle sur votre business, où qu’il grandisse.';
 
@@ -176,7 +176,7 @@ export default function AuthScreen() {
         setSocialMessage('Si un compte existe avec cet email, un lien de recuperation a ete envoye.');
       } else if (isRegister) {
         if (!registerRole) {
-          throw new Error('Choisis proprietaire ou vendeur.');
+          throw new Error('Choisis manager ou vendeur.');
         }
 
         if (registerRole === 'seller' && !inviteCode.trim()) {
@@ -406,7 +406,7 @@ export default function AuthScreen() {
                           </View>
                           <View style={{ flex: 1, minWidth: 0 }}>
                             <Text style={{ color: colors.gray900, fontSize: 17, fontWeight: '900' }}>
-                              {role === 'owner' ? 'Je suis propriétaire' : 'Je suis vendeur'}
+                              {role === 'owner' ? 'Je suis manager' : 'Je suis vendeur'}
                             </Text>
                             <Text style={{ color: colors.gray600, fontSize: 13, lineHeight: 18, fontWeight: '600', marginTop: 3 }}>
                               {role === 'owner'

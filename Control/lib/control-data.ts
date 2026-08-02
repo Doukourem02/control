@@ -130,6 +130,7 @@ export type ShopRow = BaseRow & {
   cashGapAlertsEnabled: string;
   defaultLowStockThreshold: string;
   logoFileId?: string;
+  organizationId?: string;
 };
 
 export type CreateProductInput = {
@@ -644,7 +645,34 @@ export async function getShopLogoUri(): Promise<string | null> {
   return `data:${mimeType};base64,${base64}`;
 }
 
-export type NotificationType = 'stock_low' | 'closure_reminder' | 'cash_gap' | 'stock_anomaly';
+// ── Boutiques (multi-boutique) ──────────────────────────────────────────────
+
+export async function listMyStores(): Promise<{ stores: ShopRow[]; activeShopId: string }> {
+  return requestApi<{ stores: ShopRow[]; activeShopId: string }>('/api/organizations/stores');
+}
+
+export async function createStore(input: { name: string }): Promise<ShopRow> {
+  const response = await requestApi<{ store: ShopRow }>('/api/organizations/stores', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return response.store;
+}
+
+export async function switchActiveStore(shopId: string): Promise<ShopRow> {
+  const response = await requestApi<{ shop: ShopRow }>(`/api/organizations/stores/${shopId}/activate`, {
+    method: 'POST',
+  });
+  return response.shop;
+}
+
+export type NotificationType =
+  | 'stock_low'
+  | 'closure_reminder'
+  | 'cash_gap'
+  | 'stock_anomaly'
+  | 'suspicious_sale'
+  | 'activity_drop';
 
 export type NotificationRow = BaseRow & {
   shopId: string;

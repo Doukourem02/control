@@ -23,6 +23,7 @@ export function ProfileMenu({
   onEditAlerts,
   onEditTeam,
   onEditData,
+  onEditStores,
 }: {
   compact: boolean;
   role: ControlExperienceRole | null;
@@ -33,6 +34,7 @@ export function ProfileMenu({
   onEditAlerts: () => void;
   onEditTeam: () => void;
   onEditData: () => void;
+  onEditStores: () => void;
 }) {
   const { session, signOut } = useControlAuth();
   const shopName = session?.shop.name || 'Boutique';
@@ -51,6 +53,9 @@ export function ProfileMenu({
   const alertsSummary = formatAlertsSummary(session?.shop);
   const teamValue = `${memberCount} membre${memberCount > 1 ? 's' : ''}`;
   const isOwner = role === 'owner';
+  // Le manager herite de l'experience UI "owner" mais ne doit pas voir le
+  // selecteur de boutiques (reserve au vrai proprietaire du compte).
+  const isRealOwner = session?.user.accountRole === 'owner';
   const logoFileId = session?.shop.logoFileId;
   const [logoUri, setLogoUri] = useState<string | null>(null);
 
@@ -165,6 +170,9 @@ export function ProfileMenu({
           <SettingsRow icon="phone-outline" title="Contact" value={contact} onPress={isOwner ? onEditShop : undefined} />
           <SettingsRow icon="map-marker-outline" title="Adresse" value={address} onPress={isOwner ? onEditShop : undefined} />
           <SettingsRow icon="clock-outline" title="Horaires" value={openingHours} onPress={isOwner ? onEditShop : undefined} />
+          {isRealOwner ? (
+            <SettingsRow icon="shopping-outline" title="Mes boutiques" onPress={onEditStores} />
+          ) : null}
         </SettingsSection>
 
         {isOwner ? (

@@ -14,12 +14,12 @@ export async function inviteMemberHandler(request: Request, response: Response):
   const userId = request.auth.userId;
   const role = await getMyRole(shopId, userId);
 
-  if (role !== 'owner') {
-    response.status(403).json({ error: 'Seul le proprietaire peut inviter des membres.', code: 'TEAM_OWNER_ONLY' });
+  if (role !== 'owner' && role !== 'manager') {
+    response.status(403).json({ error: 'Seuls le proprietaire et les gerants peuvent inviter des membres.', code: 'TEAM_INVITE_FORBIDDEN' });
     return;
   }
 
-  const member = await inviteMember(shopId, request.body as Record<string, unknown>);
+  const member = await inviteMember(shopId, request.body as Record<string, unknown>, role);
   response.status(201).json({ member });
 }
 

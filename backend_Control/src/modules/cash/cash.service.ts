@@ -1,5 +1,5 @@
 import { listExpensesInRange } from '../expenses/expenses.repository';
-import { triggerCashGapAlert } from '../notifications/notifications.triggers';
+import { triggerActivityDropAlert, triggerCashGapAlert } from '../notifications/notifications.triggers';
 import { listSalesInRange } from '../sales/sales.repository';
 import { parseAmount, userError } from '../../utils/http';
 import {
@@ -21,6 +21,44 @@ export async function getTodaySummary(shopId: string, date?: string) {
   ]);
 
   return buildTodaySummary(todaySales, todayExpenses, todayClosures);
+}
+
+const WEEKDAY_LABELS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const HISTORY_WEEKS = 4;
+const MIN_COMPARABLE_DAYS = 2;
+
+export async function checkActivityDropIfNeeded(shopId: string): Promise<void> {
+  const now = new Date();
+
+  // Pas assez de la journee ecoulee pour juger une baisse avant le milieu d'apres-midi
+  if (now.getHours() < 14) return;
+
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const todaySales = await listSalesInRange(shopId, todayStart, now);
+  const todayTotal = todaySales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+
+  const weeklyTotals: number[] = [];
+  for (let weeksAgo = 1; weeksAgo <= HISTORY_WEEKS; weeksAgo++) {
+    const pastDay = new Date(now);
+    pastDay.setDate(pastDay.getDate() - 7 * weeksAgo);
+
+    const pastDayStart = new Date(pastDay);
+    pastDayStart.setHours(0, 0, 0, 0);
+    const pastDaySameTime = new Date(pastDay);
+    pastDaySameTime.setHours(now.getHours(), now.getMinutes(), 0, 0);
+
+    const pastSales = await listSalesInRange(shopId, pastDayStart, pastDaySameTime);
+    const pastTotal = pastSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+
+    if (pastTotal > 0) weeklyTotals.push(pastTotal);
+  }
+
+  if (weeklyTotals.length < MIN_COMPARABLE_DAYS) return;
+
+  const average = weeklyTotals.reduce((sum, total) => sum + total, 0) / weeklyTotals.length;
+
+  await triggerActivityDropAlert(shopId, todayTotal, average, WEEKDAY_LABELS[now.getDay()]);
 }
 
 export async function getCashClosures(shopId: string, rawLimit: unknown, date?: string) {

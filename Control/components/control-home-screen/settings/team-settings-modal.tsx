@@ -18,7 +18,7 @@ const INVITE_ROLES: MemberRole[] = ['seller', 'manager', 'comptable'];
 
 const ROLE_LABELS: Record<MemberRole, string> = {
   seller: 'Vendeuse',
-  manager: 'Manager',
+  manager: 'Gérant',
   comptable: 'Comptable',
 };
 
@@ -36,13 +36,18 @@ export function TeamSettingsModal({
   onJoined?: () => Promise<void>;
 }) {
   const { session } = useControlAuth();
-  const ownerName = session?.shop.ownerName || session?.user.name || 'Proprietaire';
+  const ownerName = session?.shop.ownerName || session?.user.name || 'Manager';
   const ownerEmail = session?.user.email || '';
   const userId = session?.user.id ?? '';
   const shopId = session?.shop.$id ?? '';
   const isOwner = session?.user.accountRole
     ? session.user.accountRole === 'owner'
     : !userId || !shopId || userId === shopId;
+  // Un manager peut recruter des "apprentis" dans sa boutique, mais toujours
+  // au niveau vendeuse — jamais choisir le role, et jamais retirer un membre
+  // (reserve au proprietaire).
+  const isManager = session?.user.accountRole === 'manager';
+  const canInvite = isOwner || isManager;
 
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -135,7 +140,7 @@ export function TeamSettingsModal({
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ gap: 2 }}>
               <Text style={{ color: colors.gray900, fontSize: 22, fontWeight: '800' }}>Equipe</Text>
-              <Text style={{ color: colors.gray600, fontSize: 13 }}>Proprietaire, vendeuses et acces</Text>
+              <Text style={{ color: colors.gray600, fontSize: 13 }}>Manager, gérants, vendeuses et accès</Text>
             </View>
             <Pressable
               onPress={onClose}
@@ -165,7 +170,7 @@ export function TeamSettingsModal({
                 <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>{ownerName}</Text>
                 {ownerEmail ? <Text numberOfLines={1} style={{ color: colors.gray600, fontSize: 12, fontWeight: '600', marginTop: 1 }}>{ownerEmail}</Text> : null}
               </View>
-              <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>Owner</Text>
+              <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>Manager</Text>
             </View>
           </View>
 
@@ -199,7 +204,7 @@ export function TeamSettingsModal({
           ) : null}
 
           {/* Invitations en attente */}
-          {isOwner && pendingMembers.length > 0 ? (
+          {canInvite && pendingMembers.length > 0 ? (
             <View style={{ gap: 8 }}>
               <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>En attente</Text>
               {pendingMembers.map((m) => (
@@ -217,22 +222,31 @@ export function TeamSettingsModal({
                       {formatInviteExpiry(m.expiresAt, m.$createdAt)}
                     </Text>
                   </View>
-                  <Pressable
-                    onPress={() => handleRemove(m.$id)}
-                    style={({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
-                  >
-                    <Feather name="x" size={16} color={colors.gray300} />
-                  </Pressable>
+                  {isOwner ? (
+                    <Pressable
+                      onPress={() => handleRemove(m.$id)}
+                      style={({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
+                    >
+                      <Feather name="x" size={16} color={colors.gray300} />
+                    </Pressable>
+                  ) : null}
                 </View>
               ))}
             </View>
           ) : null}
 
-          {/* Inviter (owner) */}
-          {isOwner ? (
+          {/* Inviter (owner + manager) */}
+          {canInvite ? (
             inviteVisible ? (
               <View style={{ borderRadius: 16, backgroundColor: colors.gray50, padding: 14, gap: 10 }}>
-                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Inviter un membre</Text>
+                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>
+                  {isOwner ? 'Inviter un membre' : 'Inviter un apprenti'}
+                </Text>
+                {isManager ? (
+                  <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '600', marginTop: -4 }}>
+                    Rejoint ta boutique au niveau vendeuse.
+                  </Text>
+                ) : null}
                 <TextInput
                   placeholder="Nom"
                   value={inviteName}
@@ -249,29 +263,31 @@ export function TeamSettingsModal({
                   placeholderTextColor={colors.gray400}
                   style={{ height: 44, borderRadius: 12, backgroundColor: colors.white, paddingHorizontal: 14, fontSize: 14, color: colors.gray900, fontWeight: '600' }}
                 />
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {INVITE_ROLES.map((role) => {
-                    const selected = inviteRole === role;
-                    return (
-                      <Pressable
-                        key={role}
-                        onPress={() => setInviteRole(role)}
-                        style={{
-                          flex: 1,
-                          height: 38,
-                          borderRadius: 12,
-                          backgroundColor: selected ? colors.primary : colors.white,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Text style={{ color: selected ? colors.white : colors.gray600, fontSize: 12, fontWeight: '700' }}>
-                          {ROLE_LABELS[role]}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                {isOwner ? (
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {INVITE_ROLES.map((role) => {
+                      const selected = inviteRole === role;
+                      return (
+                        <Pressable
+                          key={role}
+                          onPress={() => setInviteRole(role)}
+                          style={{
+                            flex: 1,
+                            height: 38,
+                            borderRadius: 12,
+                            backgroundColor: selected ? colors.primary : colors.white,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Text style={{ color: selected ? colors.white : colors.gray600, fontSize: 12, fontWeight: '700' }}>
+                            {ROLE_LABELS[role]}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
                     onPress={() => { setInviteVisible(false); setInviteName(''); setInviteEmail(''); setInviteRole('seller'); }}
@@ -298,13 +314,15 @@ export function TeamSettingsModal({
                 })}
               >
                 <Feather name="user-plus" size={16} color={colors.white} />
-                <Text style={{ color: colors.white, fontSize: 14, fontWeight: '700' }}>Inviter un membre</Text>
+                <Text style={{ color: colors.white, fontSize: 14, fontWeight: '700' }}>
+                  {isOwner ? 'Inviter un membre' : 'Inviter un apprenti'}
+                </Text>
               </Pressable>
             )
           ) : null}
 
           {/* Rejoindre (seller / new user) */}
-          {!isOwner ? (
+          {!canInvite ? (
             joinVisible ? (
               <View style={{ borderRadius: 16, backgroundColor: colors.primarySoft, padding: 14, gap: 10 }}>
                 <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Rejoindre une boutique</Text>

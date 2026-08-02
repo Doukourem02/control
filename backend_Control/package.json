@@ -11,7 +11,8 @@
     "appwrite:setup-shops": "node scripts/setup-appwrite-shops.js",
     "appwrite:setup-notifications": "node scripts/setup-appwrite-notifications.js",
     "appwrite:setup-members": "node scripts/setup-appwrite-members.js",
-    "appwrite:setup-user-profiles": "node scripts/setup-appwrite-user-profiles.js"
+    "appwrite:setup-user-profiles": "node scripts/setup-appwrite-user-profiles.js",
+    "appwrite:setup-organizations": "node scripts/setup-appwrite-organizations.js"
   },
   "keywords": [],
   "author": "",

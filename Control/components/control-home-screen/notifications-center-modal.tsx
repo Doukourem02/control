@@ -26,6 +26,8 @@ export function NotificationsCenterModal({
     closure_reminder: 'Clôture oubliée',
     cash_gap: 'Écart de caisse',
     stock_anomaly: 'Mouvement inhabituel',
+    suspicious_sale: 'Vente à vérifier',
+    activity_drop: 'Activité basse',
   };
 
   function formatRelativeDate(iso: string) {
@@ -156,7 +158,11 @@ export function NotificationsCenterModal({
                             ? 'cash-minus'
                             : notif.type === 'stock_anomaly'
                               ? 'alert-outline'
-                              : 'bell-ring-outline'
+                              : notif.type === 'suspicious_sale'
+                                ? 'shield-alert-outline'
+                                : notif.type === 'activity_drop'
+                                  ? 'chart-line-variant'
+                                  : 'bell-ring-outline'
                       }
                       size={18}
                       color={notif.read === 'false' ? colors.primaryMuted : colors.gray500}

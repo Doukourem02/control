@@ -334,8 +334,8 @@ backend_Control/src/modules/
 - [x] Notification in-app en cas d'écart de caisse détecté
 - [x] Centre de notifications in-app (liste des alertes récentes)
 - [x] Badge non-lu sur la cloche
-- [ ] Alerte "ventes suspectes" (cahier des charges §10)
-- [ ] Alerte "baisse d'activité inhabituelle" (cahier des charges §10)
+- [x] Alerte "ventes suspectes" (cahier des charges §10) — se déclenche quand le montant encaissé (modifiable manuellement à la vente dans `app/sale.tsx`) est < 70% du prix catalogue × quantité. `triggerSuspiciousSaleAlert`, notification `suspicious_sale`.
+- [x] Alerte "baisse d'activité inhabituelle" (cahier des charges §10) — compare les ventes du jour (à l'heure actuelle) à la moyenne du même jour de semaine sur les 4 dernières semaines, à heure égale. `checkActivityDropIfNeeded` (piggyback sur `GET /api/summary/today`, même point que le rappel de clôture), notification `activity_drop`.
 - [ ] Push notifications Expo/iOS — différé (logo app requis, à faire en dernier)
 
 ### Réapprovisionnement produit (Supply)
@@ -389,6 +389,12 @@ Détail livré :
 - Invitation d'équipe : sélecteur de rôle dans `team-settings-modal.tsx`, propagé jusqu'à `POST /api/team/invite` (`role` dans le body, validé côté service).
 - Le rôle réellement assigné à l'inscription/join vient de l'invitation (`member.role`), plus jamais hardcodé à `'seller'`.
 - Middleware `requireAuth` : la résolution du `shopId` par appartenance à une équipe (au lieu de la création d'une boutique propre) s'applique maintenant à tout rôle `!== 'owner'`, pas seulement `'seller'`.
+
+**Délégation d'invitation aux managers — LIVRÉ** (session 2026-08-02, à la demande explicite de l'utilisateur : "le propriétaire place un gérant par boutique, et ce gérant recrute lui-même ses apprentis").
+- [x] Un `manager` peut désormais inviter des membres dans sa boutique (`team.controller.ts` : `role !== 'owner' && role !== 'manager'` → 403, au lieu de `owner` seul).
+- [x] Garde-fou anti-escalade de privilèges : quand l'inviteur n'est pas `owner`, le rôle assigné est **toujours forcé à `seller`** côté service (`team.service.ts::inviteMember`), quel que soit le rôle demandé dans le body — un manager ne peut jamais créer un autre manager/comptable, ni se dupliquer à son propre niveau. Couvert par `team.service.test.ts` (3 tests, dont un qui vérifie explicitement qu'une tentative de créer un `manager` depuis un compte `manager` retombe sur `seller`).
+- [x] Retrait d'un membre reste réservé au seul `owner` (inchangé, décision volontaire — un manager peut recruter mais pas révoquer).
+- [x] Frontend (`team-settings-modal.tsx`) : un manager voit le formulaire d'invitation (libellé "Inviter un apprenti", pas de sélecteur de rôle puisqu'il est forcé), voit la liste des invitations en attente qu'il a lui-même créées, mais ne voit pas le bouton de retrait (réservé owner).
 - Simplification assumée et documentée dans le code : pas encore d'écran dédié comptable (vue lecture seule des rapports) — `comptable` réutilise l'écran vendeur/seller pour l'instant, seule l'écriture est bloquée côté API.
 
 ### Dépenses avancées
@@ -425,15 +431,19 @@ Détail livré :
 
 ### Multi-boutique
 
-> Cahier des charges §3-4-6. Le plus gros chantier structurel : débloque la vue globale entreprise, la rentabilité par boutique, les permissions par boutique et la monétisation par palier.
+> Cahier des charges §3-4-6. **Fondation livrée** (session 2026-08-02) : un owner peut créer plusieurs boutiques et basculer entre elles, avec isolation stricte des données. La vue agrégée entreprise, la rentabilité par boutique, les permissions par boutique et la monétisation par palier restent à construire par-dessus cette fondation (hors périmètre de cette session, voir plan `docs/CAHIER_DES_CHARGES.md` §3).
 
-- [ ] Introduire l'entité `Organization` (entreprise) au-dessus de `Shop`
-- [ ] Un utilisateur peut gérer plusieurs boutiques (`Store`) au sein d'une organisation
-- [ ] Migrer le modèle de données : isolation par `organizationId` + `storeId` (au lieu du `shopId` unique actuel)
-- [ ] Sélecteur de boutique active dans l'app
-- [ ] Isolation stricte des données entre boutiques
-- [ ] Vue globale entreprise (toutes boutiques confondues) dans le dashboard
-- [ ] Vue par boutique dans le dashboard
+- [x] Introduire l'entité `Organization` (entreprise) au-dessus de `Shop` — nouveau module `organizations` (routes/controller/service/repository), collection Appwrite `organizations`.
+- [x] Un utilisateur peut gérer plusieurs boutiques (`Store`) au sein d'une organisation — `POST /api/organizations/stores` (owner only), `$id` généré (`ID.unique()`) pour les boutiques additionnelles.
+- [x] Migrer le modèle de données : isolation par `organizationId` — champ ajouté sur `shops` (pas de renommage de collection, migration additive), backfill exécuté sur les 8 boutiques existantes. `storeId` séparé jugé inutile : `shops.$id` joue déjà ce rôle.
+- [x] Sélecteur de boutique active dans l'app — modale "Mes boutiques" (`stores-settings-modal.tsx`), accessible depuis le Profil (owner uniquement, pas manager). `POST /api/organizations/stores/:shopId/activate` met à jour `user_profiles.shopId`, pointeur serveur unique par compte (pas par appareil).
+- [x] Isolation stricte des données entre boutiques — déjà garantie par le scoping `shopId` existant sur tous les modules métier ; `switchActiveStore` vérifie explicitement la propriété avant de basculer (403 `ORG_STORE_FORBIDDEN` sinon).
+- [ ] Vue globale entreprise (toutes boutiques confondues) dans le dashboard — hors périmètre de cette session.
+- [ ] Vue par boutique dans le dashboard — hors périmètre de cette session.
+
+**Bug corrigé au passage** : `GET`/`PATCH /api/shops/current` résolvaient la boutique via `request.auth.userId` en dur au lieu de `request.auth.shopId` — sans ce correctif, changer de boutique active n'aurait jamais permis d'éditer ses réglages (le sélecteur aurait été cosmétique). Vérifié par test manuel réel (créer boutique 2, l'activer, PATCH, confirmer que seule la boutique 2 change) + `organizations.service.test.ts` + nouveau cas dans `auth.test.ts`.
+
+**Hors périmètre explicite, à reprendre sur cette fondation** : suppression/archivage de boutique (pas d'endpoint `DELETE`), permissions par boutique pour manager/comptable, quota de boutiques (illimité pour l'instant), plans de facturation liés au nombre de boutiques.
 
 ### Analytics avancés
 
@@ -521,10 +531,10 @@ Objectif : sortir CONTROL du mode démo et rendre les données fiables par utili
 | Priorité | Tâches totales | Restantes | Statut |
 | -------- | ------------- | --------- | ------ |
 | P0 | 16 | 1 | Apple/FB/X différé en dernier plan |
-| P1 | 27 | 4 | Push notifications différées + 2 alertes cahier des charges |
-| P2 | 23 | 0 | Tout livré ✓ (rôles étendus, stock avancé, dépenses avancées) |
-| P3 | 35 | 26 | Multi-boutique, analytics, monétisation, vision long terme (cahier des charges) |
-| **Total** | **101** | **31** | P2 entièrement fermé le 2026-08-02 — reste uniquement P0 (Apple/FB/X), P1 (push) et P3 |
+| P1 | 27 | 2 | Ventes suspectes + baisse d'activité livrées ✓ — reste push notifications (différé) |
+| P2 | 27 | 0 | Tout livré ✓ (rôles étendus + délégation manager, stock avancé, dépenses avancées) |
+| P3 | 35 | 21 | Fondation multi-boutique livrée ✓ — reste vue globale, analytics, monétisation, vision long terme |
+| **Total** | **105** | **24** | P0/P1/P2 fermés hors blocs différés (Apple/FB/X, push) — fondation multi-boutique + délégation manager livrées le 2026-08-02 |
 
 > Le tableau compte les tâches haut niveau. Les sous-tâches ajoutées dans les sections de détail servent au suivi de reprise et peuvent être consolidées au fur et à mesure.
 > Le saut de 10 → 38 tâches restantes vient de la fusion des écarts de [`CAHIER_DES_CHARGES.md`](./CAHIER_DES_CHARGES.md), pas d'une régression : ce sont des tâches qui existaient déjà dans la vision produit mais n'étaient pas encore transcrites ici.

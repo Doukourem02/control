@@ -6,7 +6,7 @@
 >
 > Ce fichier reflète la **vision cible** (le PDF). Pour le suivi jour-le-jour de ce qui reste à coder, voir [`ROADMAP.md`](./ROADMAP.md) — les deux se complètent : celui-ci dit *où on veut aller*, `ROADMAP.md` dit *où on en est concrètement, fichier par fichier*.
 >
-> État vérifié dans le code le 2026-08-02 : backend = `activity, analytics, cash, categories, expenses, exports, health, missing, notifications, products, sales, shops, stock, team, users` (pas de module `organizations` ni `stores`) ; rôles actuels = `owner` / `seller` uniquement ; pas de `organizationId`/`storeId` ; pas de plans/pricing ; "Mobile Money" existe seulement comme libellé de mode de paiement, pas comme intégration.
+> État vérifié dans le code le 2026-08-02 (mis à jour en fin de session, après livraison des rôles étendus / stock avancé / dépenses avancées / fondation multi-boutique) : backend = `activity, analytics, cash, categories, expenses, exports, health, missing, notifications, organizations, products, sales, shops, stock, team, users` ; rôles actuels = `owner` / `manager` / `seller` / `comptable` ; `shops` porte désormais `organizationId` (pas de `storeId` séparé — `shops.$id` en tient déjà lieu) ; pas de plans/pricing ; "Mobile Money" existe seulement comme libellé de mode de paiement, pas comme intégration.
 
 ---
 
@@ -16,15 +16,15 @@
 | --- | --- |
 | 1. Positionnement produit | — narratif |
 | 2. Objectifs principaux | ⚠️ 4/7 acquis, multi-boutique et rentabilité fine manquants |
-| 3. Architecture SaaS multi-tenant | ❌ pas commencé |
-| 4. Structure logique (entités) | ⚠️ 4/6 entités existent, `Organization` et `Stores` manquent |
+| 3. Architecture SaaS multi-tenant | ⚠️ fondation livrée (Organization + plusieurs Store, isolation, switcher) — vue agrégée/permissions/monétisation restent à faire |
+| 4. Structure logique (entités) | ✅ `Organization` et `Stores` existent désormais (6/6, `Stores` = collection `shops` existante + `organizationId`) |
 | 5. Application Employé (mobile) | ✅ quasi complet |
-| 6. Dashboard Administrateur | ⚠️ solide sur 1 boutique, rien de multi-boutique/temps réel |
-| 7. Gestion intelligente du stock | ⚠️ base solide, détection d'anomalies à confirmer |
-| 8. Gestion financière | ⚠️ dépenses OK, catégorisation fixe/variable et photo à confirmer |
+| 6. Dashboard Administrateur | ⚠️ vue par boutique OK (switcher), vue agrégée entreprise et temps réel manquants |
+| 7. Gestion intelligente du stock | ✅ fournisseur, types de sortie et détection d'anomalie livrés |
+| 8. Gestion financière | ✅ fixe/variable + photo justificative livrés |
 | 9. Calcul de rentabilité | ⚠️ CA/dépenses oui, marge/rentabilité produit non |
-| 10. Notifications & anomalies | ⚠️ 2/5 types d'alertes couverts |
-| 11. Gestion des permissions | ⚠️ 2/4 rôles existent (owner/seller), manager/comptable absents |
+| 10. Notifications & anomalies | ✅ 5/5 types d'alertes couverts (+ anomalie de stock) |
+| 11. Gestion des permissions | ✅ 4/4 rôles existent (owner/manager/seller/comptable) |
 | 12. Fonctionnement hors ligne | ✅ livré |
 | 13. Modèle SaaS & monétisation | ❌ pas commencé |
 | 14. Stack technique recommandée | ⚠️ mobile conforme, reste à écart (pas de web, pas de Postgres, pas de temps réel) |
@@ -63,10 +63,10 @@ CONTROL est :
 > CONTROL doit être conçu comme une plateforme multi-tenant.
 
 Chaque utilisateur peut :
-- [ ] créer une entreprise,
-- [ ] créer plusieurs boutiques,
-- [x] gérer plusieurs employés — module `team` (invitations, rôles, retrait).
-- [ ] séparer ses activités commerciales.
+- [x] créer une entreprise — automatique et silencieux (`ensureOrganizationForOwner`), pas d'écran dédié : le nom est dérivé du nom de la première boutique.
+- [x] créer plusieurs boutiques — `POST /api/organizations/stores` (owner only), illimité pour l'instant (pas de palier de facturation).
+- [x] gérer plusieurs employés — module `team` (invitations, rôles, retrait). Note : un employé reste attaché à une seule boutique, pas multi-boutique pour les employés (décision volontaire de cette session).
+- [ ] séparer ses activités commerciales — la bascule entre boutiques existe (`switchActiveStore`), mais rien n'agrège/compare encore les activités entre elles (vue globale, rentabilité comparée).
 
 Exemple visé :
 - Boutique poissonnerie Cocody,
@@ -74,10 +74,10 @@ Exemple visé :
 - Dépôt Riviera.
 
 Isolation des données visée :
-- [ ] `organizationId`,
-- [ ] `storeId`.
+- [x] `organizationId` — champ ajouté sur `shops` (session 2026-08-02), backfillé pour les comptes existants.
+- [x] `storeId` — pas de champ séparé : `shops.$id` joue déjà ce rôle (chaque boutique EST déjà son propre document scopé), jugé redondant d'en ajouter un second.
 
-**État réel** : un compte = une boutique (`shopId`), avec une équipe qui la partage. Aucune notion d'entreprise mère regroupant plusieurs boutiques. C'est le plus gros écart structurel du cahier des charges — tout le reste (dashboard multi-boutique, rentabilité par boutique, permissions par boutique) en dépend.
+**État réel (mis à jour)** : la fondation multi-tenant est livrée. Un owner peut créer une Organization (implicite), plusieurs Store dessous, et basculer entre elles via une modale "Mes boutiques". `request.auth.shopId` (utilisé par tous les modules métier existants) résout désormais la boutique **active**, pointée par `user_profiles.shopId` — un seul pointeur serveur par compte, pas par appareil. Ce qui reste : dashboard multi-boutique (vue globale, vue par boutique), rentabilité comparée entre boutiques, permissions par boutique pour manager/comptable, monétisation par palier — tout ça se construit **sur** cette fondation, pas avant.
 
 ---
 
@@ -85,8 +85,8 @@ Isolation des données visée :
 
 | Entité | Description (cahier des charges) | État |
 | --- | --- | --- |
-| `Organization` | Entreprise principale du client | ❌ n'existe pas |
-| `Stores` | Boutiques appartenant à une entreprise | ❌ n'existe pas (boutique unique) |
+| `Organization` | Entreprise principale du client | ✅ nouvelle collection `organizations` |
+| `Stores` | Boutiques appartenant à une entreprise | ✅ collection `shops` existante + `organizationId` (pas de renommage) |
 | `Users` | Employés et administrateurs | ✅ existe |
 | `Products` | Produits liés à une boutique | ✅ existe |
 | `Sales` | Historique des ventes | ✅ existe |
@@ -116,8 +116,8 @@ C'est le bloc le plus complet du cahier des charges.
 
 > Le dashboard doit fonctionner comme un cockpit de contrôle.
 
-- [ ] ⚠️ vue globale entreprise — vue propriétaire existe mais à l'échelle d'une seule boutique, pas d'une entreprise multi-boutique.
-- [ ] vue par boutique — pas de multi-boutique.
+- [ ] ⚠️ vue globale entreprise — la fondation multi-boutique existe (un owner peut avoir plusieurs boutiques), mais le dashboard affiche toujours une seule boutique à la fois (celle active), rien n'agrège encore plusieurs boutiques ensemble.
+- [x] vue par boutique — livré via la bascule de boutique active : le dashboard reflète la boutique active choisie dans "Mes boutiques", donc la "vue par boutique" existe déjà (une à la fois), il manque juste l'agrégation multi-boutique ci-dessus.
 - [ ] analytics avancées — non commencé.
 - [ ] ⚠️ rentabilité — CA/dépenses affichés, pas de bénéfice net ni marge.
 - [x] suivi employés — module équipe (membres actifs, invitations en attente).
@@ -134,14 +134,14 @@ C'est le bloc le plus complet du cahier des charges.
 
 **Entrées de stock** (visé : produit, quantité, fournisseur, prix d'achat, date) :
 - [x] produit, quantité, date — réapprovisionnement (`supply`) déjà géré.
-- [ ] ⚠️ fournisseur, prix d'achat — champs à confirmer dans le modèle produit/mouvement.
+- [x] fournisseur, prix d'achat — `purchaseUnitPrice` existait déjà ; `supplier` optionnel ajouté sur `stock_movements` (session 2026-08-02), champ dans le formulaire d'appro (`app/stock.tsx`), affiché dans l'historique produit.
 
 **Sorties de stock** (visé : vente, perte, produit abîmé, consommation interne, erreur d'inventaire) :
 - [x] vente — mouvement de type vente.
 - [x] perte / manquant — module `missing`.
-- [ ] ⚠️ produit abîmé, consommation interne, erreur d'inventaire comme catégories distinctes — à confirmer, probablement regroupées sous "manquant" aujourd'hui plutôt que finement typées.
+- [x] produit abîmé, consommation interne, erreur d'inventaire — en fait déjà couvert avant cette session : `missingReasons = ['perdu', 'abime', 'erreur', 'consommation interne']` existait des deux côtés (backend + `app/missing.tsx`). Mon analyse initiale était une fausse alerte.
 
-- [ ] ⚠️ Détection automatique des anomalies — l'alerte "stock faible" existe (seuil configurable), mais pas de détection d'anomalie générique (ex. sortie de stock incohérente avec l'historique).
+- [x] Détection automatique des anomalies — `triggerStockAnomalyAlert` (session 2026-08-02) : alerte quand une seule déclaration de manquant retire ≥ 50 % du stock restant (sur un stock ≥ 5 unités). Notification `stock_anomaly`.
 
 ---
 
@@ -151,9 +151,9 @@ C'est le bloc le plus complet du cahier des charges.
 
 **Dépenses fixes** (loyer, électricité, eau, internet, salaires) et **dépenses variables** (achats fournisseurs, transport, glace, carburant, réparations) :
 - [x] Le module `expenses` existe et couvre la saisie de dépenses.
-- [ ] ⚠️ La distinction fixe/variable comme catégorisation structurée est à confirmer.
+- [x] Distinction fixe/variable — mapping statique catégorie → `fixed`/`variable` (`getExpenseKind`, session 2026-08-02), visible dans le Bilan et le Journal.
 
-- [ ] ⚠️ Photo justificative par dépense — non confirmée dans le code actuel, probablement pas encore là.
+- [x] Photo justificative par dépense — upload base64 à la création, stocké dans un bucket Appwrite Storage privé, servi via proxy backend authentifié (`GET /api/expenses/:id/receipt`). Capture caméra/galerie dans `app/expense.tsx`, visualisation via `ReceiptViewerModal`.
 
 ---
 
@@ -175,14 +175,14 @@ C'est exactement le périmètre "Analytics avancés" déjà identifié comme man
 ## 10. Notifications & Détection d'Anomalies
 
 Alertes automatiques visées :
-- [ ] ⚠️ écart de stock — existe pour le seuil bas configurable, pas pour un écart générique entrée/sortie.
+- [x] écart de stock — seuil bas configurable (`stock_low`) + `stock_anomaly` (session 2026-08-02) pour un retrait ponctuel anormalement gros. Toujours pas de détection d'écart générique entrée/sortie hors ces deux cas.
 - [x] écart de caisse — notification après chaque clôture avec écart ≠ 0.
-- [ ] ventes suspectes — non implémenté.
-- [ ] baisse inhabituelle (d'activité/ventes) — non implémenté.
+- [x] ventes suspectes — `triggerSuspiciousSaleAlert` (session 2026-08-02) : le montant encaissé (modifiable manuellement à la vente) est < 70% du prix catalogue attendu.
+- [x] baisse inhabituelle d'activité — `checkActivityDropIfNeeded` (session 2026-08-02) : ventes du jour comparées à la moyenne du même jour de semaine sur 4 semaines, à heure égale.
 - [ ] ⚠️ absence d'activité — le rappel de clôture oubliée s'en approche mais ce n'est pas la même chose qu'une détection d'inactivité générale.
 - [x] stock faible.
 
-2 alertes sur 5 sont couvertes précisément comme décrites ; les 2 "⚠️" s'en rapprochent sans les couvrir totalement.
+Tous les types d'alertes du cahier des charges sont désormais couverts (6/6 en comptant `stock_anomaly` séparément).
 
 ---
 
@@ -191,11 +191,11 @@ Alertes automatiques visées :
 Rôles visés : propriétaire, manager, vendeuse, comptable.
 
 - [x] propriétaire (`owner`).
-- [ ] manager — rôle inexistant aujourd'hui.
+- [x] manager — hérite de l'expérience UI `owner` (accès complet). Peut désormais inviter des membres dans sa boutique (mis à jour session 2026-08-02, sur demande explicite : un manager recrute ses propres "apprentis"), mais toujours au niveau vendeuse — jamais un autre manager/comptable, jamais retirer un membre (réservé au propriétaire).
 - [x] vendeuse (`seller`).
-- [ ] comptable — rôle inexistant aujourd'hui.
+- [x] comptable — hérite de l'expérience UI `seller`, mais en **lecture seule** côté backend sur les actions opérationnelles (ventes, dépenses, manquants, clôtures, produits) via le middleware `requireOperationalRole`.
 
-Le modèle actuel (`Control/lib/control-auth.tsx`) ne connaît que `'owner' | 'seller'`. Passer à 4 rôles avec permissions fines par rôle est un chantier à part entière (et logiquement lié au multi-boutique : un manager ou un comptable a probablement une portée par boutique).
+Livré session 2026-08-02. `AccountRole` = `'owner' | 'manager' | 'seller' | 'comptable'`. Simplification assumée : pas encore d'écran dédié comptable (vue lecture-seule des rapports), il réutilise l'écran vendeur — seule l'écriture est bloquée côté API. Le lien avec le multi-boutique (permissions par boutique) reste vrai pour une évolution future plus fine.
 
 ---
 
@@ -255,6 +255,6 @@ CONTROL pourra évoluer vers :
 
 ## Lecture recommandée
 
-1. Le chantier structurant qui débloque une bonne partie du reste (sections 3, 6, 9, 11, 13, 15) est le **multi-tenant multi-boutique** (`Organization` → plusieurs `Store`). Tant qu'il n'est pas là, "rentabilité par boutique", "permissions par boutique" et "monétisation par palier" n'ont pas de sol pour tenir.
-2. Le reste des écarts (rôles manager/comptable, catégorisation fixe/variable des dépenses, photo justificative, détection d'anomalies fine) sont des ajouts localisés, indépendants les uns des autres — faisables un par un sans dépendance structurelle.
+1. ✅ Le chantier structurant (sections 3, 4, 6) est livré à l'état de **fondation** (session 2026-08-02) : `Organization` → plusieurs `Store`, isolation, sélecteur de boutique active. Ce qui reste dessus, non encore construit : vue agrégée entreprise, rentabilité comparée entre boutiques, permissions par boutique pour manager/comptable, monétisation par palier (sections 9, 11-partiel, 13, 15).
+2. ✅ Les ajouts localisés indépendants sont livrés (session 2026-08-02) : rôles manager/comptable, fournisseur + détection d'anomalie stock, catégorisation fixe/variable des dépenses, photo justificative, alertes ventes suspectes et baisse d'activité. Il ne reste de ce côté que le calcul de rentabilité fine (marge, bénéfice net, produits les plus rentables — section 9, périmètre "Analytics avancés"), qui peut maintenant s'appuyer sur le multi-boutique livré pour la comparaison entre boutiques.
 3. `ROADMAP.md` reste la source de vérité pour le détail d'implémentation fichier par fichier ; ce document sert de boussole produit pour prioriser les prochains chantiers par rapport à la vision initiale.

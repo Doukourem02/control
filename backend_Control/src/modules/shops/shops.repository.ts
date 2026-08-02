@@ -1,4 +1,4 @@
-import { AppwriteException } from 'node-appwrite';
+import { AppwriteException, ID, Query } from 'node-appwrite';
 
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 
@@ -23,6 +23,7 @@ export type ShopRow = {
   cashGapAlertsEnabled: string;
   defaultLowStockThreshold: string;
   logoFileId: string;
+  organizationId: string;
 };
 
 export type UpdateShopInput = {
@@ -65,6 +66,7 @@ function toShopRow(doc: any): ShopRow {
     cashGapAlertsEnabled: doc.cashGapAlertsEnabled ?? 'true',
     defaultLowStockThreshold: doc.defaultLowStockThreshold ?? '5',
     logoFileId: doc.logoFileId ?? '',
+    organizationId: doc.organizationId ?? '',
   };
 }
 
@@ -82,15 +84,8 @@ export async function getShopById(shopId: string): Promise<ShopRow | null> {
   }
 }
 
-export async function createShopForUser(userId: string, ownerName: string): Promise<ShopRow> {
-  const displayName = ownerName.trim() || 'Ma boutique';
-
-  const doc = await databases.createDocument(DATABASE_ID, COLLECTIONS.shops, userId, {
-    ownerUserId: userId,
-    ownerName: displayName,
-    name: displayName.includes('boutique') || displayName.includes('Boutique')
-      ? displayName
-      : `Boutique ${displayName}`,
+function defaultShopFields() {
+  return {
     currency: 'FCFA',
     contact: '',
     address: '',
@@ -104,9 +99,54 @@ export async function createShopForUser(userId: string, ownerName: string): Prom
     closureReminderEnabled: 'true',
     cashGapAlertsEnabled: 'true',
     defaultLowStockThreshold: '5',
+  };
+}
+
+export async function createShopForUser(
+  userId: string,
+  ownerName: string,
+  organizationId: string
+): Promise<ShopRow> {
+  const displayName = ownerName.trim() || 'Ma boutique';
+
+  const doc = await databases.createDocument(DATABASE_ID, COLLECTIONS.shops, userId, {
+    ownerUserId: userId,
+    ownerName: displayName,
+    name: displayName.includes('boutique') || displayName.includes('Boutique')
+      ? displayName
+      : `Boutique ${displayName}`,
+    organizationId,
+    ...defaultShopFields(),
   });
 
   return toShopRow(doc);
+}
+
+export async function createAdditionalShop(input: {
+  organizationId: string;
+  ownerUserId: string;
+  ownerName: string;
+  name: string;
+}): Promise<ShopRow> {
+  const doc = await databases.createDocument(DATABASE_ID, COLLECTIONS.shops, ID.unique(), {
+    ownerUserId: input.ownerUserId,
+    ownerName: input.ownerName.trim() || 'Ma boutique',
+    name: input.name,
+    organizationId: input.organizationId,
+    ...defaultShopFields(),
+  });
+
+  return toShopRow(doc);
+}
+
+export async function listShopsByOrganization(organizationId: string): Promise<ShopRow[]> {
+  const response = await databases.listDocuments(DATABASE_ID, COLLECTIONS.shops, [
+    Query.equal('organizationId', organizationId),
+    Query.orderAsc('$createdAt'),
+    Query.limit(100),
+  ]);
+
+  return response.documents.map(toShopRow);
 }
 
 export async function updateShopById(shopId: string, input: UpdateShopInput): Promise<ShopRow> {

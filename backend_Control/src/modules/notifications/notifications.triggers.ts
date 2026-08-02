@@ -79,6 +79,70 @@ export async function triggerCashGapAlert(
   );
 }
 
+/**
+ * Vente suspecte : le montant encaisse (modifiable manuellement a la vente,
+ * voir Control/app/sale.tsx) est nettement en dessous de ce que le prix
+ * catalogue x quantite donnerait. Ne bloque jamais la vente — un rabais
+ * legitime existe — mais rend l'ecart visible au proprietaire.
+ */
+export async function triggerSuspiciousSaleAlert(
+  shopId: string,
+  productName: string,
+  expectedAmount: number,
+  actualAmount: number
+): Promise<void> {
+  const shop = await getShopById(shopId);
+  if (!shop || shop.cashGapAlertsEnabled !== 'true') return;
+
+  const SUSPICIOUS_RATIO = 0.7;
+
+  if (expectedAmount <= 0) return;
+  if (actualAmount / expectedAmount >= SUSPICIOUS_RATIO) return;
+
+  await createNotification(
+    shopId,
+    'suspicious_sale',
+    'Vente à vérifier',
+    `"${productName}" vendu à ${actualAmount} au lieu de ${expectedAmount} attendus au prix catalogue.`
+  );
+}
+
+/**
+ * Baisse d'activite inhabituelle : les ventes du jour (a l'heure actuelle)
+ * sont nettement en dessous de la moyenne du meme jour de semaine sur les
+ * semaines precedentes. Comparaison a heure egale pour rester juste en
+ * cours de journee (pas de "chute" artificielle le matin).
+ */
+export async function triggerActivityDropAlert(
+  shopId: string,
+  todayTotalSoFar: number,
+  historicalAverage: number,
+  weekdayLabel: string
+): Promise<void> {
+  const shop = await getShopById(shopId);
+  if (!shop || shop.cashGapAlertsEnabled !== 'true') return;
+
+  const DROP_RATIO = 0.4;
+
+  if (historicalAverage <= 0) return;
+  if (todayTotalSoFar / historicalAverage >= DROP_RATIO) return;
+
+  // Dedup : ne pas envoyer deux alertes dans la même fenêtre de 12h
+  const recent = await listNotifications(shopId, 20);
+  const twelveHoursAgo = Date.now() - 12 * 60 * 60 * 1000;
+  const alreadySent = recent.some(
+    (n) => n.type === 'activity_drop' && new Date(n.$createdAt).getTime() > twelveHoursAgo
+  );
+  if (alreadySent) return;
+
+  await createNotification(
+    shopId,
+    'activity_drop',
+    'Activité inhabituellement basse',
+    `Les ventes d'aujourd'hui sont nettement en dessous de la moyenne habituelle pour un ${weekdayLabel}.`
+  );
+}
+
 export async function triggerClosureReminderIfNeeded(shopId: string): Promise<void> {
   const shop = await getShopById(shopId);
   if (!shop || shop.closureReminderEnabled !== 'true') return;

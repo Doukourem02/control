@@ -12,16 +12,26 @@ const accountGet = mock.fn(async () => ({
   name: 'Owner',
 }));
 const createSessionAccount = mock.fn((_sessionSecret: string) => ({ get: accountGet }));
-const getOrCreateCurrentShop = mock.fn(async () => ({
+const getActiveShopForOwner = mock.fn(async () => ({
   $id: 'shop-1',
 }));
+const getUserProfileByUserId = mock.fn(async () => null as { accountRole: string; shopId: string } | null);
+const getActiveMemberByUserId = mock.fn(async () => null as { shopId: string } | null);
 
 req.cache[req.resolve('../config/appwrite')] = {
   exports: { createSessionAccount },
 } as unknown as NodeJS.Module;
 
 req.cache[req.resolve('../modules/shops/shops.service')] = {
-  exports: { getOrCreateCurrentShop },
+  exports: { getActiveShopForOwner },
+} as unknown as NodeJS.Module;
+
+req.cache[req.resolve('../modules/users/users.repository')] = {
+  exports: { getUserProfileByUserId },
+} as unknown as NodeJS.Module;
+
+req.cache[req.resolve('../modules/team/team.repository')] = {
+  exports: { getActiveMemberByUserId },
 } as unknown as NodeJS.Module;
 
 delete req.cache[req.resolve('./auth')];
@@ -58,10 +68,14 @@ beforeEach(() => {
     email: 'owner@example.com',
     name: 'Owner',
   }));
-  getOrCreateCurrentShop.mock.mockImplementation(async () => ({ $id: 'shop-1' }));
+  getActiveShopForOwner.mock.mockImplementation(async () => ({ $id: 'shop-1' }));
+  getUserProfileByUserId.mock.mockImplementation(async () => null);
+  getActiveMemberByUserId.mock.mockImplementation(async () => null);
   createSessionAccount.mock.resetCalls();
   accountGet.mock.resetCalls();
-  getOrCreateCurrentShop.mock.resetCalls();
+  getActiveShopForOwner.mock.resetCalls();
+  getUserProfileByUserId.mock.resetCalls();
+  getActiveMemberByUserId.mock.resetCalls();
 });
 
 describe('requireAuth', () => {
@@ -83,7 +97,7 @@ describe('requireAuth', () => {
 
   it('forwards shop provisioning failures to the error handler', async () => {
     const shopError = new Error('shops collection is missing');
-    getOrCreateCurrentShop.mock.mockImplementation(async () => {
+    getActiveShopForOwner.mock.mockImplementation(async () => {
       throw shopError;
     });
     const response = mockResponse();
@@ -95,5 +109,27 @@ describe('requireAuth', () => {
 
     assert.equal(response.statusCode, 200);
     assert.equal(forwardedError, shopError);
+  });
+
+  it('resolves the owner active store via profile.shopId (multi-boutique)', async () => {
+    getUserProfileByUserId.mock.mockImplementation(async () => ({
+      accountRole: 'owner',
+      shopId: 'shop-2',
+    }));
+    getActiveShopForOwner.mock.mockImplementation(async () => ({ $id: 'shop-2' }));
+
+    const request = mockRequest();
+    const response = mockResponse();
+    let nextCalls = 0;
+
+    await requireAuth(request, response as unknown as Response, (() => {
+      nextCalls += 1;
+    }) as NextFunction);
+
+    assert.equal(nextCalls, 1);
+    assert.equal(request.auth?.shopId, 'shop-2');
+    assert.equal(request.auth?.accountRole, 'owner');
+    assert.equal(getActiveShopForOwner.mock.calls.length, 1);
+    assert.deepEqual(getActiveShopForOwner.mock.calls[0].arguments, ['user-1', 'shop-2', 'Owner']);
   });
 });

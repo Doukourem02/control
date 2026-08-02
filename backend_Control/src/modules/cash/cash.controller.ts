@@ -2,7 +2,13 @@ import type { Request, Response } from 'express';
 
 import { getShopId } from '../../utils/http';
 import { triggerClosureReminderIfNeeded } from '../notifications/notifications.triggers';
-import { createCashClosure, getCashClosures, getTodaySummary, patchCashClosure } from './cash.service';
+import {
+  checkActivityDropIfNeeded,
+  createCashClosure,
+  getCashClosures,
+  getTodaySummary,
+  patchCashClosure,
+} from './cash.service';
 
 export async function getTodaySummaryController(request: Request, response: Response) {
   const date = typeof request.query.date === 'string' ? request.query.date : undefined;
@@ -11,6 +17,7 @@ export async function getTodaySummaryController(request: Request, response: Resp
 
   if (!summary.isClosed) {
     triggerClosureReminderIfNeeded(shopId).catch(() => {});
+    checkActivityDropIfNeeded(shopId).catch(() => {});
   }
 
   response.json({ summary });

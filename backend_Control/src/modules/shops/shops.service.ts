@@ -1,8 +1,9 @@
 import { BUCKETS } from '../../config/appwrite';
 import { userError } from '../../utils/http';
 import { decodeBase64Photo, getPhotoFile, replacePhoto } from '../../utils/photo-storage';
+import { ensureOrganizationForOwner } from '../organizations/organizations.service';
 import { getActiveMemberByUserId } from '../team/team.repository';
-import { createShopForUser, getShopById, updateShopById, type UpdateShopInput } from './shops.repository';
+import { createShopForUser, getShopById, updateShopById, type ShopRow, type UpdateShopInput } from './shops.repository';
 
 const MAX_LOGO_BYTES = 4 * 1024 * 1024; // 4 Mo — la photo est deja compressee cote app
 
@@ -17,7 +18,27 @@ export async function getOrCreateCurrentShop(userId: string, ownerName: string) 
   const existingShop = await getShopById(userId);
   if (existingShop) return existingShop;
 
-  return createShopForUser(userId, ownerName);
+  const organization = await ensureOrganizationForOwner(userId, ownerName);
+  return createShopForUser(userId, ownerName, organization.$id);
+}
+
+/**
+ * Resout la boutique active d'un owner : prefere le pointeur explicite
+ * (user_profiles.shopId, mis a jour par le store switcher) ; retombe sur la
+ * boutique primaire si absent/introuvable (comportement historique, et cas
+ * d'un tout nouvel owner sans boutique du tout).
+ */
+export async function getActiveShopForOwner(
+  userId: string,
+  profileShopId: string | undefined,
+  ownerName: string
+): Promise<ShopRow> {
+  if (profileShopId) {
+    const activeShop = await getShopById(profileShopId);
+    if (activeShop) return activeShop;
+  }
+
+  return getOrCreateCurrentShop(userId, ownerName);
 }
 
 function readOptionalText(value: unknown, maxLength: number) {
@@ -134,7 +155,7 @@ function readLowStockThreshold(value: unknown) {
   return String(parsed);
 }
 
-export async function updateCurrentShop(userId: string, body: Record<string, unknown>) {
+export async function updateCurrentShop(shopId: string, body: Record<string, unknown>) {
   const name = readOptionalText(body.name, 80);
   const currency = readCurrency(body.currency);
   const contact = readOptionalText(body.contact, 80);
@@ -172,16 +193,16 @@ export async function updateCurrentShop(userId: string, body: Record<string, unk
 
   const logo = decodeBase64Photo(body.logoPhoto, body.logoPhotoType, MAX_LOGO_BYTES);
   if (logo) {
-    const currentShop = await getShopById(userId);
+    const currentShop = await getShopById(shopId);
     input.logoFileId = await replacePhoto(
       BUCKETS.photos,
       currentShop?.logoFileId || undefined,
       logo.buffer,
-      `${userId}-${Date.now()}.${logo.mimeType.split('/')[1] ?? 'jpg'}`
+      `${shopId}-${Date.now()}.${logo.mimeType.split('/')[1] ?? 'jpg'}`
     );
   }
 
-  return updateShopById(userId, input);
+  return updateShopById(shopId, input);
 }
 
 export async function getShopLogo(shopId: string) {

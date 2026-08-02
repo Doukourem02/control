@@ -2,7 +2,7 @@ import { AppwriteException, ID, Query, type Models } from 'node-appwrite';
 import { COLLECTIONS, DATABASE_ID, databases } from '../../config/appwrite';
 import type { PaymentMethod, SaleRow } from '../../types/control';
 import { userError } from '../../utils/http';
-import { triggerStockLowAlert } from '../notifications/notifications.triggers';
+import { triggerStockLowAlert, triggerSuspiciousSaleAlert } from '../notifications/notifications.triggers';
 
 export type CreateSaleInput = {
   shopId: string;
@@ -51,9 +51,12 @@ export async function createSaleRecord(input: CreateSaleInput): Promise<SaleRow>
     throw userError('Stock insuffisant pour cette vente.', 409, 'STOCK_INSUFFICIENT');
   }
 
-  const totalAmount = input.totalAmount != null
-    ? Math.round(input.totalAmount)
-    : Math.round(input.quantity * (productDoc['sellingUnitPrice'] as number));
+  const expectedAmount = Math.round(input.quantity * (productDoc['sellingUnitPrice'] as number));
+  const totalAmount = input.totalAmount != null ? Math.round(input.totalAmount) : expectedAmount;
+
+  if (input.totalAmount != null) {
+    triggerSuspiciousSaleAlert(input.shopId, productDoc['name'] as string, expectedAmount, totalAmount).catch(() => {});
+  }
 
   const saleDoc = await databases.createDocument(DATABASE_ID, COLLECTIONS.sales, ID.unique(), {
     shopId: input.shopId,

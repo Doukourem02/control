@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 
-import { getOrCreateCurrentShop, getShopLogo, updateCurrentShop } from './shops.service';
+import { getShopLogo, updateCurrentShop } from './shops.service';
+import { getShopById } from './shops.repository';
 import { getShopId, sendError } from '../../utils/http';
 
 export async function getCurrentShop(request: Request, response: Response) {
@@ -9,7 +10,12 @@ export async function getCurrentShop(request: Request, response: Response) {
     return;
   }
 
-  const shop = await getOrCreateCurrentShop(request.auth.userId, request.auth.name);
+  const shop = await getShopById(getShopId(request));
+
+  if (!shop) {
+    sendError(response, 404, 'Boutique introuvable.', 'SHOP_NOT_FOUND');
+    return;
+  }
 
   response.json({ shop });
 }
@@ -20,7 +26,7 @@ export async function updateCurrentShopSettings(request: Request, response: Resp
     return;
   }
 
-  const shop = await updateCurrentShop(request.auth.userId, request.body);
+  const shop = await updateCurrentShop(getShopId(request), request.body);
 
   response.json({ shop });
 }

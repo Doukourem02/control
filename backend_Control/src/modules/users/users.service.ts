@@ -92,6 +92,7 @@ function createPendingSellerShop(ownerName: string): ShopRow {
     cashGapAlertsEnabled: 'true',
     defaultLowStockThreshold: '5',
     logoFileId: '',
+    organizationId: '',
   };
 }
 

@@ -52,10 +52,13 @@ export async function getTeamMembers(shopId: string) {
   return listMembersByShop(shopId);
 }
 
-export async function inviteMember(shopId: string, body: Record<string, unknown>) {
+export async function inviteMember(shopId: string, body: Record<string, unknown>, inviterRole: AccountRole) {
   const email = String(body.email ?? '').trim().toLowerCase();
   const name = String(body.name ?? '').trim();
-  const role = readInviteRole(body.role);
+  // Seul le proprietaire choisit librement le role invite (vendeuse/manager/
+  // comptable). Un manager qui recrute un "apprenti" ne peut le placer qu'au
+  // niveau vendeuse — jamais a son propre niveau ou au-dessus.
+  const role = inviterRole === 'owner' ? readInviteRole(body.role) : 'seller';
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw userError('Adresse email invalide.', 400, 'TEAM_EMAIL_INVALID');

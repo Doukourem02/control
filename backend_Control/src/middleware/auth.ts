@@ -3,7 +3,7 @@ import { AppwriteException } from 'node-appwrite';
 
 import { createSessionAccount } from '../config/appwrite';
 import { getShopById } from '../modules/shops/shops.repository';
-import { getOrCreateCurrentShop } from '../modules/shops/shops.service';
+import { getActiveShopForOwner } from '../modules/shops/shops.service';
 import { getActiveMemberByUserId } from '../modules/team/team.repository';
 import { getUserProfileByUserId, type AccountRole } from '../modules/users/users.repository';
 import { sendError } from '../utils/http';
@@ -51,7 +51,7 @@ export async function requireAuth(request: Request, response: Response, next: Ne
         const memberShop = memberShopId ? await getShopById(memberShopId) : null;
         shopId = memberShop?.$id ?? memberShopId;
       } else {
-        const shop = await getOrCreateCurrentShop(user.$id, user.name || user.email);
+        const shop = await getActiveShopForOwner(user.$id, profile?.shopId, user.name || user.email);
         shopId = shop.$id;
       }
     } catch (error) {

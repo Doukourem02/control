@@ -74,3 +74,8 @@ export async function upsertUserProfile(input: {
   const doc = await databases.createDocument(DATABASE_ID, COLLECTIONS.userProfiles, input.userId, payload);
   return toUserProfileRow(doc);
 }
+
+export async function updateUserProfileShopId(userId: string, shopId: string): Promise<UserProfileRow> {
+  const doc = await databases.updateDocument(DATABASE_ID, COLLECTIONS.userProfiles, userId, { shopId });
+  return toUserProfileRow(doc);
+}

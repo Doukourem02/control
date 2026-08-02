@@ -43,4 +43,5 @@ export const COLLECTIONS = {
   categories: 'categories',
   notifications: 'notifications',
   members: 'members',
+  organizations: 'organizations',
 } as const;

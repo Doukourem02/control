@@ -103,7 +103,7 @@ export function RoleSetupModal({
                 <MaterialCommunityIcons name="storefront-outline" size={28} color={colors.gray900} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }}>Propriétaire</Text>
+                <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }}>Manager</Text>
                 <Text style={{ color: colors.gray600, fontSize: 14, lineHeight: 20, fontWeight: '600', marginTop: 3 }}>
                   Je crée et je gère ma boutique
                 </Text>
@@ -142,7 +142,7 @@ export function RoleSetupModal({
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }}>Vendeur</Text>
                 <Text style={{ color: colors.gray600, fontSize: 14, lineHeight: 20, fontWeight: '600', marginTop: 3 }}>
-                  Je rejoins la boutique d’un propriétaire
+                  Je rejoins la boutique d’un manager
                 </Text>
               </View>
               <Feather name="chevron-right" size={22} color={colors.gray900} />

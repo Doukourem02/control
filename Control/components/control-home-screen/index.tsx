@@ -35,6 +35,7 @@ import { DataSettingsModal } from './settings/data-settings-modal';
 import { DisplaySettingsModal } from './settings/display-settings-modal';
 import { RoleSetupModal } from './settings/role-setup-modal';
 import { ShopSettingsModal } from './settings/shop-settings-modal';
+import { StoresSettingsModal } from './settings/stores-settings-modal';
 import { TeamSettingsModal } from './settings/team-settings-modal';
 import { BottomNav, type ControlExperienceRole, type NavKey } from './shared-ui';
 import { formatMoney, getInitials, isAmountsVisibleByDefault, needsShopSetup, todayDateKey } from './utils';
@@ -57,6 +58,7 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
   const [roleSetupLoading, setRoleSetupLoading] = useState(false);
   const [roleSetupError, setRoleSetupError] = useState('');
   const [shopSettingsVisible, setShopSettingsVisible] = useState(false);
+  const [storesSettingsVisible, setStoresSettingsVisible] = useState(false);
   const [cashSettingsVisible, setCashSettingsVisible] = useState(false);
   const [displaySettingsVisible, setDisplaySettingsVisible] = useState(false);
   const [alertsSettingsVisible, setAlertsSettingsVisible] = useState(false);
@@ -643,6 +645,7 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                   onEditAlerts={() => setAlertsSettingsVisible(true)}
                   onEditTeam={() => setTeamSettingsVisible(true)}
                   onEditData={() => setDataSettingsVisible(true)}
+                  onEditStores={() => setStoresSettingsVisible(true)}
                 />
               )}
             </Animated.View>
@@ -709,6 +712,12 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
         compact={compact}
         onClose={() => setShopSettingsVisible(false)}
         onSaved={refreshSession}
+      />
+      <StoresSettingsModal
+        visible={storesSettingsVisible}
+        compact={compact}
+        onClose={() => setStoresSettingsVisible(false)}
+        onSwitched={refreshSession}
       />
       <CashSettingsModal
         visible={cashSettingsVisible}
