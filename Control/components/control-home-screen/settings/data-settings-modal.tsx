@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native';
 import { formatDayLabel, shareExportFile, shiftDateKey, todayDateKey } from '../utils';
+import { colors } from '@/lib/theme';
 
 export function DataSettingsModal({
   visible,
@@ -69,7 +70,7 @@ export function DataSettingsModal({
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: colors.white,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             paddingHorizontal: 24,
@@ -81,8 +82,8 @@ export function DataSettingsModal({
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ gap: 2 }}>
-              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Données</Text>
-              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>Export et historique</Text>
+              <Text style={{ color: colors.gray900, fontSize: 22, fontWeight: '800' }}>Données</Text>
+              <Text style={{ color: colors.gray600, fontSize: 13 }}>Export et historique</Text>
             </View>
             <Pressable
               onPress={onClose}
@@ -90,48 +91,48 @@ export function DataSettingsModal({
                 width: 38,
                 height: 38,
                 borderRadius: 19,
-                backgroundColor: '#F5F5F5',
+                backgroundColor: colors.gray50,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed ? 0.68 : 1,
               })}
             >
-              <Feather name="x" size={20} color="#111111" />
+              <Feather name="x" size={20} color={colors.gray900} />
             </Pressable>
           </View>
 
           {/* Feedback banner */}
           {feedback ? (
-            <View style={{ backgroundColor: '#FFF3CD', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
-              <Text style={{ color: '#856404', fontSize: 13, fontWeight: '600' }}>{feedback}</Text>
+            <View style={{ backgroundColor: colors.warningSoft, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+              <Text style={{ color: colors.warningDark, fontSize: 13, fontWeight: '600' }}>{feedback}</Text>
             </View>
           ) : null}
 
           {/* Bilan PDF */}
-          <View style={{ borderRadius: 18, backgroundColor: '#F7F7F7', padding: 14, gap: 10 }}>
+          <View style={{ borderRadius: 18, backgroundColor: colors.gray50, padding: 14, gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <MaterialCommunityIcons name="file-chart-outline" size={22} color="#111111" />
+              <MaterialCommunityIcons name="file-chart-outline" size={22} color={colors.gray900} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Bilan journalier</Text>
-                <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 1 }}>Export PDF</Text>
+                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Bilan journalier</Text>
+                <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '600', marginTop: 1 }}>Export PDF</Text>
               </View>
             </View>
             {/* Date selector */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Pressable
                 onPress={() => setPdfDate(shiftDateKey(pdfDate, -1))}
-                style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center' }}
+                style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Feather name="chevron-left" size={16} color="#111111" />
+                <Feather name="chevron-left" size={16} color={colors.gray900} />
               </Pressable>
-              <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#EBEBEB', borderRadius: 10, paddingVertical: 6 }}>
-                <Text style={{ color: '#111111', fontSize: 13, fontWeight: '700' }}>{formatDayLabel(pdfDate)}</Text>
+              <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.gray100, borderRadius: 10, paddingVertical: 6 }}>
+                <Text style={{ color: colors.gray900, fontSize: 13, fontWeight: '700' }}>{formatDayLabel(pdfDate)}</Text>
               </View>
               <Pressable
                 onPress={() => pdfDate < today && setPdfDate(shiftDateKey(pdfDate, 1))}
-                style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center', opacity: pdfDate >= today ? 0.35 : 1 }}
+                style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center', opacity: pdfDate >= today ? 0.35 : 1 }}
               >
-                <Feather name="chevron-right" size={16} color="#111111" />
+                <Feather name="chevron-right" size={16} color={colors.gray900} />
               </Pressable>
             </View>
             <Pressable
@@ -139,64 +140,64 @@ export function DataSettingsModal({
               style={({ pressed }: { pressed: boolean }) => ({
                 height: 42,
                 borderRadius: 12,
-                backgroundColor: '#111111',
+                backgroundColor: colors.gray900,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed || pdfLoading ? 0.68 : 1,
               })}
             >
               {pdfLoading
-                ? <ActivityIndicator size="small" color="#FFFFFF" />
-                : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Exporter PDF</Text>
+                ? <ActivityIndicator size="small" color={colors.white} />
+                : <Text style={{ color: colors.white, fontSize: 14, fontWeight: '700' }}>Exporter PDF</Text>
               }
             </Pressable>
           </View>
 
           {/* Historique CSV */}
-          <View style={{ borderRadius: 18, backgroundColor: '#F7F7F7', padding: 14, gap: 10 }}>
+          <View style={{ borderRadius: 18, backgroundColor: colors.gray50, padding: 14, gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <MaterialCommunityIcons name="table-arrow-down" size={22} color="#111111" />
+              <MaterialCommunityIcons name="table-arrow-down" size={22} color={colors.gray900} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Historique</Text>
-                <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 1 }}>Export CSV sur une période</Text>
+                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Historique</Text>
+                <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '600', marginTop: 1 }}>Export CSV sur une période</Text>
               </View>
             </View>
             {/* From / To */}
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', width: 38 }}>Début</Text>
+                <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '600', width: 38 }}>Début</Text>
                 <Pressable
                   onPress={() => setCsvFrom(shiftDateKey(csvFrom, -1))}
-                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <Feather name="chevron-left" size={14} color="#111111" />
+                  <Feather name="chevron-left" size={14} color={colors.gray900} />
                 </Pressable>
-                <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#EBEBEB', borderRadius: 8, paddingVertical: 5 }}>
-                  <Text style={{ color: '#111111', fontSize: 13, fontWeight: '700' }}>{formatDayLabel(csvFrom)}</Text>
+                <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.gray100, borderRadius: 8, paddingVertical: 5 }}>
+                  <Text style={{ color: colors.gray900, fontSize: 13, fontWeight: '700' }}>{formatDayLabel(csvFrom)}</Text>
                 </View>
                 <Pressable
                   onPress={() => csvFrom < csvTo && setCsvFrom(shiftDateKey(csvFrom, 1))}
-                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center', opacity: csvFrom >= csvTo ? 0.35 : 1 }}
+                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center', opacity: csvFrom >= csvTo ? 0.35 : 1 }}
                 >
-                  <Feather name="chevron-right" size={14} color="#111111" />
+                  <Feather name="chevron-right" size={14} color={colors.gray900} />
                 </Pressable>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', width: 38 }}>Fin</Text>
+                <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '600', width: 38 }}>Fin</Text>
                 <Pressable
                   onPress={() => csvTo > csvFrom && setCsvTo(shiftDateKey(csvTo, -1))}
-                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center', opacity: csvTo <= csvFrom ? 0.35 : 1 }}
+                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center', opacity: csvTo <= csvFrom ? 0.35 : 1 }}
                 >
-                  <Feather name="chevron-left" size={14} color="#111111" />
+                  <Feather name="chevron-left" size={14} color={colors.gray900} />
                 </Pressable>
-                <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#EBEBEB', borderRadius: 8, paddingVertical: 5 }}>
-                  <Text style={{ color: '#111111', fontSize: 13, fontWeight: '700' }}>{formatDayLabel(csvTo)}</Text>
+                <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.gray100, borderRadius: 8, paddingVertical: 5 }}>
+                  <Text style={{ color: colors.gray900, fontSize: 13, fontWeight: '700' }}>{formatDayLabel(csvTo)}</Text>
                 </View>
                 <Pressable
                   onPress={() => csvTo < today && setCsvTo(shiftDateKey(csvTo, 1))}
-                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center', opacity: csvTo >= today ? 0.35 : 1 }}
+                  style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center', opacity: csvTo >= today ? 0.35 : 1 }}
                 >
-                  <Feather name="chevron-right" size={14} color="#111111" />
+                  <Feather name="chevron-right" size={14} color={colors.gray900} />
                 </Pressable>
               </View>
             </View>
@@ -205,15 +206,15 @@ export function DataSettingsModal({
               style={({ pressed }: { pressed: boolean }) => ({
                 height: 42,
                 borderRadius: 12,
-                backgroundColor: '#111111',
+                backgroundColor: colors.gray900,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed || csvLoading ? 0.68 : 1,
               })}
             >
               {csvLoading
-                ? <ActivityIndicator size="small" color="#FFFFFF" />
-                : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Exporter CSV</Text>
+                ? <ActivityIndicator size="small" color={colors.white} />
+                : <Text style={{ color: colors.white, fontSize: 14, fontWeight: '700' }}>Exporter CSV</Text>
               }
             </Pressable>
           </View>
@@ -223,17 +224,17 @@ export function DataSettingsModal({
             style={{
               minHeight: 52,
               borderRadius: 18,
-              backgroundColor: '#F7F7F7',
+              backgroundColor: colors.gray50,
               paddingHorizontal: 14,
               flexDirection: 'row',
               alignItems: 'center',
               gap: 12,
             }}
           >
-            <MaterialCommunityIcons name="cloud-check-outline" size={22} color="#111111" />
+            <MaterialCommunityIcons name="cloud-check-outline" size={22} color={colors.gray900} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Sauvegarde</Text>
-              <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 1 }}>Données isolées par boutique sur Appwrite</Text>
+              <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Sauvegarde</Text>
+              <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '600', marginTop: 1 }}>Données isolées par boutique sur Appwrite</Text>
             </View>
           </View>
         </View>

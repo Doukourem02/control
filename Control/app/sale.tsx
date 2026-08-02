@@ -23,6 +23,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/lib/theme';
 
 function formatMoney(value: number) {
   return `${Math.round(value).toLocaleString('fr-FR')} F`;
@@ -59,11 +60,11 @@ function ProductTile({
       style={({ pressed }: { pressed: boolean }) => ({
         flex: 1,
         aspectRatio: 1,
-        borderRadius: 24,
+        borderRadius: 16,
         borderCurve: 'continuous',
-        backgroundColor: selected ? '#111111' : '#F7F7F7',
+        backgroundColor: selected ? colors.gray900 : colors.gray50,
         borderWidth: 1.5,
-        borderColor: selected ? '#111111' : '#EFEFEF',
+        borderColor: selected ? colors.gray900 : colors.gray100,
         padding: 14,
         alignItems: 'center',
         justifyContent: 'center',
@@ -75,7 +76,7 @@ function ProductTile({
       <Text
         numberOfLines={2}
         style={{
-          color: selected ? '#FFFFFF' : '#111111',
+          color: selected ? colors.white : colors.gray900,
           fontSize: 14,
           fontWeight: '800',
           textAlign: 'center',
@@ -85,7 +86,7 @@ function ProductTile({
       </Text>
       <Text
         style={{
-          color: selected ? '#AAAAAA' : '#2A8DEB',
+          color: selected ? colors.gray400 : colors.primary,
           fontSize: 12,
           fontWeight: '700',
         }}
@@ -236,7 +237,7 @@ export default function SaleScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -245,7 +246,7 @@ export default function SaleScreen() {
           {isOffline && (
             <View
               style={{
-                backgroundColor: '#FFF3CD',
+                backgroundColor: colors.warningSoft,
                 paddingVertical: 8,
                 paddingHorizontal: 20,
                 flexDirection: 'row',
@@ -253,8 +254,8 @@ export default function SaleScreen() {
                 gap: 8,
               }}
             >
-              <Feather name="wifi-off" size={13} color="#856404" />
-              <Text style={{ color: '#856404', fontSize: 13, fontWeight: '600', flex: 1 }}>
+              <Feather name="wifi-off" size={13} color={colors.warningDark} />
+              <Text style={{ color: colors.warningDark, fontSize: 13, fontWeight: '600', flex: 1 }}>
                 Hors ligne — les ventes seront synchronisées à la reconnexion
               </Text>
             </View>
@@ -281,13 +282,13 @@ export default function SaleScreen() {
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="arrow-left" size={21} color="#111111" />
+                <Feather name="arrow-left" size={21} color={colors.gray900} />
               </Pressable>
               <Pressable
                 onPress={loadProducts}
@@ -295,26 +296,26 @@ export default function SaleScreen() {
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="refresh-cw" size={18} color="#777777" />
+                <Feather name="refresh-cw" size={18} color={colors.gray600} />
               </Pressable>
             </View>
 
             <View style={{ marginTop: 20, marginBottom: 20 }}>
-              <Text style={{ color: '#111111', fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
+              <Text style={{ color: colors.gray900, fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
                 Vente
               </Text>
               {selectedProduct ? (
-                <Text style={{ marginTop: 6, color: '#9A9A9A', fontSize: 15 }}>
+                <Text style={{ marginTop: 6, color: colors.gray500, fontSize: 15 }}>
                   {selectedProduct.name} · {selectedProduct.quantity} {selectedProduct.unit} en stock
                 </Text>
               ) : (
-                <Text style={{ marginTop: 6, color: '#9A9A9A', fontSize: 15 }}>
+                <Text style={{ marginTop: 6, color: colors.gray500, fontSize: 15 }}>
                   Selectionne un produit
                 </Text>
               )}
@@ -322,7 +323,7 @@ export default function SaleScreen() {
 
             {loading ? (
               <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                <ActivityIndicator color="#2A8DEB" />
+                <ActivityIndicator color={colors.primary} />
               </View>
             ) : (
               <View style={{ gap: 12 }}>

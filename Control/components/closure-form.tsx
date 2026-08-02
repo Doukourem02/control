@@ -1,6 +1,7 @@
 import React from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { colors } from '@/lib/theme';
 
 import type { TodaySummary } from '@/lib/control-data';
 
@@ -36,14 +37,14 @@ function ClosureSummaryRow({
         gap: 14,
       }}
     >
-      <Text style={{ flex: 1, color: '#777777', fontSize: 13, fontWeight: '700' }}>{label}</Text>
+      <Text style={{ flex: 1, color: colors.gray600, fontSize: 13, fontWeight: '700' }}>{label}</Text>
       <Text
         selectable
         numberOfLines={1}
         adjustsFontSizeToFit
         style={{
           maxWidth: '52%',
-          color: muted ? '#9A9A9A' : '#111111',
+          color: muted ? colors.gray500 : colors.gray900,
           fontSize: 14,
           fontWeight: '900',
           textAlign: 'right',
@@ -70,16 +71,16 @@ function ClosureMetricCard({
       style={{
         flex: 1,
         minHeight: 86,
-        borderRadius: 22,
+        borderRadius: 16,
         borderCurve: 'continuous',
-        backgroundColor: accent ? '#EFF7FF' : '#F7F7F7',
+        backgroundColor: accent ? colors.primarySoft : colors.gray50,
         borderWidth: 1,
-        borderColor: accent ? '#CDE7FF' : '#EFEFEF',
+        borderColor: accent ? colors.primaryDisabled : colors.gray100,
         padding: 16,
         justifyContent: 'space-between',
       }}
     >
-      <Text style={{ color: '#777777', fontSize: 13, fontWeight: '700' }}>
+      <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '700' }}>
         {label}
       </Text>
       <Text
@@ -87,7 +88,7 @@ function ClosureMetricCard({
         numberOfLines={1}
         adjustsFontSizeToFit
         style={{
-          color: '#111111',
+          color: colors.gray900,
           fontSize: accent ? 25 : 21,
           fontWeight: '900',
           fontVariant: ['tabular-nums'],
@@ -128,21 +129,21 @@ export function ClosureForm({
       </View>
 
       <View style={{ gap: 7 }}>
-        <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Note</Text>
+        <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Note</Text>
         <TextInput
           value={note}
           onChangeText={onNoteChange}
           placeholder="Commentaire de fin de journee"
-          placeholderTextColor="#B4B4B4"
+          placeholderTextColor={colors.gray400}
           style={{
             minHeight: 54,
             borderRadius: 18,
             borderCurve: 'continuous',
-            backgroundColor: '#F7F7F7',
+            backgroundColor: colors.gray50,
             borderWidth: 1,
-            borderColor: '#EEEEEE',
+            borderColor: colors.gray100,
             paddingHorizontal: 16,
-            color: '#111111',
+            color: colors.gray900,
             fontSize: 16,
             fontWeight: '600',
           }}
@@ -151,18 +152,18 @@ export function ClosureForm({
 
       <View
         style={{
-          borderRadius: 24,
+          borderRadius: 16,
           borderCurve: 'continuous',
-          backgroundColor: '#F7F7F7',
+          backgroundColor: colors.gray50,
           borderWidth: 1,
-          borderColor: '#EFEFEF',
+          borderColor: colors.gray100,
           padding: 18,
           gap: 8,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-          <Feather name="clipboard" size={17} color="#777777" />
-          <Text style={{ color: '#111111', fontSize: 16, fontWeight: '900' }}>
+          <Feather name="clipboard" size={17} color={colors.gray600} />
+          <Text style={{ color: colors.gray900, fontSize: 16, fontWeight: '900' }}>
             Detail de la journee
           </Text>
         </View>
@@ -185,7 +186,7 @@ export function ClosureForm({
         </View>
 
         {summary.closureCount > 0 ? (
-          <Text style={{ color: '#E5484D', fontSize: 12, lineHeight: 17, fontWeight: '700' }}>
+          <Text style={{ color: colors.danger, fontSize: 12, lineHeight: 17, fontWeight: '700' }}>
             {summary.closureCount === 1
               ? 'Une cloture existe deja pour cette journee.'
               : `${summary.closureCount} clotures existent deja pour cette journee.`}
@@ -194,13 +195,13 @@ export function ClosureForm({
       </View>
 
       {formError ? (
-        <Text selectable style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>
+        <Text selectable style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>
           {formError}
         </Text>
       ) : null}
 
       {successMessage ? (
-        <Text selectable style={{ color: '#2A8D55', fontSize: 13, fontWeight: '700' }}>
+        <Text selectable style={{ color: colors.successMuted, fontSize: 13, fontWeight: '700' }}>
           {successMessage}
         </Text>
       ) : null}
@@ -211,9 +212,9 @@ export function ClosureForm({
         disabled={disabled}
         style={({ pressed }: { pressed: boolean }) => ({
           height: 54,
-          borderRadius: 20,
+          borderRadius: 16,
           borderCurve: 'continuous',
-          backgroundColor: disabled ? '#9FCAEF' : '#2A8DEB',
+          backgroundColor: disabled ? colors.primaryDisabled : colors.primary,
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'row',
@@ -222,11 +223,11 @@ export function ClosureForm({
         })}
       >
         {saving ? (
-          <ActivityIndicator color="#FFFFFF" />
+          <ActivityIndicator color={colors.white} />
         ) : (
-          <Feather name="check-circle" size={20} color="#FFFFFF" />
+          <Feather name="check-circle" size={20} color={colors.white} />
         )}
-        <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+        <Text style={{ color: colors.white, fontSize: 16, fontWeight: '800' }}>
           {summary.isClosed ? 'Journee cloturee' : 'Cloturer la journee'}
         </Text>
       </Pressable>

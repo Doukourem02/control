@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { PreferenceToggle } from '../shared-ui';
 import { isPreferenceEnabled } from '../utils';
+import { colors } from '@/lib/theme';
 
 export function AlertsSettingsModal({
   visible,
@@ -76,7 +77,7 @@ export function AlertsSettingsModal({
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: colors.white,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             paddingHorizontal: 24,
@@ -87,8 +88,8 @@ export function AlertsSettingsModal({
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ gap: 2 }}>
-              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Alertes</Text>
-              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+              <Text style={{ color: colors.gray900, fontSize: 22, fontWeight: '800' }}>Alertes</Text>
+              <Text style={{ color: colors.gray600, fontSize: 13 }}>
                 Préférences avant les notifications
               </Text>
             </View>
@@ -98,13 +99,13 @@ export function AlertsSettingsModal({
                 width: 38,
                 height: 38,
                 borderRadius: 19,
-                backgroundColor: '#F5F5F5',
+                backgroundColor: colors.gray50,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed ? 0.68 : 1,
               })}
             >
-              <Feather name="x" size={20} color="#111111" />
+              <Feather name="x" size={20} color={colors.gray900} />
             </Pressable>
           </View>
 
@@ -130,19 +131,19 @@ export function AlertsSettingsModal({
           </View>
 
           <View style={{ gap: 7 }}>
-            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Seuil stock faible</Text>
+            <Text style={{ color: colors.gray700, fontSize: 13, fontWeight: '700' }}>Seuil stock faible</Text>
             <TextInput
               value={defaultLowStockThreshold}
               onChangeText={setDefaultLowStockThreshold}
               placeholder="5"
-              placeholderTextColor="#A8A8A8"
+              placeholderTextColor={colors.gray400}
               keyboardType="number-pad"
               style={{
                 height: 52,
                 borderRadius: 18,
-                backgroundColor: '#F7F7F7',
+                backgroundColor: colors.gray50,
                 paddingHorizontal: 16,
-                color: '#111111',
+                color: colors.gray900,
                 fontSize: 16,
                 fontWeight: '700',
               }}
@@ -150,7 +151,7 @@ export function AlertsSettingsModal({
           </View>
 
           {errorMessage ? (
-            <Text style={{ color: '#B42318', fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
+            <Text style={{ color: colors.dangerDark, fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
           ) : null}
 
           <Pressable
@@ -158,17 +159,17 @@ export function AlertsSettingsModal({
             onPress={handleSave}
             style={({ pressed }: { pressed: boolean }) => ({
               height: 56,
-              borderRadius: 22,
-              backgroundColor: '#050505',
+              borderRadius: 16,
+              backgroundColor: colors.ink,
               alignItems: 'center',
               justifyContent: 'center',
               opacity: pressed || saving ? 0.72 : 1,
             })}
           >
             {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
+              <Text style={{ color: colors.white, fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
             )}
           </Pressable>
         </View>

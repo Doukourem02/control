@@ -1,4 +1,5 @@
 import type { TodaySummary } from '@/lib/control-data';
+import { colors } from '@/lib/theme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { type ComponentProps } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -10,14 +11,16 @@ export function EcartsTile({
   subtitle,
   icon,
   accent,
+  bg = colors.gray50,
   compact,
-  subtitleColor = '#A8A8A8',
+  subtitleColor = colors.gray400,
   onPress,
 }: {
   title: string;
   subtitle: string;
   icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
   accent: string;
+  bg?: string;
   compact: boolean;
   subtitleColor?: string;
   onPress?: () => void;
@@ -32,17 +35,15 @@ export function EcartsTile({
       style={({ pressed }: { pressed: boolean }) => ({
         width: '48%',
         height: compact ? 158 : 176,
-        borderRadius: 28,
+        borderRadius: 16,
         borderCurve: 'continuous',
-        backgroundColor: '#F7F7F7',
-        borderWidth: 1,
-        borderColor: '#F0F0F0',
+        backgroundColor: bg,
         paddingTop: compact ? 22 : 24,
         paddingHorizontal: compact ? 22 : 24,
         paddingBottom: compact ? 20 : 22,
         opacity: pressed ? 0.68 : 1,
         transform: [{ scale: pressed ? 0.985 : 1 }],
-        boxShadow: '0 8px 18px rgba(0, 0, 0, 0.018)',
+        boxShadow: '0 8px 18px rgba(0, 0, 0, 0.03)',
       })}
     >
       <View
@@ -56,7 +57,7 @@ export function EcartsTile({
           justifyContent: 'center',
         }}
       >
-        <MaterialCommunityIcons name={icon} size={glyphSize} color="#FFFFFF" />
+        <MaterialCommunityIcons name={icon} size={glyphSize} color={colors.white} />
       </View>
 
       <View style={{ gap: 5, marginTop: compact ? 30 : 40 }}>
@@ -65,7 +66,7 @@ export function EcartsTile({
           adjustsFontSizeToFit
           minimumFontScale={0.82}
           style={{
-            color: '#111111',
+            color: colors.gray900,
             fontSize: compact ? 17 : 18,
             lineHeight: compact ? 21 : 22,
             fontWeight: '700',
@@ -110,7 +111,7 @@ export function MissingMenu({
 }) {
   const hiddenValue = '•••';
   const hasGap = summary.latestCashGap !== 0;
-  const gapColor = summary.latestCashGap < 0 ? '#E5484D' : '#34C875';
+  const gapColor = summary.latestCashGap < 0 ? colors.danger : colors.successMuted;
   const expectedValue = amountsVisible ? formatMoney(summary.physicalCashExpected) : hiddenValue;
   const latestGapValue = amountsVisible ? formatMoney(summary.latestCashGap) : hiddenValue;
   const showSellerCashJournal = role === 'seller';
@@ -125,22 +126,24 @@ export function MissingMenu({
       }}
     >
       <View style={{ gap: 14 }}>
-        <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Contrôle caisse</Text>
+        <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '700' }}>Contrôle caisse</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 }}>
           <EcartsTile
             title="Cash attendu"
             subtitle={expectedValue}
-            subtitleColor="#A8A8A8"
+            subtitleColor={colors.gray500}
             icon="cash"
-            accent="#4C9BFF"
+            accent={colors.primary}
+            bg={colors.primarySoft}
             compact={compact}
           />
           <EcartsTile
             title="Dernier écart"
             subtitle={latestGapValue}
-            subtitleColor={hasGap ? gapColor : '#A8A8A8'}
+            subtitleColor={hasGap ? gapColor : colors.gray500}
             icon={hasGap ? 'alert' : 'check'}
-            accent="#FF8A4C"
+            accent={colors.accentOrange}
+            bg={colors.accentOrangeSoft}
             compact={compact}
           />
         </View>
@@ -148,13 +151,14 @@ export function MissingMenu({
 
       {showSellerCashJournal ? (
         <View style={{ gap: 14 }}>
-          <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Journal caisse</Text>
+          <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '700' }}>Journal caisse</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 }}>
             <EcartsTile
               title="Mouvements"
               subtitle="Ventes et sorties"
               icon="history"
-              accent="#3B3B3B"
+              accent={colors.accentDeep}
+              bg={colors.accentDeepSoft}
               compact={compact}
               onPress={onOpenCashJournal}
             />
@@ -162,7 +166,8 @@ export function MissingMenu({
               title="Dépense"
               subtitle="Sortie caisse"
               icon="cash-minus"
-              accent="#F59E0B"
+              accent={colors.warning}
+              bg={colors.warningSoft}
               compact={compact}
               onPress={onOpenExpense}
             />
@@ -171,13 +176,14 @@ export function MissingMenu({
       ) : null}
 
       <View style={{ gap: 14 }}>
-        <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>Stock</Text>
+        <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '700' }}>Stock</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 }}>
           <EcartsTile
             title="Historique"
             subtitle="Manquants stock"
             icon="clipboard-list-outline"
-            accent="#3B3B3B"
+            accent={colors.accentDeep}
+            bg={colors.accentDeepSoft}
             compact={compact}
             onPress={onOpenMissingHistory}
           />
@@ -185,7 +191,8 @@ export function MissingMenu({
             title="Manquant"
             subtitle="Déclarer une perte"
             icon="alert-outline"
-            accent="#E5484D"
+            accent={colors.danger}
+            bg={colors.dangerSoft}
             compact={compact}
             onPress={onOpenMissing}
           />
@@ -195,9 +202,9 @@ export function MissingMenu({
       {!hasGap ? (
         <View
           style={{
-            borderRadius: 22,
+            borderRadius: 16,
             borderCurve: 'continuous',
-            backgroundColor: '#F7F7F7',
+            backgroundColor: colors.successSoft,
             paddingHorizontal: 20,
             paddingVertical: 18,
             flexDirection: 'row',
@@ -211,16 +218,16 @@ export function MissingMenu({
               height: 40,
               borderRadius: 14,
               borderCurve: 'continuous',
-              backgroundColor: '#E8F8F0',
+              backgroundColor: colors.white,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <MaterialCommunityIcons name="check" size={20} color="#08784F" />
+            <MaterialCommunityIcons name="check" size={20} color={colors.success} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: '#111111', fontSize: 15, fontWeight: '700' }}>Rien à signaler</Text>
-            <Text style={{ color: '#8E8E8E', fontSize: 13, lineHeight: 18, marginTop: 2 }}>
+            <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '700' }}>Rien à signaler</Text>
+            <Text style={{ color: colors.gray600, fontSize: 13, lineHeight: 18, marginTop: 2 }}>
               Aucun écart de caisse et aucun manquant en attente.
             </Text>
           </View>

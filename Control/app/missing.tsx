@@ -21,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/lib/theme';
 
 const reasons: { label: string; value: MissingReason }[] = [
   { label: 'Perdu', value: 'perdu' },
@@ -83,11 +84,11 @@ function ProductOption({
       onPress={onPress}
       style={({ pressed }: { pressed: boolean }) => ({
         minHeight: 66,
-        borderRadius: 20,
+        borderRadius: 16,
         borderCurve: 'continuous',
-        backgroundColor: selected ? '#111111' : '#F7F7F7',
+        backgroundColor: selected ? colors.gray900 : colors.gray50,
         borderWidth: 1,
-        borderColor: selected ? '#111111' : '#EFEFEF',
+        borderColor: selected ? colors.gray900 : colors.gray100,
         padding: 14,
         flexDirection: 'row',
         alignItems: 'center',
@@ -97,10 +98,10 @@ function ProductOption({
       })}
     >
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: selected ? '#FFFFFF' : '#111111', fontSize: 15, fontWeight: '800' }}>
+        <Text numberOfLines={1} style={{ color: selected ? colors.white : colors.gray900, fontSize: 15, fontWeight: '800' }}>
           {product.name}
         </Text>
-        <Text numberOfLines={1} style={{ marginTop: 3, color: selected ? '#CFCFCF' : '#9A9A9A', fontSize: 13 }}>
+        <Text numberOfLines={1} style={{ marginTop: 3, color: selected ? colors.gray300 : colors.gray500, fontSize: 13 }}>
           {product.quantity} {product.unit} disponible
         </Text>
       </View>
@@ -113,11 +114,11 @@ function MissingItem({ missing }: { missing: MissingRow }) {
     <View
       style={{
         minHeight: 66,
-        borderRadius: 20,
+        borderRadius: 16,
         borderCurve: 'continuous',
-        backgroundColor: '#FFF5F5',
+        backgroundColor: colors.dangerSoft,
         borderWidth: 1,
-        borderColor: '#FFD7D9',
+        borderColor: colors.dangerSoft,
         padding: 14,
         flexDirection: 'row',
         alignItems: 'center',
@@ -126,14 +127,14 @@ function MissingItem({ missing }: { missing: MissingRow }) {
       }}
     >
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
+        <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>
           {missing.productName}
         </Text>
-        <Text numberOfLines={1} style={{ marginTop: 3, color: '#9A9A9A', fontSize: 13 }}>
+        <Text numberOfLines={1} style={{ marginTop: 3, color: colors.gray500, fontSize: 13 }}>
           {missing.reason} · {formatDateTime(missing.$createdAt)}
         </Text>
       </View>
-      <Text style={{ color: '#E5484D', fontSize: 14, fontWeight: '800' }}>
+      <Text style={{ color: colors.danger, fontSize: 14, fontWeight: '800' }}>
         -{missing.quantity} {missing.unit}
       </Text>
     </View>
@@ -227,7 +228,7 @@ export default function MissingScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -256,13 +257,13 @@ export default function MissingScreen() {
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="arrow-left" size={21} color="#111111" />
+                <Feather name="arrow-left" size={21} color={colors.gray900} />
               </Pressable>
               <Pressable
                 onPress={loadData}
@@ -270,21 +271,21 @@ export default function MissingScreen() {
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="refresh-cw" size={18} color="#777777" />
+                <Feather name="refresh-cw" size={18} color={colors.gray600} />
               </Pressable>
             </View>
 
             <View style={{ marginTop: 26, gap: 8 }}>
-              <Text style={{ color: '#111111', fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
+              <Text style={{ color: colors.gray900, fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
                 {historyOnly ? 'Historique' : 'Manquant'}
               </Text>
-              <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
+              <Text style={{ color: colors.gray500, fontSize: 15, lineHeight: 21 }}>
                 {historyOnly
                   ? 'Retrouve les pertes et casses par date.'
                   : selectedProduct
@@ -298,11 +299,11 @@ export default function MissingScreen() {
                 style={{
                   marginTop: 22,
                   minHeight: 52,
-                  borderRadius: 20,
+                  borderRadius: 16,
                   borderCurve: 'continuous',
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   borderWidth: 1,
-                  borderColor: '#EEEEEE',
+                  borderColor: colors.gray100,
                   paddingHorizontal: 8,
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -320,12 +321,12 @@ export default function MissingScreen() {
                     opacity: pressed ? 0.62 : 1,
                   })}
                 >
-                  <Feather name="chevron-left" size={22} color="#777777" />
+                  <Feather name="chevron-left" size={22} color={colors.gray600} />
                 </Pressable>
                 <Text
                   numberOfLines={1}
                   adjustsFontSizeToFit
-                  style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '800', textAlign: 'center' }}
+                  style={{ flex: 1, color: colors.gray900, fontSize: 16, fontWeight: '800', textAlign: 'center' }}
                 >
                   {formatBusinessDate(selectedDate)}
                 </Text>
@@ -341,7 +342,7 @@ export default function MissingScreen() {
                     opacity: selectedDate === todayKey ? 0.28 : pressed ? 0.62 : 1,
                   })}
                 >
-                  <Feather name="chevron-right" size={22} color="#777777" />
+                  <Feather name="chevron-right" size={22} color={colors.gray600} />
                 </Pressable>
               </View>
             ) : null}
@@ -349,29 +350,29 @@ export default function MissingScreen() {
             {!historyOnly ? (
               <>
                 <View style={{ marginTop: 26, gap: 13 }}>
-                  <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>Produit</Text>
+                  <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }}>Produit</Text>
 
                   {loading ? (
                     <View style={{ paddingVertical: 22, alignItems: 'center' }}>
-                      <ActivityIndicator color="#E5484D" />
+                      <ActivityIndicator color={colors.danger} />
                     </View>
                   ) : products.length === 0 ? (
                     <View
                       style={{
                         minHeight: 86,
-                        borderRadius: 22,
+                        borderRadius: 16,
                         borderCurve: 'continuous',
-                        backgroundColor: '#F7F7F7',
+                        backgroundColor: colors.gray50,
                         borderWidth: 1,
-                        borderColor: '#EFEFEF',
+                        borderColor: colors.gray100,
                         padding: 18,
                         justifyContent: 'center',
                       }}
                     >
-                      <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
+                      <Text style={{ color: colors.gray900, fontSize: 16, fontWeight: '800' }}>
                         Aucun stock
                       </Text>
-                      <Text style={{ marginTop: 5, color: '#9A9A9A', fontSize: 14 }}>
+                      <Text style={{ marginTop: 5, color: colors.gray500, fontSize: 14 }}>
                         Ajoute un produit avant de declarer un manquant.
                       </Text>
                     </View>
@@ -388,7 +389,7 @@ export default function MissingScreen() {
                 </View>
 
                 <View style={{ marginTop: 26, gap: 13 }}>
-                  <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>Raison</Text>
+                  <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }}>Raison</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
                     {reasons.map((item) => {
                       const selected = reason === item.value;
@@ -400,7 +401,7 @@ export default function MissingScreen() {
                           style={({ pressed }: { pressed: boolean }) => ({
                             minHeight: 38,
                             borderRadius: 19,
-                            backgroundColor: selected ? '#E5484D' : '#F2F2F2',
+                            backgroundColor: selected ? colors.danger : colors.gray100,
                             paddingHorizontal: 14,
                             justifyContent: 'center',
                             opacity: pressed ? 0.72 : 1,
@@ -408,7 +409,7 @@ export default function MissingScreen() {
                         >
                           <Text
                             style={{
-                              color: selected ? '#FFFFFF' : '#777777',
+                              color: selected ? colors.white : colors.gray600,
                               fontSize: 13,
                               fontWeight: '800',
                             }}
@@ -423,22 +424,22 @@ export default function MissingScreen() {
 
                 <View style={{ marginTop: 26, gap: 15 }}>
                   <View style={{ gap: 7 }}>
-                    <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Quantite</Text>
+                    <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Quantite</Text>
                     <TextInput
                       value={quantity}
                       onChangeText={setQuantity}
                       placeholder="0"
-                      placeholderTextColor="#B4B4B4"
+                      placeholderTextColor={colors.gray400}
                       keyboardType="decimal-pad"
                       style={{
                         minHeight: 54,
                         borderRadius: 18,
                         borderCurve: 'continuous',
-                        backgroundColor: '#F7F7F7',
+                        backgroundColor: colors.gray50,
                         borderWidth: 1,
-                        borderColor: '#EEEEEE',
+                        borderColor: colors.gray100,
                         paddingHorizontal: 16,
-                        color: '#111111',
+                        color: colors.gray900,
                         fontSize: 18,
                         fontWeight: '800',
                       }}
@@ -446,23 +447,23 @@ export default function MissingScreen() {
                   </View>
 
                   <View style={{ gap: 7 }}>
-                    <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>
+                    <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>
                       Note (optionnel)
                     </Text>
                     <TextInput
                       value={note}
                       onChangeText={setNote}
                       placeholder="Detail ou contexte..."
-                      placeholderTextColor="#B4B4B4"
+                      placeholderTextColor={colors.gray400}
                       style={{
                         minHeight: 54,
                         borderRadius: 18,
                         borderCurve: 'continuous',
-                        backgroundColor: '#F7F7F7',
+                        backgroundColor: colors.gray50,
                         borderWidth: 1,
-                        borderColor: '#EEEEEE',
+                        borderColor: colors.gray100,
                         paddingHorizontal: 16,
-                        color: '#111111',
+                        color: colors.gray900,
                         fontSize: 16,
                         fontWeight: '600',
                       }}
@@ -470,13 +471,13 @@ export default function MissingScreen() {
                   </View>
 
                   {formError ? (
-                    <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>
+                    <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>
                       {formError}
                     </Text>
                   ) : null}
 
                   {successMessage ? (
-                    <Text style={{ color: '#2A8D55', fontSize: 13, fontWeight: '700' }}>
+                    <Text style={{ color: colors.successMuted, fontSize: 13, fontWeight: '700' }}>
                       {successMessage}
                     </Text>
                   ) : null}
@@ -486,9 +487,9 @@ export default function MissingScreen() {
                     disabled={saving}
                     style={({ pressed }: { pressed: boolean }) => ({
                       height: 54,
-                      borderRadius: 20,
+                      borderRadius: 16,
                       borderCurve: 'continuous',
-                      backgroundColor: saving ? '#F0A0A3' : '#E5484D',
+                      backgroundColor: saving ? colors.dangerDark : colors.danger,
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexDirection: 'row',
@@ -497,11 +498,11 @@ export default function MissingScreen() {
                     })}
                   >
                     {saving ? (
-                      <ActivityIndicator color="#FFFFFF" />
+                      <ActivityIndicator color={colors.white} />
                     ) : (
-                      <Feather name="alert-triangle" size={20} color="#FFFFFF" />
+                      <Feather name="alert-triangle" size={20} color={colors.white} />
                     )}
-                    <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                    <Text style={{ color: colors.white, fontSize: 16, fontWeight: '800' }}>
                       Declarer le manquant
                     </Text>
                   </Pressable>
@@ -511,31 +512,31 @@ export default function MissingScreen() {
 
             {historyOnly ? (
               <View style={{ marginTop: 26, gap: 13 }}>
-                <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>
+                <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }}>
                   Historique du {formatBusinessDate(selectedDate)}
                 </Text>
 
                 {loading ? (
                   <View style={{ paddingVertical: 22, alignItems: 'center' }}>
-                    <ActivityIndicator color="#E5484D" />
+                    <ActivityIndicator color={colors.danger} />
                   </View>
                 ) : recentMissings.length === 0 ? (
                   <View
                     style={{
                       minHeight: 78,
-                      borderRadius: 22,
+                      borderRadius: 16,
                       borderCurve: 'continuous',
-                      backgroundColor: '#F7F7F7',
+                      backgroundColor: colors.gray50,
                       borderWidth: 1,
-                      borderColor: '#EFEFEF',
+                      borderColor: colors.gray100,
                       padding: 18,
                       justifyContent: 'center',
                     }}
                   >
-                    <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
+                    <Text style={{ color: colors.gray900, fontSize: 16, fontWeight: '800' }}>
                       Aucun manquant enregistre
                     </Text>
-                    <Text style={{ marginTop: 5, color: '#9A9A9A', fontSize: 14 }}>
+                    <Text style={{ marginTop: 5, color: colors.gray500, fontSize: 14 }}>
                       Les pertes et manquants de cette date apparaitront ici.
                     </Text>
                   </View>

@@ -1,4 +1,5 @@
 import { useControlAuth } from '@/lib/control-auth';
+import { colors } from '@/lib/theme';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SettingsRow, SettingsSection, type ControlExperienceRole } from './shared-ui';
 import {
@@ -64,25 +65,25 @@ export function ProfileMenu({
             width: compact ? 78 : 86,
             height: compact ? 78 : 86,
             borderRadius: compact ? 39 : 43,
-            backgroundColor: '#E8F4EF',
+            backgroundColor: colors.primarySoft,
             borderWidth: 1,
-            borderColor: '#D8E9E1',
+            borderColor: colors.primaryDisabled,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Text style={{ color: '#08784F', fontSize: 24, fontWeight: '800' }}>
+          <Text style={{ color: colors.primary, fontSize: 24, fontWeight: '800' }}>
             {getInitials(shopName)}
           </Text>
         </View>
         <View style={{ alignItems: 'center', gap: 2 }}>
           <Text
             numberOfLines={1}
-            style={{ color: '#050505', fontSize: 25, lineHeight: 30, fontWeight: '800' }}
+            style={{ color: colors.gray900, fontSize: 25, lineHeight: 30, fontWeight: '800' }}
           >
             {shopName}
           </Text>
-          <Text numberOfLines={1} style={{ color: '#6F6F6F', fontSize: 15, fontWeight: '500' }}>
+          <Text numberOfLines={1} style={{ color: colors.gray600, fontSize: 15, fontWeight: '500' }}>
             {email}
           </Text>
         </View>
@@ -92,16 +93,16 @@ export function ProfileMenu({
             style={({ pressed }: { pressed: boolean }) => ({
               height: 42,
               paddingHorizontal: 24,
-              borderRadius: 22,
+              borderRadius: 16,
               borderWidth: 1.5,
-              borderColor: '#08784F',
+              borderColor: colors.primary,
               alignItems: 'center',
               justifyContent: 'center',
               opacity: pressed ? 0.65 : 1,
               marginTop: 8,
             })}
           >
-            <Text style={{ color: '#08784F', fontSize: 14, fontWeight: '800' }}>
+            <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '800' }}>
               Modifier
             </Text>
           </Pressable>
@@ -111,13 +112,13 @@ export function ProfileMenu({
               height: 34,
               paddingHorizontal: 14,
               borderRadius: 17,
-              backgroundColor: '#F0F4FF',
+              backgroundColor: colors.primarySoft,
               alignItems: 'center',
               justifyContent: 'center',
               marginTop: 6,
             }}
           >
-            <Text style={{ color: '#2A5BE8', fontSize: 13, fontWeight: '800' }}>
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '800' }}>
               Espace vendeur
             </Text>
           </View>

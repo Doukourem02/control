@@ -6,6 +6,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { readPaymentMethods } from '../utils';
+import { colors } from '@/lib/theme';
 
 export function CashSettingsModal({
   visible,
@@ -85,7 +86,7 @@ export function CashSettingsModal({
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: colors.white,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             paddingHorizontal: 24,
@@ -96,8 +97,8 @@ export function CashSettingsModal({
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ gap: 2 }}>
-              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Caisse</Text>
-              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+              <Text style={{ color: colors.gray900, fontSize: 22, fontWeight: '800' }}>Caisse</Text>
+              <Text style={{ color: colors.gray600, fontSize: 13 }}>
                 Devise, paiements et clôture
               </Text>
             </View>
@@ -107,18 +108,18 @@ export function CashSettingsModal({
                 width: 38,
                 height: 38,
                 borderRadius: 19,
-                backgroundColor: '#F5F5F5',
+                backgroundColor: colors.gray50,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed ? 0.68 : 1,
               })}
             >
-              <Feather name="x" size={20} color="#111111" />
+              <Feather name="x" size={20} color={colors.gray900} />
             </Pressable>
           </View>
 
           <View style={{ gap: 8 }}>
-            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Devise</Text>
+            <Text style={{ color: colors.gray700, fontSize: 13, fontWeight: '700' }}>Devise</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {currencies.map((item) => {
                 const selected = currency === item;
@@ -130,14 +131,14 @@ export function CashSettingsModal({
                     style={({ pressed }: { pressed: boolean }) => ({
                       height: 42,
                       paddingHorizontal: 16,
-                      borderRadius: 21,
-                      backgroundColor: selected ? '#050505' : '#F7F7F7',
+                      borderRadius: 16,
+                      backgroundColor: selected ? colors.ink : colors.gray50,
                       alignItems: 'center',
                       justifyContent: 'center',
                       opacity: pressed ? 0.72 : 1,
                     })}
                   >
-                    <Text style={{ color: selected ? '#FFFFFF' : '#111111', fontSize: 14, fontWeight: '800' }}>
+                    <Text style={{ color: selected ? colors.white : colors.gray900, fontSize: 14, fontWeight: '800' }}>
                       {item}
                     </Text>
                   </Pressable>
@@ -147,7 +148,7 @@ export function CashSettingsModal({
           </View>
 
           <View style={{ gap: 8 }}>
-            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Modes de paiement</Text>
+            <Text style={{ color: colors.gray700, fontSize: 13, fontWeight: '700' }}>Modes de paiement</Text>
             {[
               { label: 'Cash', enabled: cashEnabled, onToggle: setCashEnabled },
               { label: 'Mobile Money', enabled: mobileMoneyEnabled, onToggle: setMobileMoneyEnabled },
@@ -158,7 +159,7 @@ export function CashSettingsModal({
                 style={({ pressed }: { pressed: boolean }) => ({
                   minHeight: 48,
                   borderRadius: 16,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   paddingHorizontal: 14,
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -166,30 +167,30 @@ export function CashSettingsModal({
                   opacity: pressed ? 0.72 : 1,
                 })}
               >
-                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '700' }}>{method.label}</Text>
+                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '700' }}>{method.label}</Text>
                 <MaterialCommunityIcons
                   name={method.enabled ? 'check-circle' : 'circle-outline'}
                   size={23}
-                  color={method.enabled ? '#08784F' : '#A8A8A8'}
+                  color={method.enabled ? colors.success : colors.gray400}
                 />
               </Pressable>
             ))}
           </View>
 
           <View style={{ gap: 7 }}>
-            <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>Heure de clôture par défaut</Text>
+            <Text style={{ color: colors.gray700, fontSize: 13, fontWeight: '700' }}>Heure de clôture par défaut</Text>
             <TextInput
               value={defaultClosingTime}
               onChangeText={setDefaultClosingTime}
               placeholder="20:00"
-              placeholderTextColor="#A8A8A8"
+              placeholderTextColor={colors.gray400}
               keyboardType="numbers-and-punctuation"
               style={{
                 height: 52,
                 borderRadius: 18,
-                backgroundColor: '#F7F7F7',
+                backgroundColor: colors.gray50,
                 paddingHorizontal: 16,
-                color: '#111111',
+                color: colors.gray900,
                 fontSize: 16,
                 fontWeight: '700',
               }}
@@ -197,7 +198,7 @@ export function CashSettingsModal({
           </View>
 
           {errorMessage ? (
-            <Text style={{ color: '#B42318', fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
+            <Text style={{ color: colors.dangerDark, fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
           ) : null}
 
           <Pressable
@@ -205,17 +206,17 @@ export function CashSettingsModal({
             onPress={handleSave}
             style={({ pressed }: { pressed: boolean }) => ({
               height: 56,
-              borderRadius: 22,
-              backgroundColor: '#050505',
+              borderRadius: 16,
+              backgroundColor: colors.ink,
               alignItems: 'center',
               justifyContent: 'center',
               opacity: pressed || saving ? 0.72 : 1,
             })}
           >
             {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
+              <Text style={{ color: colors.white, fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
             )}
           </Pressable>
         </View>

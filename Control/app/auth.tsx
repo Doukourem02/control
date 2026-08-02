@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { colors } from '@/lib/theme';
 
 type AuthMode = 'login' | 'register' | 'recover' | 'reset';
 type RegisterRole = 'owner' | 'seller';
@@ -285,7 +286,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -327,7 +328,7 @@ export default function AuthScreen() {
               <View style={{ gap: 8, alignItems: 'center' }}>
                 <Text
                   style={{
-                    color: '#111111',
+                    color: colors.gray900,
                     fontSize: compact ? 24 : 26,
                     lineHeight: compact ? 29 : 31,
                     fontWeight: '700',
@@ -339,7 +340,7 @@ export default function AuthScreen() {
                 <Text
                   style={{
                     maxWidth: 300,
-                    color: '#8A8A8A',
+                    color: colors.gray600,
                     fontSize: 14,
                     lineHeight: 20,
                     fontWeight: '500',
@@ -350,7 +351,7 @@ export default function AuthScreen() {
                 </Text>
                 {isRecover || isReset ? (
                   <Pressable onPress={backToLogin} disabled={saving} hitSlop={8}>
-                    <Text style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>
+                    <Text style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>
                       Retour a la connexion
                     </Text>
                   </Pressable>
@@ -373,11 +374,11 @@ export default function AuthScreen() {
                           disabled={saving}
                           style={({ pressed }: { pressed: boolean }) => ({
                             minHeight: 92,
-                            borderRadius: 22,
+                            borderRadius: 16,
                             borderCurve: 'continuous',
-                            backgroundColor: '#F5F5F5',
+                            backgroundColor: colors.gray50,
                             borderWidth: 1,
-                            borderColor: '#ECECEC',
+                            borderColor: colors.gray100,
                             paddingHorizontal: 16,
                             paddingVertical: 14,
                             flexDirection: 'row',
@@ -390,9 +391,9 @@ export default function AuthScreen() {
                             style={{
                               width: 48,
                               height: 48,
-                              borderRadius: 18,
+                              borderRadius: 14,
                               borderCurve: 'continuous',
-                              backgroundColor: role === 'owner' ? '#E8F4EF' : '#F0F4FF',
+                              backgroundColor: role === 'owner' ? colors.primarySoft : colors.accentDeepSoft,
                               alignItems: 'center',
                               justifyContent: 'center',
                             }}
@@ -400,20 +401,20 @@ export default function AuthScreen() {
                             <MaterialCommunityIcons
                               name={role === 'owner' ? 'storefront-outline' : 'account-outline'}
                               size={25}
-                              color={role === 'owner' ? '#08784F' : '#2A5BE8'}
+                              color={role === 'owner' ? colors.primary : colors.accentDeep}
                             />
                           </View>
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text style={{ color: '#111111', fontSize: 17, fontWeight: '900' }}>
+                            <Text style={{ color: colors.gray900, fontSize: 17, fontWeight: '900' }}>
                               {role === 'owner' ? 'Je suis propriétaire' : 'Je suis vendeur'}
                             </Text>
-                            <Text style={{ color: '#777777', fontSize: 13, lineHeight: 18, fontWeight: '600', marginTop: 3 }}>
+                            <Text style={{ color: colors.gray600, fontSize: 13, lineHeight: 18, fontWeight: '600', marginTop: 3 }}>
                               {role === 'owner'
                                 ? 'Créer et gérer ma boutique.'
                                 : 'Rejoindre une boutique avec un code.'}
                             </Text>
                           </View>
-                          <Feather name="chevron-right" size={22} color="#A0A0A0" />
+                          <Feather name="chevron-right" size={22} color={colors.gray500} />
                         </Pressable>
                       ))}
                     </View>
@@ -429,21 +430,21 @@ export default function AuthScreen() {
                               gap: 12,
                               borderRadius: 12,
                               borderCurve: 'continuous',
-                              backgroundColor: '#F5F5F5',
+                              backgroundColor: colors.gray50,
                               paddingHorizontal: 16,
                             }}
                           >
-                            <Feather name="mail" size={18} color="#292929" />
+                            <Feather name="mail" size={18} color={colors.gray800} />
                             <TextInput
                               value={email}
                               onChangeText={setEmail}
                               placeholder="Email invité"
-                              placeholderTextColor="#8A8A8A"
+                              placeholderTextColor={colors.gray600}
                               keyboardType="email-address"
                               autoCapitalize="none"
                               autoCorrect={false}
                               textContentType="emailAddress"
-                              style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                              style={{ flex: 1, color: colors.gray900, fontSize: 16, fontWeight: '600' }}
                             />
                           </View>
                           <View
@@ -454,19 +455,19 @@ export default function AuthScreen() {
                               gap: 12,
                               borderRadius: 12,
                               borderCurve: 'continuous',
-                              backgroundColor: '#F5F5F5',
+                              backgroundColor: colors.gray50,
                               paddingHorizontal: 16,
                             }}
                           >
-                            <Feather name="key" size={18} color="#292929" />
+                            <Feather name="key" size={18} color={colors.gray800} />
                             <TextInput
                               value={inviteCode}
                               onChangeText={(value) => setInviteCode(value.toUpperCase())}
                               placeholder="Code d'invitation"
-                              placeholderTextColor="#8A8A8A"
+                              placeholderTextColor={colors.gray600}
                               autoCapitalize="characters"
                               autoCorrect={false}
-                              style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '800', letterSpacing: 1.4 }}
+                              style={{ flex: 1, color: colors.gray900, fontSize: 16, fontWeight: '800', letterSpacing: 1.4 }}
                             />
                           </View>
                         </>
@@ -477,7 +478,7 @@ export default function AuthScreen() {
                               style={{
                                 borderRadius: 16,
                                 borderCurve: 'continuous',
-                                backgroundColor: '#EAF8F0',
+                                backgroundColor: colors.successSoft,
                                 paddingHorizontal: 14,
                                 paddingVertical: 12,
                                 flexDirection: 'row',
@@ -485,12 +486,12 @@ export default function AuthScreen() {
                                 gap: 10,
                               }}
                             >
-                              <Feather name="check-circle" size={20} color="#08784F" />
+                              <Feather name="check-circle" size={20} color={colors.success} />
                               <View style={{ flex: 1, minWidth: 0 }}>
-                                <Text style={{ color: '#08784F', fontSize: 14, fontWeight: '900' }}>
+                                <Text style={{ color: colors.success, fontSize: 14, fontWeight: '900' }}>
                                   Invitation validée
                                 </Text>
-                                <Text numberOfLines={1} style={{ color: '#08784F', fontSize: 12, fontWeight: '700', marginTop: 1 }}>
+                                <Text numberOfLines={1} style={{ color: colors.success, fontSize: 12, fontWeight: '700', marginTop: 1 }}>
                                   {sellerInvite.shopName}
                                 </Text>
                               </View>
@@ -505,25 +506,25 @@ export default function AuthScreen() {
                               gap: 12,
                               borderRadius: 12,
                               borderCurve: 'continuous',
-                              backgroundColor: '#F5F5F5',
+                              backgroundColor: colors.gray50,
                               paddingHorizontal: 16,
                             }}
                           >
-                            <Feather name={registerRole === 'owner' ? 'briefcase' : 'user'} size={18} color="#292929" />
+                            <Feather name={registerRole === 'owner' ? 'briefcase' : 'user'} size={18} color={colors.gray800} />
                             <TextInput
                               value={name}
                               onChangeText={setName}
                               placeholder={registerRole === 'owner' ? 'Nom de la boutique' : 'Nom complet du vendeur'}
-                              placeholderTextColor="#8A8A8A"
+                              placeholderTextColor={colors.gray600}
                               autoCapitalize="words"
-                              style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                              style={{ flex: 1, color: colors.gray900, fontSize: 16, fontWeight: '600' }}
                             />
                           </View>
                         </>
                       )}
 
                       <Pressable onPress={backToRoleChoice} disabled={saving} hitSlop={8}>
-                        <Text style={{ color: '#252525', fontSize: 14, fontWeight: '800' }}>
+                        <Text style={{ color: colors.gray800, fontSize: 14, fontWeight: '800' }}>
                           Changer de statut
                         </Text>
                       </Pressable>
@@ -540,21 +541,21 @@ export default function AuthScreen() {
                       gap: 12,
                       borderRadius: 12,
                       borderCurve: 'continuous',
-                      backgroundColor: '#F5F5F5',
+                      backgroundColor: colors.gray50,
                       paddingHorizontal: 16,
                     }}
                   >
-                    <Feather name="mail" size={18} color="#292929" />
+                    <Feather name="mail" size={18} color={colors.gray800} />
                     <TextInput
                       value={email}
                       onChangeText={setEmail}
                       placeholder="Adresse email"
-                      placeholderTextColor="#8A8A8A"
+                      placeholderTextColor={colors.gray600}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
                       textContentType="emailAddress"
-                      style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                      style={{ flex: 1, color: colors.gray900, fontSize: 16, fontWeight: '600' }}
                     />
                   </View>
                 ) : null}
@@ -568,22 +569,22 @@ export default function AuthScreen() {
                       gap: 12,
                       borderRadius: 12,
                       borderCurve: 'continuous',
-                      backgroundColor: '#F5F5F5',
+                      backgroundColor: colors.gray50,
                       paddingHorizontal: 16,
                     }}
                   >
-                    <Feather name="lock" size={18} color="#292929" />
+                    <Feather name="lock" size={18} color={colors.gray800} />
                     <TextInput
                       value={password}
                       onChangeText={setPassword}
                       placeholder={isReset ? 'Nouveau mot de passe' : 'Mot de passe'}
-                      placeholderTextColor="#8A8A8A"
+                      placeholderTextColor={colors.gray600}
                       secureTextEntry={!passwordVisible}
                       textContentType={isRegister || isReset ? 'newPassword' : 'password'}
-                      style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                      style={{ flex: 1, color: colors.gray900, fontSize: 16, fontWeight: '600' }}
                     />
                     <Pressable onPress={() => setPasswordVisible((current) => !current)} hitSlop={10}>
-                      <Feather name={passwordVisible ? 'eye-off' : 'eye'} size={18} color="#8A8A8A" />
+                      <Feather name={passwordVisible ? 'eye-off' : 'eye'} size={18} color={colors.gray600} />
                     </Pressable>
                   </View>
                 ) : null}
@@ -597,38 +598,38 @@ export default function AuthScreen() {
                       gap: 12,
                       borderRadius: 12,
                       borderCurve: 'continuous',
-                      backgroundColor: '#F5F5F5',
+                      backgroundColor: colors.gray50,
                       paddingHorizontal: 16,
                     }}
                   >
-                    <Feather name="lock" size={18} color="#292929" />
+                    <Feather name="lock" size={18} color={colors.gray800} />
                     <TextInput
                       value={passwordConfirm}
                       onChangeText={setPasswordConfirm}
                       placeholder="Confirmer le mot de passe"
-                      placeholderTextColor="#8A8A8A"
+                      placeholderTextColor={colors.gray600}
                       secureTextEntry={!passwordVisible}
                       textContentType="newPassword"
-                      style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
+                      style={{ flex: 1, color: colors.gray900, fontSize: 16, fontWeight: '600' }}
                     />
                   </View>
                 ) : null}
 
                 {!isRegister && !isRecover && !isReset ? (
                   <Pressable onPress={openRecovery} disabled={saving} hitSlop={8}>
-                    <Text style={{ color: '#252525', fontSize: 14, fontWeight: '700' }}>
+                    <Text style={{ color: colors.gray800, fontSize: 14, fontWeight: '700' }}>
                       Mot de passe oublié ?
                     </Text>
                   </Pressable>
                 ) : null}
 
                 {errorMessage ? (
-                  <Text selectable style={{ color: '#B42318', fontSize: 14, fontWeight: '700' }}>
+                  <Text selectable style={{ color: colors.dangerDark, fontSize: 14, fontWeight: '700' }}>
                     {errorMessage}
                   </Text>
                 ) : null}
                 {socialMessage ? (
-                  <Text selectable style={{ color: '#08784F', fontSize: 14, fontWeight: '700' }}>
+                  <Text selectable style={{ color: colors.success, fontSize: 14, fontWeight: '700' }}>
                     {socialMessage}
                   </Text>
                 ) : null}
@@ -643,15 +644,15 @@ export default function AuthScreen() {
                     marginTop: 8,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 24,
-                    backgroundColor: saving ? '#2A2A2A' : '#000000',
+                    borderRadius: 16,
+                    backgroundColor: saving ? colors.primaryMuted : colors.primary,
                     opacity: pressed ? 0.86 : 1,
                   })}
                 >
                   {saving ? (
-                    <ActivityIndicator color="#FFFFFF" />
+                    <ActivityIndicator color={colors.white} />
                   ) : (
-                    <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                    <Text style={{ color: colors.white, fontSize: 16, fontWeight: '800' }}>
                       {isReset
                         ? 'Mettre a jour'
                         : isRecover
@@ -669,14 +670,14 @@ export default function AuthScreen() {
               {!isRecover && !isReset && !isRegisterRoleChoice && !isSellerInviteStep ? (
                 <View style={{ gap: 14 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={{ flex: 1, height: 1, backgroundColor: '#E5E5E5' }} />
-                    <Text style={{ color: '#8A8A8A', fontSize: 13, fontWeight: '700' }}>ou</Text>
-                    <View style={{ flex: 1, height: 1, backgroundColor: '#E5E5E5' }} />
+                    <View style={{ flex: 1, height: 1, backgroundColor: colors.gray200 }} />
+                    <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '700' }}>ou</Text>
+                    <View style={{ flex: 1, height: 1, backgroundColor: colors.gray200 }} />
                   </View>
 
                   <Text
                     style={{
-                      color: '#8A8A8A',
+                      color: colors.gray600,
                       fontSize: 12,
                       lineHeight: 17,
                       textAlign: 'center',
@@ -707,7 +708,7 @@ export default function AuthScreen() {
                           justifyContent: 'center',
                           borderRadius: 12,
                           borderCurve: 'continuous',
-                          backgroundColor: '#F7F7F7',
+                          backgroundColor: colors.gray50,
                           opacity: saving ? 0.45 : pressed ? 0.7 : 1,
                         })}
                       >
@@ -720,12 +721,12 @@ export default function AuthScreen() {
 
               {!isRecover && !isReset ? (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 6, rowGap: 3, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: '#9A9A9A', fontSize: 13, lineHeight: 19, fontWeight: '500' }}>
+                  <Text style={{ color: colors.gray500, fontSize: 13, lineHeight: 19, fontWeight: '500' }}>
                     {isRegister ? 'Déjà inscrit' : 'Nouveau ici'}
                   </Text>
-                  <Text style={{ color: '#C8C8C8', fontSize: 13, lineHeight: 19 }}>·</Text>
+                  <Text style={{ color: colors.gray300, fontSize: 13, lineHeight: 19 }}>·</Text>
                   <Pressable onPress={toggleMode} disabled={saving} hitSlop={8}>
-                    <Text style={{ color: '#111111', fontSize: 13, lineHeight: 19, fontWeight: '700' }}>
+                    <Text style={{ color: colors.gray900, fontSize: 13, lineHeight: 19, fontWeight: '700' }}>
                       {isRegister ? 'Connexion' : 'Créer un compte'}
                     </Text>
                   </Pressable>
@@ -735,7 +736,7 @@ export default function AuthScreen() {
 
             <Text
               style={{
-                color: '#5F5F5F',
+                color: colors.gray700,
                 fontSize: 12,
                 lineHeight: 18,
                 textAlign: 'center',

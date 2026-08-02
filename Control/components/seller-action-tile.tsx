@@ -1,3 +1,4 @@
+import { colors } from '@/lib/theme';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { ComponentProps } from 'react';
@@ -30,11 +31,11 @@ export function SellerActionTile({ action, compact = false, onPress }: SellerAct
       style={({ pressed }: { pressed: boolean }) => ({
         width: '48%',
         height: compact ? 158 : 176,
-        borderRadius: 28,
+        borderRadius: 16,
         borderCurve: 'continuous',
-        backgroundColor: '#F7F7F7',
+        backgroundColor: colors.white,
         borderWidth: 1,
-        borderColor: '#F0F0F0',
+        borderColor: colors.gray100,
         paddingTop: compact ? 22 : 24,
         paddingHorizontal: compact ? 22 : 24,
         paddingBottom: compact ? 20 : 22,
@@ -55,9 +56,9 @@ export function SellerActionTile({ action, compact = false, onPress }: SellerAct
         }}
       >
         {action.icon.family === 'material' ? (
-          <MaterialCommunityIcons name={action.icon.name} size={glyphSize} color="#FFFFFF" />
+          <MaterialCommunityIcons name={action.icon.name} size={glyphSize} color={colors.white} />
         ) : (
-          <Feather name={action.icon.name} size={glyphSize} color="#FFFFFF" />
+          <Feather name={action.icon.name} size={glyphSize} color={colors.white} />
         )}
       </View>
 
@@ -67,7 +68,7 @@ export function SellerActionTile({ action, compact = false, onPress }: SellerAct
           adjustsFontSizeToFit
           minimumFontScale={0.82}
           style={{
-            color: '#111111',
+            color: colors.gray900,
             fontSize: compact ? 17 : 18,
             lineHeight: compact ? 21 : 22,
             fontWeight: '700',
@@ -78,7 +79,7 @@ export function SellerActionTile({ action, compact = false, onPress }: SellerAct
         <Text
           numberOfLines={1}
           style={{
-            color: '#A8A8A8',
+            color: colors.gray400,
             fontSize: compact ? 14 : 15,
             lineHeight: compact ? 17 : 18,
             fontWeight: '400',

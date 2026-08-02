@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { needsShopSetup } from '../utils';
+import { colors } from '@/lib/theme';
 
 export function ShopSettingsModal({
   visible,
@@ -75,7 +76,7 @@ export function ShopSettingsModal({
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: colors.white,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             paddingHorizontal: 24,
@@ -86,8 +87,8 @@ export function ShopSettingsModal({
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ gap: 2 }}>
-              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Boutique</Text>
-              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+              <Text style={{ color: colors.gray900, fontSize: 22, fontWeight: '800' }}>Boutique</Text>
+              <Text style={{ color: colors.gray600, fontSize: 13 }}>
                 Nom et informations visibles dans CONTROL
               </Text>
             </View>
@@ -97,13 +98,13 @@ export function ShopSettingsModal({
                 width: 38,
                 height: 38,
                 borderRadius: 19,
-                backgroundColor: '#F5F5F5',
+                backgroundColor: colors.gray50,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed ? 0.68 : 1,
               })}
             >
-              <Feather name="x" size={20} color="#111111" />
+              <Feather name="x" size={20} color={colors.gray900} />
             </Pressable>
           </View>
 
@@ -114,18 +115,18 @@ export function ShopSettingsModal({
             { label: 'Horaires', value: openingHours, onChangeText: setOpeningHours, placeholder: 'Ex. 8h - 20h' },
           ].map((field) => (
             <View key={field.label} style={{ gap: 7 }}>
-              <Text style={{ color: '#4A4A4A', fontSize: 13, fontWeight: '700' }}>{field.label}</Text>
+              <Text style={{ color: colors.gray700, fontSize: 13, fontWeight: '700' }}>{field.label}</Text>
               <TextInput
                 value={field.value}
                 onChangeText={field.onChangeText}
                 placeholder={field.placeholder}
-                placeholderTextColor="#A8A8A8"
+                placeholderTextColor={colors.gray400}
                 style={{
                   height: 52,
                   borderRadius: 18,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   paddingHorizontal: 16,
-                  color: '#111111',
+                  color: colors.gray900,
                   fontSize: 16,
                   fontWeight: field.label === 'Nom de la boutique' ? '700' : '500',
                 }}
@@ -134,7 +135,7 @@ export function ShopSettingsModal({
           ))}
 
           {errorMessage ? (
-            <Text style={{ color: '#B42318', fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
+            <Text style={{ color: colors.dangerDark, fontSize: 13, fontWeight: '700' }}>{errorMessage}</Text>
           ) : null}
 
           <Pressable
@@ -142,17 +143,17 @@ export function ShopSettingsModal({
             onPress={handleSave}
             style={({ pressed }: { pressed: boolean }) => ({
               height: 56,
-              borderRadius: 22,
-              backgroundColor: '#050505',
+              borderRadius: 16,
+              backgroundColor: colors.ink,
               alignItems: 'center',
               justifyContent: 'center',
               opacity: pressed || saving ? 0.72 : 1,
             })}
           >
             {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
+              <Text style={{ color: colors.white, fontSize: 17, fontWeight: '800' }}>Enregistrer</Text>
             )}
           </Pressable>
         </View>

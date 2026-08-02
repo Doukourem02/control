@@ -5,6 +5,7 @@ import {
   type AnalyticsType,
   type StockMovementRow,
 } from '@/lib/control-data';
+import { colors } from '@/lib/theme';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEffect, useState, type ComponentProps } from 'react';
@@ -30,10 +31,12 @@ export function ReportChart({
   data,
   selectedDate,
   amountsVisible,
+  accent = colors.primary,
 }: {
   data: AnalyticsData;
   selectedDate: string;
   amountsVisible: boolean;
+  accent?: string;
 }) {
   const [chartWidth, setChartWidth] = useState(0);
   const chartHeight = 214;
@@ -66,7 +69,7 @@ export function ReportChart({
   if (points.length === 0) {
     return (
       <View style={{ height: chartHeight, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: '#BBBBBB', fontSize: 14, fontWeight: '600' }}>Aucune donnée</Text>
+        <Text style={{ color: colors.gray300, fontSize: 14, fontWeight: '600' }}>Aucune donnée</Text>
       </View>
     );
   }
@@ -87,7 +90,7 @@ export function ReportChart({
             right: 0,
             top: plotTop + (plotHeight / 5) * index,
             height: 1,
-            backgroundColor: '#EFEFEF',
+            backgroundColor: colors.gray100,
           }}
         />
       ))}
@@ -103,7 +106,7 @@ export function ReportChart({
               width: 8,
               height: 8,
               borderRadius: 4,
-              backgroundColor: '#111111',
+              backgroundColor: accent,
               zIndex: 4,
             }}
           />
@@ -116,7 +119,7 @@ export function ReportChart({
               height: tooltipHeight,
               borderRadius: 12,
               borderCurve: 'continuous',
-              backgroundColor: '#111111',
+              backgroundColor: colors.ink,
               paddingLeft: 22,
               paddingRight: 14,
               paddingVertical: 10,
@@ -132,17 +135,17 @@ export function ReportChart({
                 width: 3,
                 height: tooltipHeight - 26,
                 borderRadius: 2,
-                backgroundColor: '#D8D8D8',
+                backgroundColor: accent,
               }}
             />
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
-              style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] }}
+              style={{ color: colors.white, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] }}
             >
               {amountsVisible ? formatMoney(activePoint.amount) : '•••'}
             </Text>
-            <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '700', marginTop: 3 }}>
+            <Text numberOfLines={1} style={{ color: colors.gray400, fontSize: 12, fontWeight: '700', marginTop: 3 }}>
               {formatTooltipDate(activePoint.date)}
             </Text>
           </View>
@@ -166,7 +169,7 @@ export function ReportChart({
                   left: labelLeft,
                   bottom: 0,
                   width: labelWidth,
-                  color: i === activeIndex ? '#111111' : '#9B9B9B',
+                  color: i === activeIndex ? colors.gray900 : colors.gray400,
                   fontSize: 13,
                   fontWeight: i === activeIndex ? '800' : '600',
                   textAlign: i === 0 ? 'left' : i === points.length - 1 ? 'right' : 'center',
@@ -189,7 +192,8 @@ export function StockMovementItem({
   movement: StockMovementRow;
 }) {
   const isDecrease = movement.type === 'sale' || movement.type === 'missing';
-  const accent = isDecrease ? '#E5484D' : '#34C875';
+  const accent = isDecrease ? colors.danger : colors.successMuted;
+  const bg = isDecrease ? colors.dangerSoft : colors.successSoft;
   const iconName: ComponentProps<typeof Feather>['name'] = isDecrease ? 'arrow-up-right' : 'arrow-down-left';
   const signedQuantity = `${isDecrease ? '-' : '+'}${Math.abs(movement.quantity).toLocaleString('fr-FR')} ${movement.unit}`;
   const details = [getStockMovementLabel(movement.type), formatStockMovementDate(movement.$createdAt)]
@@ -201,16 +205,21 @@ export function StockMovementItem({
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 14,
+        backgroundColor: colors.white,
+        borderRadius: 16,
+        borderCurve: 'continuous',
+        paddingVertical: 12,
+        paddingHorizontal: 14,
         gap: 12,
+        boxShadow: '0 6px 16px rgba(23, 23, 31, 0.05)',
       }}
     >
       <View
         style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: '#F7F7F7',
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: bg,
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -219,17 +228,29 @@ export function StockMovementItem({
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>
+        <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>
           {movement.productName}
         </Text>
-        <Text numberOfLines={1} style={{ color: '#A4A4A4', fontSize: 12, marginTop: 1 }}>
+        <Text numberOfLines={1} style={{ color: colors.gray500, fontSize: 12, marginTop: 1 }}>
           {details}
         </Text>
       </View>
 
-      <Text style={{ color: accent, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
-        {signedQuantity}
-      </Text>
+      <View
+        style={{
+          backgroundColor: bg,
+          borderRadius: 12,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+        }}
+      >
+        <Text
+          numberOfLines={1}
+          style={{ color: accent, fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] }}
+        >
+          {signedQuantity}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -243,10 +264,10 @@ export function ReportSectionTitle({
 }) {
   return (
     <View style={{ marginBottom: 10 }}>
-      <Text style={{ color: '#111111', fontSize: 16, fontWeight: '800' }}>
+      <Text style={{ color: colors.gray900, fontSize: 16, fontWeight: '800' }}>
         {title}
       </Text>
-      <Text style={{ color: '#A4A4A4', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+      <Text style={{ color: colors.gray500, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
         {date}
       </Text>
     </View>
@@ -288,8 +309,10 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
         ? 100
         : 0;
   const trendUp = trendPct >= 0;
-  const accent = type === 'sales' ? '#2A8DEB' : '#FF6B35';
-  const historyAccent = type === 'sales' ? '#34C875' : '#E5484D';
+  const accent = type === 'sales' ? colors.primary : colors.accentOrange;
+  const accentSoft = type === 'sales' ? colors.primarySoft : colors.accentOrangeSoft;
+  const historyAccent = type === 'sales' ? colors.successMuted : colors.danger;
+  const historyBg = type === 'sales' ? colors.successSoft : colors.dangerSoft;
   const reportDateLabel = formatReportDate(selectedDate);
   const sectionDateLabel = formatSectionDate(selectedDate);
   const todayKey = dateToKey(new Date());
@@ -321,29 +344,35 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
         style={{
           marginTop: compact ? 20 : 28,
           flexDirection: 'row',
-          backgroundColor: '#F0F0F0',
+          backgroundColor: colors.gray100,
           borderRadius: 16,
           padding: 4,
         }}
       >
-        {(['sales', 'expenses'] as AnalyticsType[]).map((t) => (
-          <Pressable
-            key={t}
-            onPress={() => setType(t)}
-            style={{
-              flex: 1,
-              height: 38,
-              borderRadius: 13,
-              backgroundColor: type === t ? '#FFFFFF' : 'transparent',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: type === t ? '#111111' : '#9A9A9A' }}>
-              {t === 'sales' ? 'Ventes' : 'Sorties'}
-            </Text>
-          </Pressable>
-        ))}
+        {(['sales', 'expenses'] as AnalyticsType[]).map((t) => {
+          const isActive = type === t;
+          const tAccent = t === 'sales' ? colors.primary : colors.accentOrange;
+          const tAccentSoft = t === 'sales' ? colors.primarySoft : colors.accentOrangeSoft;
+
+          return (
+            <Pressable
+              key={t}
+              onPress={() => setType(t)}
+              style={{
+                flex: 1,
+                height: 38,
+                borderRadius: 13,
+                backgroundColor: isActive ? tAccentSoft : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 15, fontWeight: '700', color: isActive ? tAccent : colors.gray500 }}>
+                {t === 'sales' ? 'Ventes' : 'Sorties'}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {/* Date */}
@@ -366,10 +395,10 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
             opacity: pressed ? 0.62 : 1,
           })}
         >
-          <Text style={{ color: '#111111', fontSize: 16, fontWeight: '600' }}>
+          <Text style={{ color: colors.gray900, fontSize: 16, fontWeight: '600' }}>
             {reportDateLabel}
           </Text>
-          <MaterialCommunityIcons name="menu-down" size={22} color="#777777" />
+          <MaterialCommunityIcons name="menu-down" size={22} color={colors.gray600} />
         </Pressable>
 
         <Pressable
@@ -378,14 +407,13 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: '#FFFFFF',
+            backgroundColor: colors.primarySoft,
             alignItems: 'center',
             justifyContent: 'center',
             opacity: pressed ? 0.68 : 1,
-            boxShadow: '0 10px 24px rgba(0, 0, 0, 0.045)',
           })}
         >
-          <MaterialCommunityIcons name="calendar-month-outline" size={23} color="#2A8DEB" />
+          <MaterialCommunityIcons name="calendar-month-outline" size={23} color={colors.primary} />
         </Pressable>
       </View>
 
@@ -393,11 +421,11 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
         <View
           style={{
             marginTop: 8,
-            borderRadius: 22,
+            borderRadius: 16,
             borderCurve: 'continuous',
-            backgroundColor: '#F7F7F7',
+            backgroundColor: colors.gray50,
             borderWidth: 1,
-            borderColor: '#EEEEEE',
+            borderColor: colors.gray100,
             padding: 12,
           }}
         >
@@ -421,10 +449,10 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
                 opacity: pressed ? 0.64 : 1,
               })}
             >
-              <Feather name="chevron-left" size={20} color="#777777" />
+              <Feather name="chevron-left" size={20} color={colors.gray600} />
             </Pressable>
 
-            <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800', textTransform: 'capitalize' }}>
+            <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800', textTransform: 'capitalize' }}>
               {formatCalendarMonth(calendarMonth)}
             </Text>
 
@@ -440,7 +468,7 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
                 opacity: !canGoNextMonth ? 0.28 : pressed ? 0.64 : 1,
               })}
             >
-              <Feather name="chevron-right" size={20} color="#777777" />
+              <Feather name="chevron-right" size={20} color={colors.gray600} />
             </Pressable>
           </View>
 
@@ -450,7 +478,7 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
                 key={`${label}-${index}`}
                 style={{
                   flex: 1,
-                  color: '#A0A0A0',
+                  color: colors.gray400,
                   fontSize: 11,
                   fontWeight: '800',
                   textAlign: 'center',
@@ -480,15 +508,15 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
                         borderRadius: 19,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: isSelected ? '#111111' : isToday ? '#EAF4FF' : 'transparent',
+                        backgroundColor: isSelected ? colors.primary : isToday ? colors.primarySoft : 'transparent',
                         borderWidth: isToday && !isSelected ? 1 : 0,
-                        borderColor: '#B8DCFF',
+                        borderColor: colors.primaryDisabled,
                         opacity: isFuture ? 0.28 : pressed ? 0.62 : 1,
                       })}
                     >
                       <Text
                         style={{
-                          color: isSelected ? '#FFFFFF' : isToday ? '#2A8DEB' : '#111111',
+                          color: isSelected ? colors.white : isToday ? colors.primary : colors.gray900,
                           fontSize: 14,
                           fontWeight: isSelected || isToday ? '800' : '700',
                         }}
@@ -512,7 +540,7 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
               marginTop: 10,
               paddingHorizontal: 14,
               borderRadius: 17,
-              backgroundColor: '#FFFFFF',
+              backgroundColor: colors.primarySoft,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
@@ -520,21 +548,31 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
               opacity: pressed ? 0.64 : 1,
             })}
           >
-            <MaterialCommunityIcons name="calendar-today" size={18} color="#2A8DEB" />
-            <Text style={{ color: '#111111', fontSize: 13, fontWeight: '800' }}>{"Aujourd'hui"}</Text>
+            <MaterialCommunityIcons name="calendar-today" size={18} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '800' }}>{"Aujourd'hui"}</Text>
           </Pressable>
         </View>
       ) : null}
 
-      {/* Total + tendance */}
-      <View style={{ marginTop: compact ? 12 : 16 }}>
-        <Text style={{ color: '#9A9A9A', fontSize: 13, fontWeight: '500' }}>
+      {/* Total + tendance + graphique */}
+      <View
+        style={{
+          marginTop: compact ? 12 : 16,
+          backgroundColor: accentSoft,
+          borderRadius: 16,
+          borderCurve: 'continuous',
+          paddingHorizontal: 16,
+          paddingTop: 16,
+          paddingBottom: 4,
+        }}
+      >
+        <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '500' }}>
           Total {type === 'sales' ? 'Ventes' : 'Sorties'}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
           <Text
             style={{
-              color: '#111111',
+              color: colors.gray900,
               fontSize: compact ? 34 : 38,
               fontWeight: '800',
               fontVariant: ['tabular-nums'],
@@ -545,7 +583,7 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
           {data.previousTotal > 0 && amountsVisible && (
             <Text
               style={{
-                color: trendUp ? '#34C875' : '#E5484D',
+                color: trendUp ? colors.successMuted : colors.danger,
                 fontSize: 13,
                 fontWeight: '700',
                 paddingBottom: 6,
@@ -555,16 +593,13 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
             </Text>
           )}
         </View>
-      </View>
 
-      {/* Graphique bilan */}
-      <View style={{ marginTop: compact ? 18 : 22 }}>
         {loading ? (
           <View style={{ height: 176, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator color={accent} />
           </View>
         ) : (
-          <ReportChart data={data} selectedDate={selectedDate} amountsVisible={amountsVisible} />
+          <ReportChart data={data} selectedDate={selectedDate} amountsVisible={amountsVisible} accent={accent} />
         )}
       </View>
 
@@ -572,44 +607,45 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
       {!loading && data.transactions.length > 0 && (
         <View style={{ marginTop: compact ? 22 : 28 }}>
           <ReportSectionTitle title="Mouvements argent" date={sectionDateLabel} />
-          <View
-            style={{
-              paddingVertical: 2,
-            }}
-          >
+          <View style={{ gap: 10 }}>
             {data.transactions.map((t) => (
               <View
                 key={t.id}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  paddingVertical: 14,
+                  backgroundColor: colors.white,
+                  borderRadius: 16,
+                  borderCurve: 'continuous',
+                  paddingVertical: 12,
+                  paddingHorizontal: 14,
                   gap: 12,
+                  boxShadow: '0 6px 16px rgba(23, 23, 31, 0.05)',
                 }}
               >
                 <View
-	                  style={{
-	                    width: 40,
-	                    height: 40,
-	                    borderRadius: 20,
-	                    backgroundColor: '#F7F7F7',
-	                    alignItems: 'center',
-	                    justifyContent: 'center',
-	                  }}
-	                >
-	                  <Feather name="arrow-up-right" size={20} color={historyAccent} />
-	                </View>
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: historyBg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Feather name="arrow-up-right" size={20} color={historyAccent} />
+                </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>
+                  <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>
                     {t.label}
                   </Text>
                   {t.sub ? (
-                    <Text numberOfLines={1} style={{ color: '#A4A4A4', fontSize: 12, marginTop: 1 }}>
+                    <Text numberOfLines={1} style={{ color: colors.gray500, fontSize: 12, marginTop: 1 }}>
                       {t.sub}
                     </Text>
                   ) : null}
                 </View>
-                <Text style={{ color: '#111111', fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+                <Text style={{ color: colors.gray900, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] }}>
                   {amountsVisible ? formatMoney(t.amount) : '•••'}
                 </Text>
               </View>
@@ -622,7 +658,7 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
         <View style={{ marginTop: data.transactions.length > 0 ? 12 : compact ? 22 : 28 }}>
           <ReportSectionTitle title="Mouvements stock" date={sectionDateLabel} />
 
-          <View style={{ paddingVertical: 2 }}>
+          <View style={{ gap: 10 }}>
             {stockMovements.map((movement) => (
               <StockMovementItem key={movement.$id} movement={movement} />
             ))}
@@ -632,7 +668,7 @@ export function ReportMenu({ compact, amountsVisible }: { compact: boolean; amou
 
       {!loading && data.transactions.length === 0 && stockMovements.length === 0 && (
         <View style={{ marginTop: 40, alignItems: 'center' }}>
-          <Text style={{ color: '#BBBBBB', fontSize: 15 }}>Aucune donnée pour cette date</Text>
+          <Text style={{ color: colors.gray300, fontSize: 15 }}>Aucune donnée pour cette date</Text>
         </View>
       )}
     </ScrollView>

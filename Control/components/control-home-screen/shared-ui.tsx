@@ -1,4 +1,5 @@
 import type { SellerAction } from '@/components/seller-action-tile';
+import { colors } from '@/lib/theme';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { type ComponentProps, type ReactNode, useEffect, useRef } from 'react';
@@ -16,25 +17,25 @@ export const quickActions: SellerAction[] = [
     title: 'Vente',
     subtitle: 'Nouvelle vente',
     icon: { family: 'feather', name: 'arrow-up-right' },
-    accent: '#4C9BFF',
+    accent: colors.primaryMuted,
   },
   {
     title: 'Stock',
     subtitle: 'Articles',
     icon: { family: 'material', name: 'cube-outline' },
-    accent: '#FF8A4C',
+    accent: colors.accentOrange,
   },
   {
     title: 'Clôture',
     subtitle: 'Fin de journée',
     icon: { family: 'material', name: 'credit-card-outline' },
-    accent: '#B94DFF',
+    accent: colors.accentDeep,
   },
   {
     title: 'Sortie',
     subtitle: 'Dépense caisse',
     icon: { family: 'material', name: 'currency-usd' },
-    accent: '#3B3B3B',
+    accent: colors.gray800,
   },
 ];
 
@@ -112,7 +113,7 @@ export function BottomNav({
         maxWidth: onQuickActions ? 304 : 292,
         height: navHeight,
         borderRadius: 40,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: colors.white,
         padding: 8,
         flexDirection: 'row',
         alignItems: 'center',
@@ -139,15 +140,15 @@ export function BottomNav({
             height: fabSize,
             borderRadius: fabSize / 2,
             marginTop: compact ? -9 : -10,
-            backgroundColor: '#050505',
+            backgroundColor: colors.primary,
             alignItems: 'center',
             justifyContent: 'center',
             opacity: pressed ? 0.8 : 1,
             transform: [{ scale: pressed ? 0.94 : 1 }],
-            boxShadow: '0 10px 20px rgba(0, 0, 0, 0.16)',
+            boxShadow: '0 10px 20px rgba(10, 116, 254, 0.28)',
           })}
         >
-          <Feather name="plus" size={20} color="#FFFFFF" />
+          <Feather name="plus" size={20} color={colors.white} />
         </Pressable>
       ) : null}
 
@@ -207,7 +208,7 @@ function NavItem({
           width: itemSize,
           height: itemSize,
           borderRadius: itemSize / 2,
-          backgroundColor: '#F7F7F7',
+          backgroundColor: colors.primarySoft,
           opacity: highlight,
           transform: [{ scale: highlight.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) }],
         }}
@@ -216,13 +217,13 @@ function NavItem({
         <NavAssetIcon
           name={item.icon.name}
           size={compact ? 25 : 26}
-          color={isActive ? '#050505' : '#A6A6A6'}
+          color={isActive ? colors.primary : colors.gray400}
         />
       ) : (
         <MaterialCommunityIcons
           name={item.icon.name}
           size={compact ? 25 : 26}
-          color={isActive ? '#050505' : '#A6A6A6'}
+          color={isActive ? colors.primary : colors.gray400}
         />
       )}
     </Pressable>
@@ -255,12 +256,12 @@ export function SettingsRow({
         opacity: pressed ? 0.68 : 1,
       })}
     >
-      <MaterialCommunityIcons name={icon} size={21} color={destructive ? '#B42318' : '#111111'} />
+      <MaterialCommunityIcons name={icon} size={21} color={destructive ? colors.dangerDark : colors.gray900} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text
           numberOfLines={1}
           style={{
-            color: destructive ? '#B42318' : '#111111',
+            color: destructive ? colors.dangerDark : colors.gray900,
             fontSize: subtitle ? 15 : 16,
             fontWeight: subtitle ? '700' : '500',
           }}
@@ -268,7 +269,7 @@ export function SettingsRow({
           {title}
         </Text>
         {subtitle ? (
-          <Text numberOfLines={1} style={{ color: '#A4A4A4', fontSize: 13, marginTop: 2 }}>
+          <Text numberOfLines={1} style={{ color: colors.gray500, fontSize: 13, marginTop: 2 }}>
             {subtitle}
           </Text>
         ) : null}
@@ -277,7 +278,7 @@ export function SettingsRow({
         <Text
           numberOfLines={1}
           style={{
-            color: '#555555',
+            color: colors.gray700,
             fontSize: 15,
             fontWeight: '500',
             maxWidth: 166,
@@ -287,7 +288,7 @@ export function SettingsRow({
           {value}
         </Text>
       ) : null}
-      {onPress ? <Feather name="chevron-right" size={19} color="#B0B0B0" /> : null}
+      {onPress ? <Feather name="chevron-right" size={19} color={colors.gray400} /> : null}
     </Pressable>
   );
 }
@@ -302,15 +303,15 @@ export function SettingsSection({
   return (
     <View
       style={{
-        borderRadius: 22,
+        borderRadius: 16,
         borderCurve: 'continuous',
-        backgroundColor: '#F7F7F7',
+        backgroundColor: colors.gray50,
         paddingHorizontal: 18,
         paddingVertical: 16,
         gap: 7,
       }}
     >
-      <Text style={{ color: '#111111', fontSize: 18, fontWeight: '700' }}>{title}</Text>
+      <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '700' }}>{title}</Text>
       <View>{children}</View>
     </View>
   );
@@ -333,7 +334,7 @@ export function PreferenceToggle({
       style={({ pressed }: { pressed: boolean }) => ({
         minHeight: 54,
         borderRadius: 18,
-        backgroundColor: '#F7F7F7',
+        backgroundColor: colors.gray50,
         paddingHorizontal: 14,
         flexDirection: 'row',
         alignItems: 'center',
@@ -343,15 +344,15 @@ export function PreferenceToggle({
       })}
     >
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>{title}</Text>
-        <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 2 }}>
+        <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>{title}</Text>
+        <Text numberOfLines={1} style={{ color: colors.gray600, fontSize: 12, fontWeight: '600', marginTop: 2 }}>
           {subtitle}
         </Text>
       </View>
       <MaterialCommunityIcons
         name={enabled ? 'check-circle' : 'circle-outline'}
         size={24}
-        color={enabled ? '#08784F' : '#A8A8A8'}
+        color={enabled ? colors.success : colors.gray400}
       />
     </Pressable>
   );
@@ -372,7 +373,7 @@ export function DashedVerticalLine({ top, height, left }: { top: number; height:
             top: index * (dashHeight + gap),
             width: 1,
             height: dashHeight,
-            backgroundColor: '#111111',
+            backgroundColor: colors.gray900,
             opacity: 0.82,
           }}
         />

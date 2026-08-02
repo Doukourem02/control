@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/lib/theme';
 
 const categories: { label: string; value: ExpenseCategory }[] = [
   { label: 'Transport', value: 'transport' },
@@ -89,7 +90,7 @@ export default function ExpenseScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -97,7 +98,7 @@ export default function ExpenseScreen() {
         {isOffline && (
           <View
             style={{
-              backgroundColor: '#FFF3CD',
+              backgroundColor: colors.warningSoft,
               paddingVertical: 8,
               paddingHorizontal: 24,
               flexDirection: 'row',
@@ -105,8 +106,8 @@ export default function ExpenseScreen() {
               gap: 8,
             }}
           >
-            <Feather name="wifi-off" size={13} color="#856404" />
-            <Text style={{ color: '#856404', fontSize: 13, fontWeight: '600', flex: 1 }}>
+            <Feather name="wifi-off" size={13} color={colors.warningDark} />
+            <Text style={{ color: colors.warningDark, fontSize: 13, fontWeight: '600', flex: 1 }}>
               Hors ligne — les sorties seront synchronisées à la reconnexion
             </Text>
           </View>
@@ -135,27 +136,27 @@ export default function ExpenseScreen() {
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="arrow-left" size={21} color="#111111" />
+                <Feather name="arrow-left" size={21} color={colors.gray900} />
               </Pressable>
             </View>
 
             <View style={{ marginTop: 26, gap: 8 }}>
-              <Text style={{ color: '#111111', fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
+              <Text style={{ color: colors.gray900, fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
                 Sortie caisse
               </Text>
-              <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
+              <Text style={{ color: colors.gray500, fontSize: 15, lineHeight: 21 }}>
                 Enregistre une depense payee en cash.
               </Text>
             </View>
 
             <View style={{ marginTop: 26, gap: 13 }}>
-              <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>Categorie</Text>
+              <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }}>Categorie</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
                 {categories.map((item) => {
                   const selected = category === item.value;
@@ -167,7 +168,7 @@ export default function ExpenseScreen() {
                       style={({ pressed }: { pressed: boolean }) => ({
                         minHeight: 38,
                         borderRadius: 19,
-                        backgroundColor: selected ? '#111111' : '#F2F2F2',
+                        backgroundColor: selected ? colors.gray900 : colors.gray100,
                         paddingHorizontal: 14,
                         justifyContent: 'center',
                         opacity: pressed ? 0.72 : 1,
@@ -175,7 +176,7 @@ export default function ExpenseScreen() {
                     >
                       <Text
                         style={{
-                          color: selected ? '#FFFFFF' : '#777777',
+                          color: selected ? colors.white : colors.gray600,
                           fontSize: 13,
                           fontWeight: '800',
                         }}
@@ -190,22 +191,22 @@ export default function ExpenseScreen() {
 
             <View style={{ marginTop: 26, gap: 15 }}>
               <View style={{ gap: 7 }}>
-                <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Montant</Text>
+                <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Montant</Text>
                 <TextInput
                   value={amount}
                   onChangeText={setAmount}
                   placeholder="0 F"
-                  placeholderTextColor="#B4B4B4"
+                  placeholderTextColor={colors.gray400}
                   keyboardType="number-pad"
                   style={{
                     minHeight: 54,
                     borderRadius: 18,
                     borderCurve: 'continuous',
-                    backgroundColor: '#F7F7F7',
+                    backgroundColor: colors.gray50,
                     borderWidth: 1,
-                    borderColor: '#EEEEEE',
+                    borderColor: colors.gray100,
                     paddingHorizontal: 16,
-                    color: '#111111',
+                    color: colors.gray900,
                     fontSize: 18,
                     fontWeight: '800',
                   }}
@@ -213,21 +214,21 @@ export default function ExpenseScreen() {
               </View>
 
               <View style={{ gap: 7 }}>
-                <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Motif (optionnel)</Text>
+                <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Motif (optionnel)</Text>
                 <TextInput
                   value={note}
                   onChangeText={setNote}
                   placeholder="Précision..."
-                  placeholderTextColor="#B4B4B4"
+                  placeholderTextColor={colors.gray400}
                   style={{
                     minHeight: 54,
                     borderRadius: 18,
                     borderCurve: 'continuous',
-                    backgroundColor: '#F7F7F7',
+                    backgroundColor: colors.gray50,
                     borderWidth: 1,
-                    borderColor: '#EEEEEE',
+                    borderColor: colors.gray100,
                     paddingHorizontal: 16,
-                    color: '#111111',
+                    color: colors.gray900,
                     fontSize: 16,
                     fontWeight: '600',
                   }}
@@ -237,22 +238,22 @@ export default function ExpenseScreen() {
               <View
                 style={{
                   minHeight: 82,
-                  borderRadius: 24,
+                  borderRadius: 16,
                   borderCurve: 'continuous',
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   borderWidth: 1,
-                  borderColor: '#EFEFEF',
+                  borderColor: colors.gray100,
                   padding: 18,
                   justifyContent: 'space-between',
                 }}
               >
-                <Text style={{ color: '#777777', fontSize: 14, fontWeight: '700' }}>
+                <Text style={{ color: colors.gray600, fontSize: 14, fontWeight: '700' }}>
                   A deduire de la caisse
                 </Text>
                 <Text
                   selectable
                   style={{
-                    color: '#111111',
+                    color: colors.gray900,
                     fontSize: 26,
                     lineHeight: 31,
                     fontWeight: '900',
@@ -264,13 +265,13 @@ export default function ExpenseScreen() {
               </View>
 
               {formError ? (
-                <Text selectable style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>
+                <Text selectable style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>
                   {formError}
                 </Text>
               ) : null}
 
               {successMessage ? (
-                <Text selectable style={{ color: '#2A8D55', fontSize: 13, fontWeight: '700' }}>
+                <Text selectable style={{ color: colors.successMuted, fontSize: 13, fontWeight: '700' }}>
                   {successMessage}
                 </Text>
               ) : null}
@@ -280,9 +281,9 @@ export default function ExpenseScreen() {
                 disabled={saving}
                 style={({ pressed }: { pressed: boolean }) => ({
                   height: 54,
-                  borderRadius: 20,
+                  borderRadius: 16,
                   borderCurve: 'continuous',
-                  backgroundColor: saving ? '#9FCAEF' : '#2A8DEB',
+                  backgroundColor: saving ? colors.primaryDisabled : colors.primary,
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexDirection: 'row',
@@ -291,11 +292,11 @@ export default function ExpenseScreen() {
                 })}
               >
                 {saving ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={colors.white} />
                 ) : (
-                  <Feather name="minus" size={20} color="#FFFFFF" />
+                  <Feather name="minus" size={20} color={colors.white} />
                 )}
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                <Text style={{ color: colors.white, fontSize: 16, fontWeight: '800' }}>
                   Enregistrer la sortie
                 </Text>
               </Pressable>

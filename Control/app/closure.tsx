@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/lib/theme';
 
 function dateToKey(date: Date) {
   const year = date.getFullYear();
@@ -73,9 +74,9 @@ export default function ClosureScreen() {
     : 'Journee ouverte : verifie le bilan puis cloture.';
   const closureStatusColor = summary.isClosed
     ? summary.latestCashGap === 0
-      ? '#34C875'
-      : '#E5484D'
-    : '#FF8A4C';
+      ? colors.successMuted
+      : colors.danger
+    : colors.accentOrange;
 
   const loadSummary = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!silent) {
@@ -123,7 +124,7 @@ export default function ClosureScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -152,13 +153,13 @@ export default function ClosureScreen() {
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="arrow-left" size={21} color="#111111" />
+                <Feather name="arrow-left" size={21} color={colors.gray900} />
               </Pressable>
               <Pressable
                 onPress={loadSummary}
@@ -166,21 +167,21 @@ export default function ClosureScreen() {
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="refresh-cw" size={18} color="#777777" />
+                <Feather name="refresh-cw" size={18} color={colors.gray600} />
               </Pressable>
             </View>
 
             <View style={{ marginTop: 26, gap: 8 }}>
-              <Text style={{ color: '#111111', fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
+              <Text style={{ color: colors.gray900, fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
                 Bilan du jour
               </Text>
-              <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
+              <Text style={{ color: colors.gray500, fontSize: 15, lineHeight: 21 }}>
                 Regarde combien la journee a fait, puis cloture.
               </Text>
             </View>
@@ -189,11 +190,11 @@ export default function ClosureScreen() {
               style={{
                 marginTop: 22,
                 minHeight: 52,
-                borderRadius: 20,
+                borderRadius: 16,
                 borderCurve: 'continuous',
-                backgroundColor: '#F7F7F7',
+                backgroundColor: colors.gray50,
                 borderWidth: 1,
-                borderColor: '#EEEEEE',
+                borderColor: colors.gray100,
                 paddingHorizontal: 8,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -211,12 +212,12 @@ export default function ClosureScreen() {
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="chevron-left" size={22} color="#777777" />
+                <Feather name="chevron-left" size={22} color={colors.gray600} />
               </Pressable>
               <Text
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '800', textAlign: 'center' }}
+                style={{ flex: 1, color: colors.gray900, fontSize: 16, fontWeight: '800', textAlign: 'center' }}
               >
                 {formatBusinessDate(businessDate)}
               </Text>
@@ -232,7 +233,7 @@ export default function ClosureScreen() {
                   opacity: businessDate === todayKey ? 0.28 : pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="chevron-right" size={22} color="#777777" />
+                <Feather name="chevron-right" size={22} color={colors.gray600} />
               </Pressable>
             </View>
 
@@ -240,11 +241,11 @@ export default function ClosureScreen() {
               style={{
                 marginTop: 12,
                 minHeight: 54,
-                borderRadius: 20,
+                borderRadius: 16,
                 borderCurve: 'continuous',
-                backgroundColor: '#F7F7F7',
+                backgroundColor: colors.gray50,
                 borderWidth: 1,
-                borderColor: '#EEEEEE',
+                borderColor: colors.gray100,
                 paddingHorizontal: 16,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -259,7 +260,7 @@ export default function ClosureScreen() {
                   backgroundColor: closureStatusColor,
                 }}
               />
-              <Text numberOfLines={2} style={{ flex: 1, color: '#777777', fontSize: 13, fontWeight: '700' }}>
+              <Text numberOfLines={2} style={{ flex: 1, color: colors.gray600, fontSize: 13, fontWeight: '700' }}>
                 {closureStatusText}
               </Text>
             </View>
@@ -271,7 +272,7 @@ export default function ClosureScreen() {
                 marginTop: 12,
                 minHeight: 34,
                 borderRadius: 17,
-                backgroundColor: '#F7F7F7',
+                backgroundColor: colors.gray50,
                 paddingHorizontal: 14,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -279,13 +280,13 @@ export default function ClosureScreen() {
                 opacity: pressed ? 0.64 : 1,
               })}
             >
-              <Feather name="clock" size={16} color="#777777" />
-              <Text style={{ color: '#111111', fontSize: 13, fontWeight: '800' }}>Voir les clotures</Text>
+              <Feather name="clock" size={16} color={colors.gray600} />
+              <Text style={{ color: colors.gray900, fontSize: 13, fontWeight: '800' }}>Voir les clotures</Text>
             </Pressable>
 
             {loading ? (
               <View style={{ paddingVertical: 34, alignItems: 'center' }}>
-                <ActivityIndicator color="#2A8DEB" />
+                <ActivityIndicator color={colors.primary} />
               </View>
             ) : (
               <ClosureForm

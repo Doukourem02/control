@@ -15,6 +15,7 @@ import {
 } from '@/lib/control-data';
 import { getControlErrorMessage, logControlError } from '@/lib/control-errors';
 import { useNetworkStatus } from '@/lib/network-state';
+import { colors } from '@/lib/theme';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -148,7 +149,7 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
   const displayedGap = PREVIEW_MODE ? previewGap : todaySummary.latestCashGap;
   const displayedMovements = PREVIEW_MODE ? previewMovements : stockMovements;
   const spentRatio = totalSalesAmount > 0 ? Math.min(displayedExpenses / totalSalesAmount, 1) : 0;
-  const gapColor = displayedGap < 0 ? '#E5484D' : '#34C875';
+  const gapColor = displayedGap < 0 ? colors.danger : colors.successMuted;
   const headerTitle =
     activeMenu === 'report'
       ? 'Bilan'
@@ -270,11 +271,11 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
   }, [isOffline]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.paper }}>
       {isOffline && (
         <View
           style={{
-            backgroundColor: '#FFF3CD',
+            backgroundColor: colors.warningSoft,
             paddingVertical: 8,
             paddingHorizontal: 20,
             flexDirection: 'row',
@@ -282,13 +283,13 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
             gap: 8,
           }}
         >
-          <Feather name="wifi-off" size={13} color="#856404" />
-          <Text style={{ color: '#856404', fontSize: 13, fontWeight: '600', flex: 1 }}>
+          <Feather name="wifi-off" size={13} color={colors.warningDark} />
+          <Text style={{ color: colors.warningDark, fontSize: 13, fontWeight: '600', flex: 1 }}>
             Hors ligne — données en cache affichées
           </Text>
         </View>
       )}
-      <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+      <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.paper }}>
         <View
           style={{
             width: contentWidth,
@@ -308,13 +309,13 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
               }}
             >
               {headerTitle ? (
-                <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>{headerTitle}</Text>
+                <Text style={{ color: colors.gray900, fontSize: 22, fontWeight: '800' }}>{headerTitle}</Text>
               ) : (
                 <View style={{ flexShrink: 1 }}>
-                  <Text numberOfLines={1} style={{ color: '#9A9A9A', fontSize: 15, fontWeight: '500' }}>
+                  <Text numberOfLines={1} style={{ color: colors.gray500, fontSize: 15, fontWeight: '500' }}>
                     Bonjour,
                   </Text>
-                  <Text numberOfLines={1} style={{ color: '#111111', fontSize: 26, fontWeight: '600', marginTop: 2 }}>
+                  <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 26, fontWeight: '600', marginTop: 2 }}>
                     {firstName || 'Utilisateur'}
                   </Text>
                 </View>
@@ -327,14 +328,14 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                     width: 44,
                     height: 44,
                     borderRadius: 22,
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: colors.white,
                     alignItems: 'center',
                     justifyContent: 'center',
                     opacity: pressed ? 0.62 : 1,
                     boxShadow: '0 4px 14px rgba(0, 0, 0, 0.08)',
                   })}
                 >
-                  <MaterialCommunityIcons name="bell-outline" size={21} color="#2A5BE8" />
+                  <MaterialCommunityIcons name="bell-outline" size={21} color={colors.primary} />
                   {notifications.filter((n) => n.read === 'false').length > 0 && (
                     <View
                       style={{
@@ -344,9 +345,9 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                         width: 9,
                         height: 9,
                         borderRadius: 5,
-                        backgroundColor: '#FF3B30',
+                        backgroundColor: colors.danger,
                         borderWidth: 1.5,
-                        borderColor: '#FFFFFF',
+                        borderColor: colors.white,
                       }}
                     />
                   )}
@@ -359,13 +360,13 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                       width: 44,
                       height: 44,
                       borderRadius: 22,
-                      backgroundColor: '#E8F4EF',
+                      backgroundColor: colors.primarySoft,
                       alignItems: 'center',
                       justifyContent: 'center',
                       opacity: pressed ? 0.62 : 1,
                     })}
                   >
-                    <Text style={{ color: '#08784F', fontSize: 15, fontWeight: '800' }}>{avatarInitials}</Text>
+                    <Text style={{ color: colors.primary, fontSize: 15, fontWeight: '800' }}>{avatarInitials}</Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -388,9 +389,9 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                       style={({ pressed }: { pressed: boolean }) => ({
                         marginTop: compact ? 14 : 18,
                         height: 46,
-                        borderRadius: 23,
+                        borderRadius: 16,
                         borderCurve: 'continuous',
-                        backgroundColor: '#F2F2F5',
+                        backgroundColor: colors.gray100,
                         paddingHorizontal: 16,
                         flexDirection: 'row',
                         alignItems: 'center',
@@ -398,19 +399,19 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                         opacity: pressed ? 0.72 : 1,
                       })}
                     >
-                      <Feather name="search" size={17} color="#8E8E93" />
-                      <Text style={{ color: '#8E8E93', fontSize: 14, fontWeight: '500' }}>
+                      <Feather name="search" size={17} color={colors.gray600} />
+                      <Text style={{ color: colors.gray600, fontSize: 14, fontWeight: '500' }}>
                         Rechercher un produit…
                       </Text>
                     </Pressable>
 
                     <LinearGradient
-                      colors={['#5B6EF5', '#B8AEFB']}
+                      colors={[colors.primary, colors.primaryMuted]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 0, y: 1 }}
                       style={{
                         marginTop: compact ? 14 : 18,
-                        borderRadius: 20,
+                        borderRadius: 16,
                         borderCurve: 'continuous',
                         overflow: 'hidden',
                         paddingHorizontal: compact ? 22 : 26,
@@ -433,7 +434,7 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                             opacity: pressed ? 0.62 : 1,
                           })}
                         >
-                          <Feather name={amountsVisible ? 'eye' : 'eye-off'} size={17} color="#FFFFFF" />
+                          <Feather name={amountsVisible ? 'eye' : 'eye-off'} size={17} color={colors.white} />
                         </Pressable>
                       </View>
 
@@ -445,7 +446,7 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                           minimumFontScale={0.5}
                           style={{
                             flexShrink: 1,
-                            color: '#FFFFFF',
+                            color: colors.white,
                             fontSize: compact ? 36 : 40,
                             lineHeight: compact ? 40 : 44,
                             fontWeight: '800',
@@ -490,7 +491,7 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                         <Text
                           style={{
                             marginLeft: 14,
-                            color: '#FFFFFF',
+                            color: colors.white,
                             fontSize: 12,
                             fontWeight: '700',
                           }}
@@ -502,12 +503,25 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
 
                     <View style={{ flexDirection: 'row', gap: 12, marginTop: compact ? 14 : 16 }}>
                       {[
-                        { label: 'Ventes', value: totalSalesAmount, color: '#4C9BFF', ratio: 1 },
-                        { label: 'Dépenses', value: displayedExpenses, color: '#FF8A4C', ratio: spentRatio },
+                        {
+                          label: 'Ventes',
+                          value: totalSalesAmount,
+                          color: colors.primary,
+                          bg: colors.primarySoft,
+                          ratio: 1,
+                        },
+                        {
+                          label: 'Dépenses',
+                          value: displayedExpenses,
+                          color: colors.accentOrange,
+                          bg: colors.accentOrangeSoft,
+                          ratio: spentRatio,
+                        },
                         {
                           label: 'Écart',
                           value: displayedGap,
                           color: gapColor,
+                          bg: displayedGap < 0 ? colors.dangerSoft : colors.successSoft,
                           ratio: totalSalesAmount > 0 ? Math.min(Math.abs(displayedGap) / totalSalesAmount, 1) : 0,
                         },
                       ].map((metric) => (
@@ -515,29 +529,28 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                           key={metric.label}
                           style={{
                             flex: 1,
-                            borderRadius: 20,
-                            borderCurve: 'continuous',
-                            backgroundColor: '#F7F7F7',
+                            borderRadius: 14,
+                            backgroundColor: metric.bg,
                             padding: compact ? 12 : 14,
-                            gap: 8,
+                            gap: 10,
                           }}
                         >
-                          <Text numberOfLines={1} style={{ color: '#8D8D8D', fontSize: 12, fontWeight: '600' }}>
+                          <Text numberOfLines={1} style={{ color: colors.gray700, fontSize: 12, fontWeight: '600' }}>
                             {metric.label}
                           </Text>
                           <Text
                             numberOfLines={1}
                             adjustsFontSizeToFit
                             minimumFontScale={0.7}
-                            style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}
+                            style={{ color: colors.gray900, fontSize: 17, fontWeight: '800' }}
                           >
                             {amountsVisible ? formatMoney(metric.value) : '•••'}
                           </Text>
-                          <View style={{ height: 5, borderRadius: 3, backgroundColor: '#EAEAEA', overflow: 'hidden' }}>
+                          <View style={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.10)', overflow: 'hidden' }}>
                             <View
                               style={{
-                                height: 5,
-                                borderRadius: 3,
+                                height: 8,
+                                borderRadius: 4,
                                 width: `${Math.max(metric.ratio * 100, 6)}%`,
                                 backgroundColor: metric.color,
                               }}
@@ -556,20 +569,22 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
                           marginBottom: 4,
                         }}
                       >
-                        <Text style={{ color: '#111111', fontSize: 17, fontWeight: '800' }}>Mouvements</Text>
+                        <Text style={{ color: colors.gray900, fontSize: 17, fontWeight: '800' }}>Mouvements</Text>
                         <Pressable onPress={() => handleTabChange('missing')} hitSlop={8}>
-                          <Text style={{ color: '#2A5BE8', fontSize: 13, fontWeight: '700' }}>Voir tout</Text>
+                          <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>Voir tout</Text>
                         </Pressable>
                       </View>
 
                       {displayedMovements.length === 0 ? (
-                        <Text style={{ color: '#A4A4A4', fontSize: 13, marginTop: 8 }}>
+                        <Text style={{ color: colors.gray500, fontSize: 13, marginTop: 8 }}>
                           Aucun mouvement de stock aujourd’hui.
                         </Text>
                       ) : (
-                        displayedMovements.map((movement) => (
-                          <StockMovementItem key={movement.$id} movement={movement} />
-                        ))
+                        <View style={{ gap: 10, marginTop: 10 }}>
+                          {displayedMovements.map((movement) => (
+                            <StockMovementItem key={movement.$id} movement={movement} />
+                          ))}
+                        </View>
                       )}
                     </View>
                 </ScrollView>
@@ -610,7 +625,7 @@ export function ControlHomeScreen({ experienceRole }: { experienceRole?: Control
 
         <LinearGradient
           pointerEvents="none"
-          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.85)', '#FFFFFF']}
+          colors={['rgba(243,243,250,0)', 'rgba(243,243,250,0.85)', colors.paper]}
           locations={[0, 0.55, 1]}
           style={{
             position: 'absolute',

@@ -1,6 +1,7 @@
 import React from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { colors } from '@/lib/theme';
 
 import type { PaymentMethod } from '@/lib/control-data';
 
@@ -42,28 +43,28 @@ export function SaleForm({
         paddingTop: 14,
         paddingBottom: 8,
         borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
+        borderTopColor: colors.gray100,
         gap: 10,
       }}
     >
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ flex: 1, gap: 7 }}>
-          <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Quantite</Text>
+          <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Quantite</Text>
           <TextInput
             value={quantity}
             onChangeText={onQuantityChange}
             placeholder="0"
-            placeholderTextColor="#B4B4B4"
+            placeholderTextColor={colors.gray400}
             keyboardType="decimal-pad"
             style={{
               height: 54,
               borderRadius: 18,
               borderCurve: 'continuous',
-              backgroundColor: '#F7F7F7',
+              backgroundColor: colors.gray50,
               borderWidth: 1,
-              borderColor: '#EEEEEE',
+              borderColor: colors.gray100,
               paddingHorizontal: 16,
-              color: '#111111',
+              color: colors.gray900,
               fontSize: 22,
               fontWeight: '800',
             }}
@@ -71,7 +72,7 @@ export function SaleForm({
         </View>
 
         <View style={{ flex: 1, gap: 7 }}>
-          <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Paiement</Text>
+          <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Paiement</Text>
           <View style={{ flexDirection: 'row', gap: 6 }}>
             {availablePaymentMethods.map((method) => {
               const selected = paymentMethod === method;
@@ -86,7 +87,7 @@ export function SaleForm({
                     height: 54,
                     borderRadius: 18,
                     borderCurve: 'continuous',
-                    backgroundColor: selected ? '#111111' : '#F2F2F2',
+                    backgroundColor: selected ? colors.gray900 : colors.gray100,
                     alignItems: 'center',
                     justifyContent: 'center',
                     opacity: pressed ? 0.72 : 1,
@@ -95,7 +96,7 @@ export function SaleForm({
                   <Text
                     numberOfLines={1}
                     style={{
-                      color: selected ? '#FFFFFF' : '#777777',
+                      color: selected ? colors.white : colors.gray600,
                       fontSize: 11,
                       fontWeight: '800',
                     }}
@@ -112,26 +113,26 @@ export function SaleForm({
       <View
         style={{
           height: 58,
-          borderRadius: 20,
+          borderRadius: 16,
           borderCurve: 'continuous',
-          backgroundColor: '#F7F7F7',
+          backgroundColor: colors.gray50,
           borderWidth: 1,
-          borderColor: '#EFEFEF',
+          borderColor: colors.gray100,
           paddingHorizontal: 18,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}
       >
-        <Text style={{ color: '#777777', fontSize: 14, fontWeight: '700' }}>Total</Text>
+        <Text style={{ color: colors.gray600, fontSize: 14, fontWeight: '700' }}>Total</Text>
         <TextInput
           value={totalInput}
           onChangeText={onTotalInputChange}
           placeholder={formatSaleMoney(autoTotal)}
-          placeholderTextColor="#B4B4B4"
+          placeholderTextColor={colors.gray400}
           keyboardType="number-pad"
           style={{
-            color: '#111111',
+            color: colors.gray900,
             fontSize: 24,
             fontWeight: '900',
             textAlign: 'right',
@@ -141,11 +142,11 @@ export function SaleForm({
       </View>
 
       {formError ? (
-        <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>{formError}</Text>
+        <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>{formError}</Text>
       ) : null}
 
       {successMessage ? (
-        <Text style={{ color: '#2A8D55', fontSize: 13, fontWeight: '700' }}>{successMessage}</Text>
+        <Text style={{ color: colors.successMuted, fontSize: 13, fontWeight: '700' }}>{successMessage}</Text>
       ) : null}
 
       <Pressable
@@ -154,9 +155,9 @@ export function SaleForm({
         disabled={saving}
         style={({ pressed }: { pressed: boolean }) => ({
           height: 54,
-          borderRadius: 20,
+          borderRadius: 16,
           borderCurve: 'continuous',
-          backgroundColor: saving ? '#9FCAEF' : '#2A8DEB',
+          backgroundColor: saving ? colors.primaryDisabled : colors.primary,
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'row',
@@ -166,11 +167,11 @@ export function SaleForm({
         })}
       >
         {saving ? (
-          <ActivityIndicator color="#FFFFFF" />
+          <ActivityIndicator color={colors.white} />
         ) : (
-          <Feather name="arrow-up-right" size={20} color="#FFFFFF" />
+          <Feather name="arrow-up-right" size={20} color={colors.white} />
         )}
-        <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+        <Text style={{ color: colors.white, fontSize: 16, fontWeight: '800' }}>
           Valider la vente
         </Text>
       </Pressable>

@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { colors } from '@/lib/theme';
 
 type JournalEntry =
   | {
@@ -113,22 +114,22 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       style={{
         flex: 1,
         minHeight: 86,
-        borderRadius: 22,
+        borderRadius: 16,
         borderCurve: 'continuous',
-        backgroundColor: '#F7F7F7',
+        backgroundColor: colors.gray50,
         borderWidth: 1,
-        borderColor: '#EFEFEF',
+        borderColor: colors.gray100,
         padding: 16,
         justifyContent: 'space-between',
       }}
     >
-      <Text style={{ color: '#777777', fontSize: 13, fontWeight: '700' }}>{label}</Text>
+      <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '700' }}>{label}</Text>
       <Text
         selectable
         numberOfLines={1}
         adjustsFontSizeToFit
         style={{
-          color: '#111111',
+          color: colors.gray900,
           fontSize: 21,
           fontWeight: '900',
           fontVariant: ['tabular-nums'],
@@ -186,10 +187,10 @@ function buildClosureEntries(closures: CashClosureRow[]): JournalEntry[] {
 
 function EntryIcon({ kind }: { kind: JournalEntry['kind'] }) {
   const config = {
-    sale: { icon: 'arrow-up-right' as const, color: '#2A8DEB' },
-    expense: { icon: 'arrow-down-left' as const, color: '#E5484D' },
-    missing: { icon: 'alert-triangle' as const, color: '#F59E0B' },
-    closure: { icon: 'check-circle' as const, color: '#34C875' },
+    sale: { icon: 'arrow-up-right' as const, color: colors.primary },
+    expense: { icon: 'arrow-down-left' as const, color: colors.danger },
+    missing: { icon: 'alert-triangle' as const, color: colors.warning },
+    closure: { icon: 'check-circle' as const, color: colors.successMuted },
   }[kind];
 
   return (
@@ -198,7 +199,7 @@ function EntryIcon({ kind }: { kind: JournalEntry['kind'] }) {
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: '#F7F7F7',
+        backgroundColor: colors.gray50,
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -212,10 +213,10 @@ function JournalRow({ entry }: { entry: JournalEntry }) {
   const isMoneyEntry = 'amount' in entry;
   const amountColor =
     isMoneyEntry && entry.amount < 0
-      ? '#E5484D'
+      ? colors.danger
       : isMoneyEntry && entry.amount > 0
-        ? '#111111'
-        : '#777777';
+        ? colors.gray900
+        : colors.gray600;
 
   return (
     <View
@@ -229,10 +230,10 @@ function JournalRow({ entry }: { entry: JournalEntry }) {
     >
       <EntryIcon kind={entry.kind} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
+        <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>
           {entry.title}
         </Text>
-        <Text numberOfLines={1} style={{ marginTop: 3, color: '#9A9A9A', fontSize: 12, fontWeight: '600' }}>
+        <Text numberOfLines={1} style={{ marginTop: 3, color: colors.gray500, fontSize: 12, fontWeight: '600' }}>
           {formatTime(entry.date)} · {entry.subtitle}
         </Text>
       </View>
@@ -294,7 +295,7 @@ export default function JournalScreen() {
   const totalSales = summary.cashSalesAmount + summary.mobileMoneySalesAmount;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -319,13 +320,13 @@ export default function JournalScreen() {
                 width: 38,
                 height: 38,
                 borderRadius: 19,
-                backgroundColor: '#F7F7F7',
+                backgroundColor: colors.gray50,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed ? 0.62 : 1,
               })}
             >
-              <Feather name="arrow-left" size={21} color="#111111" />
+              <Feather name="arrow-left" size={21} color={colors.gray900} />
             </Pressable>
             <Pressable
               onPress={loadJournal}
@@ -333,21 +334,21 @@ export default function JournalScreen() {
                 width: 38,
                 height: 38,
                 borderRadius: 19,
-                backgroundColor: '#F7F7F7',
+                backgroundColor: colors.gray50,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed ? 0.62 : 1,
               })}
             >
-              <Feather name="refresh-cw" size={18} color="#777777" />
+              <Feather name="refresh-cw" size={18} color={colors.gray600} />
             </Pressable>
           </View>
 
           <View style={{ marginTop: 26, gap: 8 }}>
-            <Text style={{ color: '#111111', fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
+            <Text style={{ color: colors.gray900, fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
               Journal du jour
             </Text>
-            <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
+            <Text style={{ color: colors.gray500, fontSize: 15, lineHeight: 21 }}>
               Entrees, sorties, manquants et cloture.
             </Text>
           </View>
@@ -356,11 +357,11 @@ export default function JournalScreen() {
             style={{
               marginTop: 22,
               minHeight: 52,
-              borderRadius: 20,
+              borderRadius: 16,
               borderCurve: 'continuous',
-              backgroundColor: '#F7F7F7',
+              backgroundColor: colors.gray50,
               borderWidth: 1,
-              borderColor: '#EEEEEE',
+              borderColor: colors.gray100,
               paddingHorizontal: 8,
               flexDirection: 'row',
               alignItems: 'center',
@@ -378,12 +379,12 @@ export default function JournalScreen() {
                 opacity: pressed ? 0.62 : 1,
               })}
             >
-              <Feather name="chevron-left" size={22} color="#777777" />
+              <Feather name="chevron-left" size={22} color={colors.gray600} />
             </Pressable>
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
-              style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '800', textAlign: 'center' }}
+              style={{ flex: 1, color: colors.gray900, fontSize: 16, fontWeight: '800', textAlign: 'center' }}
             >
               {formatBusinessDate(businessDate)}
             </Text>
@@ -399,13 +400,13 @@ export default function JournalScreen() {
                 opacity: businessDate === todayKey ? 0.28 : pressed ? 0.62 : 1,
               })}
             >
-              <Feather name="chevron-right" size={22} color="#777777" />
+              <Feather name="chevron-right" size={22} color={colors.gray600} />
             </Pressable>
           </View>
 
           {loading ? (
             <View style={{ paddingVertical: 42, alignItems: 'center' }}>
-              <ActivityIndicator color="#2A8DEB" />
+              <ActivityIndicator color={colors.primary} />
             </View>
           ) : (
             <View style={{ marginTop: 20, gap: 18 }}>
@@ -420,11 +421,11 @@ export default function JournalScreen() {
 
               <View
                 style={{
-                  borderRadius: 24,
+                  borderRadius: 16,
                   borderCurve: 'continuous',
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   borderWidth: 1,
-                  borderColor: '#EFEFEF',
+                  borderColor: colors.gray100,
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                 }}
@@ -433,7 +434,7 @@ export default function JournalScreen() {
                   entries.map((entry) => <JournalRow key={entry.id} entry={entry} />)
                 ) : (
                   <View style={{ minHeight: 96, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: '#BBBBBB', fontSize: 14, fontWeight: '700' }}>
+                    <Text style={{ color: colors.gray400, fontSize: 14, fontWeight: '700' }}>
                       Aucun mouvement pour cette date
                     </Text>
                   </View>

@@ -31,6 +31,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '@/lib/theme';
 
 const units: { label: string; value: ProductUnit }[] = [
   { label: 'kg', value: 'kg' },
@@ -72,22 +73,22 @@ function Field({
 }) {
   return (
     <View style={{ gap: 7 }}>
-      <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>{label}</Text>
+      <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#B4B4B4"
+        placeholderTextColor={colors.gray400}
         keyboardType={keyboardType}
         style={{
           minHeight: 52,
           borderRadius: 18,
           borderCurve: 'continuous',
-          backgroundColor: '#F7F7F7',
+          backgroundColor: colors.gray50,
           borderWidth: 1,
-          borderColor: '#EEEEEE',
+          borderColor: colors.gray100,
           paddingHorizontal: 16,
-          color: '#111111',
+          color: colors.gray900,
           fontSize: 16,
           fontWeight: '600',
         }}
@@ -377,7 +378,7 @@ export default function StockScreen() {
   const ALL_EMOJIS = ['📦', '🐟', '🥩', '🐔', '🍅', '🥬', '🌽', '🥚', '🍞', '🥛', '🧴', '🧹'];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -407,13 +408,13 @@ export default function StockScreen() {
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="arrow-left" size={21} color="#111111" />
+                <Feather name="arrow-left" size={21} color={colors.gray900} />
               </Pressable>
 
               <Pressable
@@ -422,28 +423,28 @@ export default function StockScreen() {
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F7F7F7',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.62 : 1,
                 })}
               >
-                <Feather name="refresh-cw" size={18} color="#777777" />
+                <Feather name="refresh-cw" size={18} color={colors.gray600} />
               </Pressable>
             </View>
 
             <View style={{ marginTop: 26, gap: 8 }}>
-              <Text style={{ color: '#111111', fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
+              <Text style={{ color: colors.gray900, fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
                 Stock
               </Text>
-              <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
+              <Text style={{ color: colors.gray500, fontSize: 15, lineHeight: 21 }}>
                 {products.length} produit{products.length > 1 ? 's' : ''} · {lowStockCount} stock
                 {lowStockCount > 1 ? 's' : ''} faible{lowStockCount > 1 ? 's' : ''}
               </Text>
             </View>
 
             <View style={{ marginTop: 26, gap: 15 }}>
-              <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>
+              <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }}>
                 Approvisionnement
               </Text>
 
@@ -452,7 +453,7 @@ export default function StockScreen() {
                   minHeight: 44,
                   borderRadius: 18,
                   borderCurve: 'continuous',
-                  backgroundColor: '#F2F2F2',
+                  backgroundColor: colors.gray100,
                   padding: 4,
                   flexDirection: 'row',
                   gap: 4,
@@ -475,7 +476,7 @@ export default function StockScreen() {
                       style={({ pressed }: { pressed: boolean }) => ({
                         flex: 1,
                         borderRadius: 15,
-                        backgroundColor: selected ? '#111111' : 'transparent',
+                        backgroundColor: selected ? colors.gray900 : 'transparent',
                         alignItems: 'center',
                         justifyContent: 'center',
                         opacity: pressed ? 0.7 : 1,
@@ -483,7 +484,7 @@ export default function StockScreen() {
                     >
                       <Text
                         style={{
-                          color: selected ? '#FFFFFF' : '#777777',
+                          color: selected ? colors.white : colors.gray600,
                           fontSize: 14,
                           fontWeight: '800',
                         }}
@@ -497,7 +498,7 @@ export default function StockScreen() {
 
               {supplyMode === 'existing' ? (
                 <View style={{ gap: 9 }}>
-                  <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>
+                  <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>
                     Produit a augmenter
                   </Text>
                   {products.length === 0 ? (
@@ -506,14 +507,14 @@ export default function StockScreen() {
                         minHeight: 58,
                         borderRadius: 18,
                         borderCurve: 'continuous',
-                        backgroundColor: '#F7F7F7',
+                        backgroundColor: colors.gray50,
                         borderWidth: 1,
-                        borderColor: '#EEEEEE',
+                        borderColor: colors.gray100,
                         paddingHorizontal: 16,
                         justifyContent: 'center',
                       }}
                     >
-                      <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
+                      <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>
                         Aucun produit existant
                       </Text>
                     </View>
@@ -530,7 +531,7 @@ export default function StockScreen() {
                               style={({ pressed }: { pressed: boolean }) => ({
                                 minHeight: 46,
                                 borderRadius: 18,
-                                backgroundColor: selected ? '#111111' : '#F2F2F2',
+                                backgroundColor: selected ? colors.gray900 : colors.gray100,
                                 paddingHorizontal: 14,
                                 justifyContent: 'center',
                                 opacity: pressed ? 0.7 : 1,
@@ -539,7 +540,7 @@ export default function StockScreen() {
                               <Text
                                 numberOfLines={1}
                                 style={{
-                                  color: selected ? '#FFFFFF' : '#777777',
+                                  color: selected ? colors.white : colors.gray600,
                                   fontSize: 13,
                                   fontWeight: '800',
                                 }}
@@ -559,7 +560,7 @@ export default function StockScreen() {
 
                   <View style={{ gap: 9 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Categorie</Text>
+                      <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Categorie</Text>
                       <Pressable
                         onPress={() => setShowAddCategory((v) => !v)}
                         style={({ pressed }: { pressed: boolean }) => ({
@@ -567,8 +568,8 @@ export default function StockScreen() {
                           opacity: pressed ? 0.6 : 1,
                         })}
                       >
-                        <Feather name={showAddCategory ? 'x' : 'plus'} size={14} color="#2A8DEB" />
-                        <Text style={{ color: '#2A8DEB', fontSize: 13, fontWeight: '700' }}>
+                        <Feather name={showAddCategory ? 'x' : 'plus'} size={14} color={colors.primary} />
+                        <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>
                           {showAddCategory ? 'Annuler' : 'Nouvelle'}
                         </Text>
                       </Pressable>
@@ -580,11 +581,11 @@ export default function StockScreen() {
                           value={newCategoryName}
                           onChangeText={setNewCategoryName}
                           placeholder="Nom de la categorie"
-                          placeholderTextColor="#B4B4B4"
+                          placeholderTextColor={colors.gray400}
                           style={{
                             minHeight: 48, borderRadius: 16, borderCurve: 'continuous',
-                            backgroundColor: '#F7F7F7', borderWidth: 1, borderColor: '#EEEEEE',
-                            paddingHorizontal: 14, color: '#111111', fontSize: 15, fontWeight: '600',
+                            backgroundColor: colors.gray50, borderWidth: 1, borderColor: colors.gray100,
+                            paddingHorizontal: 14, color: colors.gray900, fontSize: 15, fontWeight: '600',
                           }}
                         />
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -595,7 +596,7 @@ export default function StockScreen() {
                                 onPress={() => setNewCategoryEmoji(emoji)}
                                 style={({ pressed }: { pressed: boolean }) => ({
                                   width: 42, height: 42, borderRadius: 14, borderCurve: 'continuous',
-                                  backgroundColor: newCategoryEmoji === emoji ? '#111111' : '#F2F2F2',
+                                  backgroundColor: newCategoryEmoji === emoji ? colors.gray900 : colors.gray100,
                                   alignItems: 'center', justifyContent: 'center',
                                   opacity: pressed ? 0.7 : 1,
                                 })}
@@ -610,14 +611,14 @@ export default function StockScreen() {
                           disabled={savingCategory || !newCategoryName.trim()}
                           style={({ pressed }: { pressed: boolean }) => ({
                             height: 44, borderRadius: 16, borderCurve: 'continuous',
-                            backgroundColor: savingCategory || !newCategoryName.trim() ? '#C8E3F7' : '#2A8DEB',
+                            backgroundColor: savingCategory || !newCategoryName.trim() ? colors.primaryDisabled : colors.primary,
                             alignItems: 'center', justifyContent: 'center',
                             opacity: pressed ? 0.76 : 1,
                           })}
                         >
                           {savingCategory
-                            ? <ActivityIndicator color="#FFFFFF" />
-                            : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Enregistrer la categorie</Text>
+                            ? <ActivityIndicator color={colors.white} />
+                            : <Text style={{ color: colors.white, fontSize: 14, fontWeight: '800' }}>Enregistrer la categorie</Text>
                           }
                         </Pressable>
                       </View>
@@ -633,13 +634,13 @@ export default function StockScreen() {
                                 style={({ pressed }: { pressed: boolean }) => ({
                                   flexDirection: 'row', alignItems: 'center', gap: 6,
                                   minHeight: 42, borderRadius: 16, borderCurve: 'continuous',
-                                  backgroundColor: selected ? '#111111' : '#F2F2F2',
+                                  backgroundColor: selected ? colors.gray900 : colors.gray100,
                                   paddingHorizontal: 12,
                                   opacity: pressed ? 0.7 : 1,
                                 })}
                               >
                                 <Text style={{ fontSize: 18 }}>{cat.emoji}</Text>
-                                <Text style={{ color: selected ? '#FFFFFF' : '#555555', fontSize: 13, fontWeight: '700' }}>
+                                <Text style={{ color: selected ? colors.white : colors.gray700, fontSize: 13, fontWeight: '700' }}>
                                   {cat.name}
                                 </Text>
                                 {selected && (
@@ -648,14 +649,14 @@ export default function StockScreen() {
                                     hitSlop={8}
                                     style={({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.5 : 0.7 })}
                                   >
-                                    <Feather name="x" size={13} color="#FFFFFF" />
+                                    <Feather name="x" size={13} color={colors.white} />
                                   </Pressable>
                                 )}
                               </Pressable>
                             );
                           })}
                           {categories.length === 0 && (
-                            <Text style={{ color: '#B4B4B4', fontSize: 13, fontWeight: '600', paddingVertical: 10 }}>
+                            <Text style={{ color: colors.gray400, fontSize: 13, fontWeight: '600', paddingVertical: 10 }}>
                               Aucune categorie — clique sur Nouvelle
                             </Text>
                           )}
@@ -677,7 +678,7 @@ export default function StockScreen() {
                   />
                 </View>
                 <View style={{ flex: 1, gap: 7 }}>
-                  <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Unite</Text>
+                  <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Unite</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
                     {units.map((item) => {
                       const selected = unit === item.value;
@@ -694,7 +695,7 @@ export default function StockScreen() {
                           style={({ pressed }: { pressed: boolean }) => ({
                             minHeight: 32,
                             borderRadius: 16,
-                            backgroundColor: selected ? '#111111' : '#F2F2F2',
+                            backgroundColor: selected ? colors.gray900 : colors.gray100,
                             paddingHorizontal: 11,
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -703,7 +704,7 @@ export default function StockScreen() {
                         >
                           <Text
                             style={{
-                              color: selected ? '#FFFFFF' : '#777777',
+                              color: selected ? colors.white : colors.gray600,
                               fontSize: 12,
                               fontWeight: '800',
                             }}
@@ -743,9 +744,9 @@ export default function StockScreen() {
                   style={{
                     borderRadius: 18,
                     borderCurve: 'continuous',
-                    backgroundColor: '#F7F7F7',
+                    backgroundColor: colors.gray50,
                     borderWidth: 1,
-                    borderColor: '#EEEEEE',
+                    borderColor: colors.gray100,
                     paddingHorizontal: 16,
                     paddingVertical: 12,
                     flexDirection: 'row',
@@ -753,15 +754,15 @@ export default function StockScreen() {
                   }}
                 >
                   <View>
-                    <Text style={{ color: '#777777', fontSize: 12, fontWeight: '600' }}>Cout total</Text>
-                    <Text style={{ marginTop: 3, color: '#111111', fontSize: 17, fontWeight: '800' }}>
+                    <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '600' }}>Cout total</Text>
+                    <Text style={{ marginTop: 3, color: colors.gray900, fontSize: 17, fontWeight: '800' }}>
                       {formatMoney(parsedPurchaseTotal)}
                     </Text>
                   </View>
                   {parsedSellingPrice > 0 ? (
                     <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ color: '#777777', fontSize: 12, fontWeight: '600' }}>Benefice / unite</Text>
-                      <Text style={{ marginTop: 3, color: '#2A8D55', fontSize: 17, fontWeight: '800' }}>
+                      <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '600' }}>Benefice / unite</Text>
+                      <Text style={{ marginTop: 3, color: colors.successMuted, fontSize: 17, fontWeight: '800' }}>
                         {formatMoney(parsedSellingPrice - purchaseUnitPrice)}
                       </Text>
                     </View>
@@ -770,11 +771,11 @@ export default function StockScreen() {
               ) : null}
 
               {formError ? (
-                <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>{formError}</Text>
+                <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>{formError}</Text>
               ) : null}
 
               {successMessage ? (
-                <Text style={{ color: '#2A8D55', fontSize: 13, fontWeight: '700' }}>
+                <Text style={{ color: colors.successMuted, fontSize: 13, fontWeight: '700' }}>
                   {successMessage}
                 </Text>
               ) : null}
@@ -784,9 +785,9 @@ export default function StockScreen() {
                 disabled={saving}
                 style={({ pressed }: { pressed: boolean }) => ({
                   height: 54,
-                  borderRadius: 20,
+                  borderRadius: 16,
                   borderCurve: 'continuous',
-                  backgroundColor: saving ? '#9FCAEF' : '#2A8DEB',
+                  backgroundColor: saving ? colors.primaryDisabled : colors.primary,
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexDirection: 'row',
@@ -794,8 +795,8 @@ export default function StockScreen() {
                   opacity: pressed ? 0.76 : 1,
                 })}
               >
-                {saving ? <ActivityIndicator color="#FFFFFF" /> : <Feather name="plus" size={20} color="#FFFFFF" />}
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                {saving ? <ActivityIndicator color={colors.white} /> : <Feather name="plus" size={20} color={colors.white} />}
+                <Text style={{ color: colors.white, fontSize: 16, fontWeight: '800' }}>
                   {supplyMode === 'existing' ? 'Approvisionner' : 'Enregistrer'}
                 </Text>
               </Pressable>
@@ -804,29 +805,29 @@ export default function StockScreen() {
             {/* ── Liste des produits ───────────────────────────────── */}
             {products.length > 0 ? (
               <View style={{ marginTop: 32, gap: 14 }}>
-                <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }}>
+                <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }}>
                   Catalogue ({products.length})
                 </Text>
 
                 {/* Barre de recherche */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F2F2F2', borderRadius: 16, paddingHorizontal: 14, gap: 8 }}>
-                  <Feather name="search" size={16} color="#AAAAAA" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.gray100, borderRadius: 16, paddingHorizontal: 14, gap: 8 }}>
+                  <Feather name="search" size={16} color={colors.gray400} />
                   <TextInput
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     placeholder="Rechercher un produit..."
-                    placeholderTextColor="#AAAAAA"
-                    style={{ flex: 1, height: 44, fontSize: 14, color: '#111111', fontWeight: '600' }}
+                    placeholderTextColor={colors.gray400}
+                    style={{ flex: 1, height: 44, fontSize: 14, color: colors.gray900, fontWeight: '600' }}
                   />
                   {searchQuery.length > 0 ? (
                     <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-                      <Feather name="x" size={15} color="#AAAAAA" />
+                      <Feather name="x" size={15} color={colors.gray400} />
                     </Pressable>
                   ) : null}
                 </View>
 
                 {filteredProducts.length === 0 ? (
-                  <Text style={{ color: '#B4B4B4', fontSize: 13, fontWeight: '600', textAlign: 'center', paddingVertical: 12 }}>
+                  <Text style={{ color: colors.gray400, fontSize: 13, fontWeight: '600', textAlign: 'center', paddingVertical: 12 }}>
                     Aucun produit correspondant
                   </Text>
                 ) : (
@@ -838,7 +839,7 @@ export default function StockScreen() {
                         key={product.$id}
                         style={{
                           borderRadius: 18,
-                          backgroundColor: '#F7F7F7',
+                          backgroundColor: colors.gray50,
                           paddingHorizontal: 14,
                           paddingVertical: 12,
                           flexDirection: 'row',
@@ -848,15 +849,15 @@ export default function StockScreen() {
                       >
                         <Text style={{ fontSize: 28 }}>{product.emoji}</Text>
                         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                          <Text numberOfLines={1} style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
+                          <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>
                             {product.name}
                           </Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Text style={{ color: isEmpty ? '#D93D42' : isLow ? '#E07A10' : '#8E8E8E', fontSize: 12, fontWeight: '700' }}>
+                            <Text style={{ color: isEmpty ? colors.danger : isLow ? colors.warningDark : colors.gray600, fontSize: 12, fontWeight: '700' }}>
                               {isEmpty ? 'Rupture' : `${product.quantity} ${product.unit}`}
                             </Text>
-                            <Text style={{ color: '#CCCCCC', fontSize: 12 }}>·</Text>
-                            <Text style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600' }}>
+                            <Text style={{ color: colors.gray300, fontSize: 12 }}>·</Text>
+                            <Text style={{ color: colors.gray600, fontSize: 12, fontWeight: '600' }}>
                               {formatMoney(product.sellingUnitPrice)} / {product.unit}
                             </Text>
                           </View>
@@ -864,38 +865,38 @@ export default function StockScreen() {
                         <Pressable
                           onPress={() => openRestock(product)}
                           style={({ pressed }: { pressed: boolean }) => ({
-                            width: 34, height: 34, borderRadius: 10, backgroundColor: '#E8F4FD',
+                            width: 34, height: 34, borderRadius: 10, backgroundColor: colors.primarySoft,
                             alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1,
                           })}
                         >
-                          <Feather name="plus-circle" size={14} color="#2A8DEB" />
+                          <Feather name="plus-circle" size={14} color={colors.primary} />
                         </Pressable>
                         <Pressable
                           onPress={() => openHistory(product)}
                           style={({ pressed }: { pressed: boolean }) => ({
-                            width: 34, height: 34, borderRadius: 10, backgroundColor: '#EBEBEB',
+                            width: 34, height: 34, borderRadius: 10, backgroundColor: colors.gray100,
                             alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1,
                           })}
                         >
-                          <Feather name="clock" size={14} color="#555555" />
+                          <Feather name="clock" size={14} color={colors.gray700} />
                         </Pressable>
                         <Pressable
                           onPress={() => openEdit(product)}
                           style={({ pressed }: { pressed: boolean }) => ({
-                            width: 34, height: 34, borderRadius: 10, backgroundColor: '#EBEBEB',
+                            width: 34, height: 34, borderRadius: 10, backgroundColor: colors.gray100,
                             alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1,
                           })}
                         >
-                          <Feather name="edit-2" size={14} color="#555555" />
+                          <Feather name="edit-2" size={14} color={colors.gray700} />
                         </Pressable>
                         <Pressable
                           onPress={() => setConfirmDeleteProduct(product)}
                           style={({ pressed }: { pressed: boolean }) => ({
-                            width: 34, height: 34, borderRadius: 10, backgroundColor: '#FFEEEE',
+                            width: 34, height: 34, borderRadius: 10, backgroundColor: colors.dangerSoft,
                             alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1,
                           })}
                         >
-                          <Feather name="trash-2" size={14} color="#D93D42" />
+                          <Feather name="trash-2" size={14} color={colors.danger} />
                         </Pressable>
                       </View>
                     );
@@ -911,11 +912,11 @@ export default function StockScreen() {
       <Modal visible={editingProduct !== null} transparent animationType="fade" onRequestClose={() => setEditingProduct(null)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.24)' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setEditingProduct(null)} />
-          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 36, gap: 14 }}>
-            <Text style={{ color: '#111111', fontSize: 20, fontWeight: '800' }}>Modifier le produit</Text>
+          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 36, gap: 14 }}>
+            <Text style={{ color: colors.gray900, fontSize: 20, fontWeight: '800' }}>Modifier le produit</Text>
 
             <View style={{ gap: 8 }}>
-              <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Emoji</Text>
+              <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Emoji</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {ALL_EMOJIS.map((emoji) => (
                   <Pressable
@@ -923,7 +924,7 @@ export default function StockScreen() {
                     onPress={() => setEditEmoji(emoji)}
                     style={({ pressed }: { pressed: boolean }) => ({
                       width: 44, height: 44, borderRadius: 14, borderCurve: 'continuous',
-                      backgroundColor: editEmoji === emoji ? '#111111' : '#F2F2F2',
+                      backgroundColor: editEmoji === emoji ? colors.gray900 : colors.gray100,
                       alignItems: 'center', justifyContent: 'center',
                       opacity: pressed ? 0.7 : 1,
                     })}
@@ -937,44 +938,44 @@ export default function StockScreen() {
                 onChangeText={setEditEmoji}
                 maxLength={4}
                 placeholder="Ou tape un emoji personnalisé"
-                placeholderTextColor="#B4B4B4"
-                style={{ height: 44, borderRadius: 14, backgroundColor: '#F7F7F7', paddingHorizontal: 14, fontSize: 22, color: '#111111' }}
+                placeholderTextColor={colors.gray400}
+                style={{ height: 44, borderRadius: 14, backgroundColor: colors.gray50, paddingHorizontal: 14, fontSize: 22, color: colors.gray900 }}
               />
             </View>
 
             <View style={{ gap: 8 }}>
-              <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Nom</Text>
+              <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Nom</Text>
               <TextInput
                 value={editName}
                 onChangeText={setEditName}
-                style={{ height: 48, borderRadius: 14, backgroundColor: '#F7F7F7', paddingHorizontal: 14, fontSize: 15, color: '#111111', fontWeight: '600' }}
+                style={{ height: 48, borderRadius: 14, backgroundColor: colors.gray50, paddingHorizontal: 14, fontSize: 15, color: colors.gray900, fontWeight: '600' }}
               />
             </View>
 
             <View style={{ gap: 8 }}>
-              <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Prix de vente / unite (F)</Text>
+              <Text style={{ color: colors.gray600, fontSize: 13, fontWeight: '600' }}>Prix de vente / unite (F)</Text>
               <TextInput
                 value={editSellingPrice}
                 onChangeText={setEditSellingPrice}
                 keyboardType="number-pad"
-                style={{ height: 48, borderRadius: 14, backgroundColor: '#F7F7F7', paddingHorizontal: 14, fontSize: 15, color: '#111111', fontWeight: '600' }}
+                style={{ height: 48, borderRadius: 14, backgroundColor: colors.gray50, paddingHorizontal: 14, fontSize: 15, color: colors.gray900, fontWeight: '600' }}
               />
             </View>
 
-            {formError ? <Text style={{ color: '#D93D42', fontSize: 13, fontWeight: '700' }}>{formError}</Text> : null}
+            {formError ? <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>{formError}</Text> : null}
 
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Pressable
                 onPress={() => { setEditingProduct(null); setFormError(''); }}
-                style={{ flex: 1, height: 50, borderRadius: 16, backgroundColor: '#F2F2F2', alignItems: 'center', justifyContent: 'center' }}
+                style={{ flex: 1, height: 50, borderRadius: 16, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '700' }}>Annuler</Text>
+                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '700' }}>Annuler</Text>
               </Pressable>
               <Pressable
                 onPress={handleSaveEdit}
-                style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 50, borderRadius: 16, backgroundColor: '#2A8DEB', alignItems: 'center', justifyContent: 'center', opacity: pressed || editSaving ? 0.68 : 1 })}
+                style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 50, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', opacity: pressed || editSaving ? 0.68 : 1 })}
               >
-                {editSaving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>Enregistrer</Text>}
+                {editSaving ? <ActivityIndicator color={colors.white} /> : <Text style={{ color: colors.white, fontSize: 15, fontWeight: '800' }}>Enregistrer</Text>}
               </Pressable>
             </View>
           </View>
@@ -985,32 +986,32 @@ export default function StockScreen() {
       <Modal visible={historyProduct !== null} transparent animationType="slide" onRequestClose={() => setHistoryProduct(null)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.24)' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setHistoryProduct(null)} />
-          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 20, paddingBottom: 36, maxHeight: '75%' }}>
+          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 20, paddingBottom: 36, maxHeight: '75%' }}>
             <View style={{ paddingHorizontal: 24, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: '#111111', fontSize: 18, fontWeight: '800' }} numberOfLines={1}>
+                <Text style={{ color: colors.gray900, fontSize: 18, fontWeight: '800' }} numberOfLines={1}>
                   {historyProduct?.emoji} {historyProduct?.name}
                 </Text>
-                <Text style={{ color: '#9A9A9A', fontSize: 13, fontWeight: '600', marginTop: 2 }}>
+                <Text style={{ color: colors.gray500, fontSize: 13, fontWeight: '600', marginTop: 2 }}>
                   Historique des approvisionnements
                 </Text>
               </View>
               <Pressable
                 onPress={() => setHistoryProduct(null)}
-                style={({ pressed }: { pressed: boolean }) => ({ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F2F2F2', alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
+                style={({ pressed }: { pressed: boolean }) => ({ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}
               >
-                <Feather name="x" size={16} color="#555555" />
+                <Feather name="x" size={16} color={colors.gray700} />
               </Pressable>
             </View>
 
             {historyLoading ? (
               <View style={{ paddingVertical: 32, alignItems: 'center' }}>
-                <ActivityIndicator color="#2A8DEB" />
+                <ActivityIndicator color={colors.primary} />
               </View>
             ) : historyMovements.length === 0 ? (
               <View style={{ paddingHorizontal: 24, paddingVertical: 24, alignItems: 'center', gap: 6 }}>
-                <Feather name="package" size={32} color="#CCCCCC" />
-                <Text style={{ color: '#B4B4B4', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
+                <Feather name="package" size={32} color={colors.gray300} />
+                <Text style={{ color: colors.gray400, fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
                   Aucun approvisionnement enregistre
                 </Text>
               </View>
@@ -1024,7 +1025,7 @@ export default function StockScreen() {
                     <View
                       key={m.$id}
                       style={{
-                        backgroundColor: '#F7F7F7',
+                        backgroundColor: colors.gray50,
                         borderRadius: 16,
                         paddingHorizontal: 14,
                         paddingVertical: 12,
@@ -1033,22 +1034,22 @@ export default function StockScreen() {
                         gap: 12,
                       }}
                     >
-                      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#E8F4FD', alignItems: 'center', justifyContent: 'center' }}>
-                        <Feather name="plus-circle" size={16} color="#2A8DEB" />
+                      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+                        <Feather name="plus-circle" size={16} color={colors.primary} />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={{ color: '#111111', fontSize: 14, fontWeight: '800' }}>
+                        <Text style={{ color: colors.gray900, fontSize: 14, fontWeight: '800' }}>
                           +{m.quantity} {m.unit}
                         </Text>
-                        <Text style={{ color: '#9A9A9A', fontSize: 12, fontWeight: '600', marginTop: 1 }}>
+                        <Text style={{ color: colors.gray500, fontSize: 12, fontWeight: '600', marginTop: 1 }}>
                           {dateStr} · {timeStr}
                         </Text>
                       </View>
                       <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                        <Text style={{ color: '#111111', fontSize: 13, fontWeight: '800' }}>
+                        <Text style={{ color: colors.gray900, fontSize: 13, fontWeight: '800' }}>
                           {formatMoney(m.totalCost)}
                         </Text>
-                        <Text style={{ color: '#9A9A9A', fontSize: 11, fontWeight: '600' }}>
+                        <Text style={{ color: colors.gray500, fontSize: 11, fontWeight: '600' }}>
                           {formatMoney(m.unitCost)} / {m.unit}
                         </Text>
                       </View>
@@ -1065,25 +1066,25 @@ export default function StockScreen() {
       <Modal visible={confirmDeleteProduct !== null} transparent animationType="fade" onRequestClose={() => setConfirmDeleteProduct(null)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.24)' }}>
           <Pressable style={{ flex: 1 }} onPress={() => setConfirmDeleteProduct(null)} />
-          <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 36, gap: 16 }}>
+          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 36, gap: 16 }}>
             <View style={{ gap: 4 }}>
-              <Text style={{ color: '#111111', fontSize: 20, fontWeight: '800' }}>Supprimer ce produit ?</Text>
-              <Text style={{ color: '#8E8E8E', fontSize: 14, lineHeight: 20 }}>
-                {confirmDeleteProduct?.emoji} <Text style={{ fontWeight: '700', color: '#111111' }}>{confirmDeleteProduct?.name}</Text> sera supprime definitivement. Cette action est irreversible.
+              <Text style={{ color: colors.gray900, fontSize: 20, fontWeight: '800' }}>Supprimer ce produit ?</Text>
+              <Text style={{ color: colors.gray600, fontSize: 14, lineHeight: 20 }}>
+                {confirmDeleteProduct?.emoji} <Text style={{ fontWeight: '700', color: colors.gray900 }}>{confirmDeleteProduct?.name}</Text> sera supprime definitivement. Cette action est irreversible.
               </Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Pressable
                 onPress={() => setConfirmDeleteProduct(null)}
-                style={{ flex: 1, height: 50, borderRadius: 16, backgroundColor: '#F2F2F2', alignItems: 'center', justifyContent: 'center' }}
+                style={{ flex: 1, height: 50, borderRadius: 16, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '700' }}>Annuler</Text>
+                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '700' }}>Annuler</Text>
               </Pressable>
               <Pressable
                 onPress={handleConfirmDelete}
-                style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 50, borderRadius: 16, backgroundColor: '#D93D42', alignItems: 'center', justifyContent: 'center', opacity: pressed || deleteSaving ? 0.68 : 1 })}
+                style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 50, borderRadius: 16, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', opacity: pressed || deleteSaving ? 0.68 : 1 })}
               >
-                {deleteSaving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>Supprimer</Text>}
+                {deleteSaving ? <ActivityIndicator color={colors.white} /> : <Text style={{ color: colors.white, fontSize: 15, fontWeight: '800' }}>Supprimer</Text>}
               </Pressable>
             </View>
           </View>

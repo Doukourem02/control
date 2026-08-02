@@ -2,6 +2,7 @@ import type { NotificationRow } from '@/lib/control-data';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { colors } from '@/lib/theme';
 
 export function NotificationsCenterModal({
   visible,
@@ -49,7 +50,7 @@ export function NotificationsCenterModal({
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: colors.white,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             paddingTop: 18,
@@ -67,9 +68,9 @@ export function NotificationsCenterModal({
             }}
           >
             <View style={{ gap: 2 }}>
-              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Notifications</Text>
+              <Text style={{ color: colors.gray900, fontSize: 22, fontWeight: '800' }}>Notifications</Text>
               {unreadCount > 0 && (
-                <Text style={{ color: '#8E8E8E', fontSize: 13 }}>
+                <Text style={{ color: colors.gray600, fontSize: 13 }}>
                   {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
                 </Text>
               )}
@@ -82,11 +83,11 @@ export function NotificationsCenterModal({
                     paddingHorizontal: 12,
                     paddingVertical: 7,
                     borderRadius: 12,
-                    backgroundColor: '#F5F5F5',
+                    backgroundColor: colors.gray50,
                     opacity: pressed ? 0.68 : 1,
                   })}
                 >
-                  <Text style={{ color: '#111111', fontSize: 13, fontWeight: '600' }}>
+                  <Text style={{ color: colors.gray900, fontSize: 13, fontWeight: '600' }}>
                     Tout lire
                   </Text>
                 </Pressable>
@@ -97,13 +98,13 @@ export function NotificationsCenterModal({
                   width: 38,
                   height: 38,
                   borderRadius: 19,
-                  backgroundColor: '#F5F5F5',
+                  backgroundColor: colors.gray50,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: pressed ? 0.68 : 1,
                 })}
               >
-                <Feather name="x" size={20} color="#111111" />
+                <Feather name="x" size={20} color={colors.gray900} />
               </Pressable>
             </View>
           </View>
@@ -115,8 +116,8 @@ export function NotificationsCenterModal({
           >
             {notifications.length === 0 ? (
               <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                <MaterialCommunityIcons name="bell-outline" size={40} color="#D0D0D0" />
-                <Text style={{ color: '#A0A0A0', fontSize: 15, marginTop: 12 }}>
+                <MaterialCommunityIcons name="bell-outline" size={40} color={colors.gray300} />
+                <Text style={{ color: colors.gray500, fontSize: 15, marginTop: 12 }}>
                   Aucune notification
                 </Text>
               </View>
@@ -129,7 +130,7 @@ export function NotificationsCenterModal({
                     flexDirection: 'row',
                     alignItems: 'flex-start',
                     gap: 12,
-                    backgroundColor: notif.read === 'false' ? '#F5F8FF' : '#FAFAFA',
+                    backgroundColor: notif.read === 'false' ? colors.primarySoft : colors.gray50,
                     borderRadius: 16,
                     padding: 14,
                     opacity: pressed ? 0.75 : 1,
@@ -140,7 +141,7 @@ export function NotificationsCenterModal({
                       width: 36,
                       height: 36,
                       borderRadius: 18,
-                      backgroundColor: notif.read === 'false' ? '#E8F0FF' : '#F0F0F0',
+                      backgroundColor: notif.read === 'false' ? colors.primarySoft : colors.gray100,
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
@@ -155,14 +156,14 @@ export function NotificationsCenterModal({
                             : 'bell-ring-outline'
                       }
                       size={18}
-                      color={notif.read === 'false' ? '#4C9BFF' : '#A0A0A0'}
+                      color={notif.read === 'false' ? colors.primaryMuted : colors.gray500}
                     />
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text
                         style={{
-                          color: '#111111',
+                          color: colors.gray900,
                           fontSize: 14,
                           fontWeight: notif.read === 'false' ? '700' : '600',
                           flex: 1,
@@ -176,16 +177,16 @@ export function NotificationsCenterModal({
                             width: 7,
                             height: 7,
                             borderRadius: 4,
-                            backgroundColor: '#4C9BFF',
+                            backgroundColor: colors.primaryMuted,
                             flexShrink: 0,
                           }}
                         />
                       )}
                     </View>
-                    <Text style={{ color: '#5A5A5A', fontSize: 13, lineHeight: 18 }}>
+                    <Text style={{ color: colors.gray700, fontSize: 13, lineHeight: 18 }}>
                       {notif.message}
                     </Text>
-                    <Text style={{ color: '#A0A0A0', fontSize: 12, marginTop: 2 }}>
+                    <Text style={{ color: colors.gray500, fontSize: 12, marginTop: 2 }}>
                       {typeLabel[notif.type] ?? notif.type} · {formatRelativeDate(notif.$createdAt)}
                     </Text>
                   </View>

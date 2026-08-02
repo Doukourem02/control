@@ -2,6 +2,7 @@ import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { quickActions } from './shared-ui';
+import { colors } from '@/lib/theme';
 
 export function QuickActionsModal({
   visible,
@@ -33,7 +34,7 @@ export function QuickActionsModal({
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: colors.white,
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             paddingHorizontal: 24,
@@ -50,20 +51,20 @@ export function QuickActionsModal({
               marginBottom: 6,
             }}
           >
-            <Text style={{ color: '#111111', fontSize: 20, fontWeight: '800' }}>Actions rapides</Text>
+            <Text style={{ color: colors.gray900, fontSize: 20, fontWeight: '800' }}>Actions rapides</Text>
             <Pressable
               onPress={onClose}
               style={({ pressed }: { pressed: boolean }) => ({
                 width: 36,
                 height: 36,
                 borderRadius: 18,
-                backgroundColor: '#F5F5F5',
+                backgroundColor: colors.gray50,
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: pressed ? 0.68 : 1,
               })}
             >
-              <Feather name="x" size={18} color="#111111" />
+              <Feather name="x" size={18} color={colors.gray900} />
             </Pressable>
           </View>
 
@@ -76,9 +77,9 @@ export function QuickActionsModal({
               }}
               style={({ pressed }: { pressed: boolean }) => ({
                 minHeight: 64,
-                borderRadius: 20,
+                borderRadius: 16,
                 borderCurve: 'continuous',
-                backgroundColor: '#F7F7F7',
+                backgroundColor: colors.gray50,
                 paddingHorizontal: 14,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -98,16 +99,16 @@ export function QuickActionsModal({
                 }}
               >
                 {action.icon.family === 'material' ? (
-                  <MaterialCommunityIcons name={action.icon.name} size={22} color="#FFFFFF" />
+                  <MaterialCommunityIcons name={action.icon.name} size={22} color={colors.white} />
                 ) : (
-                  <Feather name={action.icon.name} size={22} color="#FFFFFF" />
+                  <Feather name={action.icon.name} size={22} color={colors.white} />
                 )}
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: '#111111', fontSize: 16, fontWeight: '700' }}>{action.title}</Text>
-                <Text style={{ color: '#8E8E8E', fontSize: 13, marginTop: 1 }}>{action.subtitle}</Text>
+                <Text style={{ color: colors.gray900, fontSize: 16, fontWeight: '700' }}>{action.title}</Text>
+                <Text style={{ color: colors.gray600, fontSize: 13, marginTop: 1 }}>{action.subtitle}</Text>
               </View>
-              <Feather name="chevron-right" size={20} color="#B0B0B0" />
+              <Feather name="chevron-right" size={20} color={colors.gray400} />
             </Pressable>
           ))}
         </View>

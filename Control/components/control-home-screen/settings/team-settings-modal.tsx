@@ -7,6 +7,7 @@ import {
   type MemberRow,
 } from '@/lib/control-data';
 import { getControlErrorMessage } from '@/lib/control-errors';
+import { colors } from '@/lib/theme';
 import Feather from '@expo/vector-icons/Feather';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -115,69 +116,69 @@ export function TeamSettingsModal({
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.24)' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <ScrollView
-          style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '85%' }}
+          style={{ backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '85%' }}
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 18, paddingBottom: compact ? 24 : 34, gap: 16 }}
           showsVerticalScrollIndicator={false}
         >
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ gap: 2 }}>
-              <Text style={{ color: '#111111', fontSize: 22, fontWeight: '800' }}>Equipe</Text>
-              <Text style={{ color: '#8E8E8E', fontSize: 13 }}>Proprietaire, vendeuses et acces</Text>
+              <Text style={{ color: colors.gray900, fontSize: 22, fontWeight: '800' }}>Equipe</Text>
+              <Text style={{ color: colors.gray600, fontSize: 13 }}>Proprietaire, vendeuses et acces</Text>
             </View>
             <Pressable
               onPress={onClose}
               style={({ pressed }: { pressed: boolean }) => ({
-                width: 38, height: 38, borderRadius: 19, backgroundColor: '#F5F5F5',
+                width: 38, height: 38, borderRadius: 19, backgroundColor: colors.gray100,
                 alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.68 : 1,
               })}
             >
-              <Feather name="x" size={20} color="#111111" />
+              <Feather name="x" size={20} color={colors.gray900} />
             </Pressable>
           </View>
 
           {/* Feedback */}
           {feedback ? (
-            <View style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: feedback.ok ? '#E8F8F0' : '#FFF3CD' }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: feedback.ok ? '#08784F' : '#856404' }}>{feedback.msg}</Text>
+            <View style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: feedback.ok ? colors.successSoft : colors.dangerSoft }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: feedback.ok ? colors.success : colors.dangerDark }}>{feedback.msg}</Text>
             </View>
           ) : null}
 
           {/* Proprietaire */}
-          <View style={{ borderRadius: 20, backgroundColor: '#F7F7F7', padding: 14 }}>
+          <View style={{ borderRadius: 14, backgroundColor: colors.gray50, padding: 14 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8F4EF', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: '#08784F', fontSize: 15, fontWeight: '800' }}>{getInitials(ownerName)}</Text>
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: colors.primary, fontSize: 15, fontWeight: '800' }}>{getInitials(ownerName)}</Text>
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>{ownerName}</Text>
-                {ownerEmail ? <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600', marginTop: 1 }}>{ownerEmail}</Text> : null}
+                <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>{ownerName}</Text>
+                {ownerEmail ? <Text numberOfLines={1} style={{ color: colors.gray600, fontSize: 12, fontWeight: '600', marginTop: 1 }}>{ownerEmail}</Text> : null}
               </View>
-              <Text style={{ color: '#08784F', fontSize: 11, fontWeight: '800' }}>Owner</Text>
+              <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>Owner</Text>
             </View>
           </View>
 
           {/* Membres actifs */}
           {loadingMembers ? (
-            <ActivityIndicator size="small" color="#111111" style={{ alignSelf: 'center', marginVertical: 8 }} />
+            <ActivityIndicator size="small" color={colors.primary} style={{ alignSelf: 'center', marginVertical: 8 }} />
           ) : activeMembers.length > 0 ? (
             <View style={{ gap: 8 }}>
-              <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Vendeuses actives</Text>
+              <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Vendeuses actives</Text>
               {activeMembers.map((m) => (
-                <View key={m.$id} style={{ borderRadius: 16, backgroundColor: '#F7F7F7', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#EAF0FF', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: '#2A5BE8', fontSize: 13, fontWeight: '800' }}>{getInitials(m.name || m.email)}</Text>
+                <View key={m.$id} style={{ borderRadius: 16, backgroundColor: colors.gray50, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '800' }}>{getInitials(m.name || m.email)}</Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>{m.name || m.email}</Text>
-                    {m.name ? <Text numberOfLines={1} style={{ color: '#8E8E8E', fontSize: 12, fontWeight: '600' }}>{m.email}</Text> : null}
+                    <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>{m.name || m.email}</Text>
+                    {m.name ? <Text numberOfLines={1} style={{ color: colors.gray600, fontSize: 12, fontWeight: '600' }}>{m.email}</Text> : null}
                   </View>
                   {isOwner ? (
                     <Pressable
                       onPress={() => handleRemove(m.$id)}
                       style={({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
                     >
-                      <Feather name="x" size={16} color="#BBBBBB" />
+                      <Feather name="x" size={16} color={colors.gray300} />
                     </Pressable>
                   ) : null}
                 </View>
@@ -188,16 +189,16 @@ export function TeamSettingsModal({
           {/* Invitations en attente */}
           {isOwner && pendingMembers.length > 0 ? (
             <View style={{ gap: 8 }}>
-              <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>En attente</Text>
+              <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>En attente</Text>
               {pendingMembers.map((m) => (
-                <View key={m.$id} style={{ borderRadius: 16, backgroundColor: '#F7F7F7', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#F5F0FF', alignItems: 'center', justifyContent: 'center' }}>
-                    <Feather name="clock" size={15} color="#8B5CF6" />
+                <View key={m.$id} style={{ borderRadius: 16, backgroundColor: colors.gray50, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.accentDeepSoft, alignItems: 'center', justifyContent: 'center' }}>
+                    <Feather name="clock" size={15} color={colors.accentDeep} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>{m.name || m.email}</Text>
-                    <Text style={{ color: '#8B5CF6', fontSize: 12, fontWeight: '700', marginTop: 1 }}>Code : {m.inviteCode}</Text>
-                    <Text style={{ color: '#8E8E8E', fontSize: 11, fontWeight: '700', marginTop: 1 }}>
+                    <Text numberOfLines={1} style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>{m.name || m.email}</Text>
+                    <Text style={{ color: colors.accentDeep, fontSize: 12, fontWeight: '700', marginTop: 1 }}>Code : {m.inviteCode}</Text>
+                    <Text style={{ color: colors.gray600, fontSize: 11, fontWeight: '700', marginTop: 1 }}>
                       {formatInviteExpiry(m.expiresAt, m.$createdAt)}
                     </Text>
                   </View>
@@ -205,7 +206,7 @@ export function TeamSettingsModal({
                     onPress={() => handleRemove(m.$id)}
                     style={({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.5 : 1, padding: 4 })}
                   >
-                    <Feather name="x" size={16} color="#BBBBBB" />
+                    <Feather name="x" size={16} color={colors.gray300} />
                   </Pressable>
                 </View>
               ))}
@@ -215,14 +216,14 @@ export function TeamSettingsModal({
           {/* Inviter (owner) */}
           {isOwner ? (
             inviteVisible ? (
-              <View style={{ borderRadius: 20, backgroundColor: '#F7F7F7', padding: 14, gap: 10 }}>
-                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Inviter une vendeuse</Text>
+              <View style={{ borderRadius: 16, backgroundColor: colors.gray50, padding: 14, gap: 10 }}>
+                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Inviter une vendeuse</Text>
                 <TextInput
                   placeholder="Nom"
                   value={inviteName}
                   onChangeText={setInviteName}
-                  placeholderTextColor="#AAAAAA"
-                  style={{ height: 44, borderRadius: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 14, color: '#111111', fontWeight: '600' }}
+                  placeholderTextColor={colors.gray400}
+                  style={{ height: 44, borderRadius: 12, backgroundColor: colors.white, paddingHorizontal: 14, fontSize: 14, color: colors.gray900, fontWeight: '600' }}
                 />
                 <TextInput
                   placeholder="Email"
@@ -230,23 +231,23 @@ export function TeamSettingsModal({
                   onChangeText={setInviteEmail}
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  placeholderTextColor="#AAAAAA"
-                  style={{ height: 44, borderRadius: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 14, color: '#111111', fontWeight: '600' }}
+                  placeholderTextColor={colors.gray400}
+                  style={{ height: 44, borderRadius: 12, backgroundColor: colors.white, paddingHorizontal: 14, fontSize: 14, color: colors.gray900, fontWeight: '600' }}
                 />
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
                     onPress={() => { setInviteVisible(false); setInviteName(''); setInviteEmail(''); }}
-                    style={{ flex: 1, height: 42, borderRadius: 12, backgroundColor: '#EBEBEB', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ flex: 1, height: 42, borderRadius: 12, backgroundColor: colors.gray200, alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Text style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>Annuler</Text>
+                    <Text style={{ color: colors.gray900, fontSize: 14, fontWeight: '700' }}>Annuler</Text>
                   </Pressable>
                   <Pressable
                     onPress={handleInvite}
-                    style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 42, borderRadius: 12, backgroundColor: '#111111', alignItems: 'center', justifyContent: 'center', opacity: pressed || inviteLoading ? 0.68 : 1 })}
+                    style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 42, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', opacity: pressed || inviteLoading ? 0.68 : 1 })}
                   >
                     {inviteLoading
-                      ? <ActivityIndicator size="small" color="#FFFFFF" />
-                      : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Generer le code</Text>}
+                      ? <ActivityIndicator size="small" color={colors.white} />
+                      : <Text style={{ color: colors.white, fontSize: 14, fontWeight: '700' }}>Generer le code</Text>}
                   </Pressable>
                 </View>
               </View>
@@ -254,12 +255,12 @@ export function TeamSettingsModal({
               <Pressable
                 onPress={() => setInviteVisible(true)}
                 style={({ pressed }: { pressed: boolean }) => ({
-                  height: 48, borderRadius: 18, backgroundColor: '#111111', flexDirection: 'row',
+                  height: 48, borderRadius: 18, backgroundColor: colors.primary, flexDirection: 'row',
                   alignItems: 'center', justifyContent: 'center', gap: 8, opacity: pressed ? 0.68 : 1,
                 })}
               >
-                <Feather name="user-plus" size={16} color="#FFFFFF" />
-                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Inviter une vendeuse</Text>
+                <Feather name="user-plus" size={16} color={colors.white} />
+                <Text style={{ color: colors.white, fontSize: 14, fontWeight: '700' }}>Inviter une vendeuse</Text>
               </Pressable>
             )
           ) : null}
@@ -267,30 +268,30 @@ export function TeamSettingsModal({
           {/* Rejoindre (seller / new user) */}
           {!isOwner ? (
             joinVisible ? (
-              <View style={{ borderRadius: 20, backgroundColor: '#F0F4FF', padding: 14, gap: 10 }}>
-                <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>Rejoindre une boutique</Text>
+              <View style={{ borderRadius: 16, backgroundColor: colors.primarySoft, padding: 14, gap: 10 }}>
+                <Text style={{ color: colors.gray900, fontSize: 15, fontWeight: '800' }}>Rejoindre une boutique</Text>
                 <TextInput
                   placeholder="Code d'invitation (ex. A3F9C2)"
                   value={joinCode}
                   onChangeText={setJoinCode}
                   autoCapitalize="characters"
-                  placeholderTextColor="#AAAAAA"
-                  style={{ height: 44, borderRadius: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 14, color: '#111111', fontWeight: '700', letterSpacing: 2 }}
+                  placeholderTextColor={colors.gray400}
+                  style={{ height: 44, borderRadius: 12, backgroundColor: colors.white, paddingHorizontal: 14, fontSize: 14, color: colors.gray900, fontWeight: '700', letterSpacing: 2 }}
                 />
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable
                     onPress={() => { setJoinVisible(false); setJoinCode(''); }}
-                    style={{ flex: 1, height: 42, borderRadius: 12, backgroundColor: '#DDEAFF', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ flex: 1, height: 42, borderRadius: 12, backgroundColor: colors.primaryDisabled, alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Text style={{ color: '#2A5BE8', fontSize: 14, fontWeight: '700' }}>Annuler</Text>
+                    <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '700' }}>Annuler</Text>
                   </Pressable>
                   <Pressable
                     onPress={handleJoin}
-                    style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 42, borderRadius: 12, backgroundColor: '#2A5BE8', alignItems: 'center', justifyContent: 'center', opacity: pressed || joinLoading ? 0.68 : 1 })}
+                    style={({ pressed }: { pressed: boolean }) => ({ flex: 2, height: 42, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', opacity: pressed || joinLoading ? 0.68 : 1 })}
                   >
                     {joinLoading
-                      ? <ActivityIndicator size="small" color="#FFFFFF" />
-                      : <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Rejoindre</Text>}
+                      ? <ActivityIndicator size="small" color={colors.white} />
+                      : <Text style={{ color: colors.white, fontSize: 14, fontWeight: '700' }}>Rejoindre</Text>}
                   </Pressable>
                 </View>
               </View>
@@ -298,12 +299,12 @@ export function TeamSettingsModal({
               <Pressable
                 onPress={() => setJoinVisible(true)}
                 style={({ pressed }: { pressed: boolean }) => ({
-                  height: 48, borderRadius: 18, backgroundColor: '#F0F4FF', flexDirection: 'row',
+                  height: 48, borderRadius: 18, backgroundColor: colors.primarySoft, flexDirection: 'row',
                   alignItems: 'center', justifyContent: 'center', gap: 8, opacity: pressed ? 0.68 : 1,
                 })}
               >
-                <Feather name="log-in" size={16} color="#2A5BE8" />
-                <Text style={{ color: '#2A5BE8', fontSize: 14, fontWeight: '700' }}>Rejoindre une boutique</Text>
+                <Feather name="log-in" size={16} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '700' }}>Rejoindre une boutique</Text>
               </Pressable>
             )
           ) : null}
