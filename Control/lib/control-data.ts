@@ -675,6 +675,7 @@ export type MemberRow = BaseRow & {
   role: 'seller';
   inviteCode: string;
   status: MemberStatus;
+  expiresAt?: string;
 };
 
 export async function getTeamMembers(): Promise<MemberRow[]> {

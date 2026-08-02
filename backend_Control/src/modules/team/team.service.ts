@@ -14,6 +14,27 @@ function generateInviteCode(): string {
   return randomBytes(5).toString('hex').toUpperCase();
 }
 
+export function isInviteExpired(expiresAt: string, createdAt?: string) {
+  const expiry = expiresAt || (createdAt ? new Date(new Date(createdAt).getTime() + 24 * 60 * 60 * 1000).toISOString() : '');
+  if (!expiry) return false;
+
+  return new Date(expiry).getTime() <= Date.now();
+}
+
+export function assertInviteUsable(member: { status: string; expiresAt: string; $createdAt?: string }) {
+  if (member.status === 'removed') {
+    throw userError('Cette invitation a ete revoquee.', 410, 'TEAM_CODE_REVOKED');
+  }
+
+  if (member.status === 'active') {
+    throw userError('Ce code a deja ete utilise.', 409, 'TEAM_CODE_USED');
+  }
+
+  if (isInviteExpired(member.expiresAt, member.$createdAt)) {
+    throw userError('Ce code d\'invitation a expire.', 410, 'TEAM_CODE_EXPIRED');
+  }
+}
+
 export async function getTeamMembers(shopId: string) {
   return listMembersByShop(shopId);
 }
@@ -76,13 +97,7 @@ export async function joinShop(userId: string, body: Record<string, unknown>) {
     throw userError('Code d\'invitation invalide.', 404, 'TEAM_CODE_INVALID');
   }
 
-  if (member.status === 'removed') {
-    throw userError('Cette invitation a ete revoquee.', 410, 'TEAM_CODE_REVOKED');
-  }
-
-  if (member.status === 'active') {
-    throw userError('Ce code a deja ete utilise.', 409, 'TEAM_CODE_USED');
-  }
+  assertInviteUsable(member);
 
   const updatedMember = await updateMember(member.$id, { userId, status: 'active' });
   await upsertUserProfile({

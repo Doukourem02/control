@@ -72,15 +72,11 @@ const summary: TodaySummary = {
 function renderClosureForm(overrides: Partial<Parameters<typeof ClosureForm>[0]> = {}) {
   const props: Parameters<typeof ClosureForm>[0] = {
     summary,
-    physicalCashAmount: '',
     note: '',
-    isPartial: false,
     saving: false,
     formError: '',
     successMessage: '',
-    onPhysicalCashAmountChange: mock.fn(),
     onNoteChange: mock.fn(),
-    onPartialChange: mock.fn(),
     onSubmit: mock.fn(),
     ...overrides,
   };
@@ -104,43 +100,39 @@ describe('ClosureForm', () => {
     assert.equal(formatClosureMoney(1200).replace(/\s/g, ' '), '1 200 F');
   });
 
-  it('shows the calculated cash gap when cash is entered', () => {
-    const { tree } = renderClosureForm({ physicalCashAmount: '1300' });
+  it('shows the daily sales total', () => {
+    const { tree } = renderClosureForm();
+    const output = JSON.stringify(tree.toJSON()).replace(/\s/g, ' ');
 
-    assert.equal(JSON.stringify(tree.toJSON()).includes('100'), true);
+    assert.equal(output.includes('2 400'), true);
   });
 
-  it('keeps submit disabled until cash can be calculated', () => {
-    const { tree } = renderClosureForm();
+  it('disables submit when the day is already closed', () => {
+    const { tree } = renderClosureForm({
+      summary: {
+        ...summary,
+        isClosed: true,
+      },
+    });
     const submit = findByHostType(tree, 'Pressable').at(-1);
 
-    assert.equal(JSON.stringify(tree.toJSON()).includes('En attente'), true);
     assert.equal(submit?.props.disabled, true);
   });
 
-  it('forwards cash, note, partial toggle and submit actions', () => {
-    const onPhysicalCashAmountChange = mock.fn();
+  it('forwards note and submit actions', () => {
     const onNoteChange = mock.fn();
-    const onPartialChange = mock.fn();
     const onSubmit = mock.fn();
     const { tree } = renderClosureForm({
-      physicalCashAmount: '1200',
-      onPhysicalCashAmountChange,
       onNoteChange,
-      onPartialChange,
       onSubmit,
     });
     const inputs = findByHostType(tree, 'TextInput');
     const pressables = findByHostType(tree, 'Pressable');
 
-    act(() => inputs[0].props.onChangeText('1400'));
-    act(() => inputs[1].props.onChangeText('Fin de journee'));
-    act(() => pressables[0].props.onPress());
+    act(() => inputs[0].props.onChangeText('Fin de journee'));
     act(() => pressables.at(-1)?.props.onPress());
 
-    assert.equal(onPhysicalCashAmountChange.mock.calls[0].arguments[0], '1400');
     assert.equal(onNoteChange.mock.calls[0].arguments[0], 'Fin de journee');
-    assert.equal(onPartialChange.mock.calls[0].arguments[0], true);
     assert.equal(onSubmit.mock.callCount(), 1);
   });
 });

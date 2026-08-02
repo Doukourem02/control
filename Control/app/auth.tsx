@@ -76,14 +76,14 @@ function SocialProviderIcon({
   color: string;
 }) {
   if (icon === 'google') {
-    return <GoogleLogo size={27} />;
+    return <GoogleLogo size={22} />;
   }
 
   if (icon === 'x') {
-    return <XLogo size={25} />;
+    return <XLogo size={20} />;
   }
 
-  return <MaterialCommunityIcons name={icon} size={28} color={color} />;
+  return <MaterialCommunityIcons name={icon} size={22} color={color} />;
 }
 
 export default function AuthScreen() {
@@ -133,7 +133,7 @@ export default function AuthScreen() {
               ? `Invitation validée pour ${sellerInvite.shopName}. Crée ton mot de passe.`
               : 'Entre ton email et le code donné par le propriétaire.'
             : 'Choisis comment tu veux utiliser CONTROL.'
-        : 'CONTROL, plateforme de gestion commerciale pour boutiques.';
+        : 'CONTROL, gardez le contrôle sur votre business, où qu’il grandisse.';
 
   useEffect(() => {
     if (params.mode === 'reset' && params.userId && params.secret) {
@@ -302,15 +302,15 @@ export default function AuthScreen() {
           <View
             style={{
               flex: 1,
-              justifyContent: 'flex-start',
+              justifyContent: 'space-between',
               gap: compact ? 18 : 22,
             }}
           >
-            <View style={{ gap: compact ? 22 : 30 }}>
+            <View style={{ gap: compact ? 16 : 22 }}>
               <View
                 style={{
-                  width: 92,
-                  height: 92,
+                  width: 72,
+                  height: 72,
                   overflow: 'hidden',
                   alignSelf: 'center',
                   alignItems: 'center',
@@ -320,17 +320,17 @@ export default function AuthScreen() {
                 <Image
                   source={require('../assets/images/logo.png')}
                   accessibilityLabel="CONTROL"
-                  style={{ width: 156, height: 156, resizeMode: 'contain' }}
+                  style={{ width: 122, height: 122, resizeMode: 'contain' }}
                 />
               </View>
 
-              <View style={{ gap: 10, alignItems: 'center' }}>
+              <View style={{ gap: 8, alignItems: 'center' }}>
                 <Text
                   style={{
                     color: '#111111',
-                    fontSize: compact ? 29 : 32,
-                    lineHeight: compact ? 34 : 37,
-                    fontWeight: '800',
+                    fontSize: compact ? 24 : 26,
+                    lineHeight: compact ? 29 : 31,
+                    fontWeight: '700',
                     textAlign: 'center',
                   }}
                 >
@@ -338,35 +338,23 @@ export default function AuthScreen() {
                 </Text>
                 <Text
                   style={{
-                    maxWidth: 330,
+                    maxWidth: 300,
                     color: '#8A8A8A',
-                    fontSize: 15,
-                    lineHeight: 22,
+                    fontSize: 14,
+                    lineHeight: 20,
                     fontWeight: '500',
                     textAlign: 'center',
                   }}
                 >
                   {headerSubtitle}
                 </Text>
-                {!isRecover && !isReset ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 6, rowGap: 3, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: '#9A9A9A', fontSize: 13, lineHeight: 19, fontWeight: '500' }}>
-                      {isRegister ? 'Déjà inscrit' : 'Nouveau ici'}
-                    </Text>
-                    <Text style={{ color: '#C8C8C8', fontSize: 13, lineHeight: 19 }}>·</Text>
-                    <Pressable onPress={toggleMode} disabled={saving} hitSlop={8}>
-                      <Text style={{ color: '#111111', fontSize: 13, lineHeight: 19, fontWeight: '700' }}>
-                        {isRegister ? 'Connexion' : 'Créer un compte'}
-                      </Text>
-                    </Pressable>
-                  </View>
-                ) : (
+                {isRecover || isReset ? (
                   <Pressable onPress={backToLogin} disabled={saving} hitSlop={8}>
-                    <Text style={{ color: '#111111', fontSize: 15, fontWeight: '800' }}>
+                    <Text style={{ color: '#111111', fontSize: 14, fontWeight: '700' }}>
                       Retour a la connexion
                     </Text>
                   </Pressable>
-                )}
+                ) : null}
               </View>
 
               <View style={{ gap: 12 }}>
@@ -435,17 +423,17 @@ export default function AuthScreen() {
                         <>
                           <View
                             style={{
-                              height: 54,
+                              height: 50,
                               flexDirection: 'row',
                               alignItems: 'center',
                               gap: 12,
-                              borderRadius: 14,
+                              borderRadius: 12,
                               borderCurve: 'continuous',
                               backgroundColor: '#F5F5F5',
                               paddingHorizontal: 16,
                             }}
                           >
-                            <Feather name="mail" size={21} color="#292929" />
+                            <Feather name="mail" size={18} color="#292929" />
                             <TextInput
                               value={email}
                               onChangeText={setEmail}
@@ -460,17 +448,17 @@ export default function AuthScreen() {
                           </View>
                           <View
                             style={{
-                              height: 54,
+                              height: 50,
                               flexDirection: 'row',
                               alignItems: 'center',
                               gap: 12,
-                              borderRadius: 14,
+                              borderRadius: 12,
                               borderCurve: 'continuous',
                               backgroundColor: '#F5F5F5',
                               paddingHorizontal: 16,
                             }}
                           >
-                            <Feather name="key" size={21} color="#292929" />
+                            <Feather name="key" size={18} color="#292929" />
                             <TextInput
                               value={inviteCode}
                               onChangeText={(value) => setInviteCode(value.toUpperCase())}
@@ -511,17 +499,17 @@ export default function AuthScreen() {
 
                           <View
                             style={{
-                              height: 54,
+                              height: 50,
                               flexDirection: 'row',
                               alignItems: 'center',
                               gap: 12,
-                              borderRadius: 14,
+                              borderRadius: 12,
                               borderCurve: 'continuous',
                               backgroundColor: '#F5F5F5',
                               paddingHorizontal: 16,
                             }}
                           >
-                            <Feather name={registerRole === 'owner' ? 'briefcase' : 'user'} size={21} color="#292929" />
+                            <Feather name={registerRole === 'owner' ? 'briefcase' : 'user'} size={18} color="#292929" />
                             <TextInput
                               value={name}
                               onChangeText={setName}
@@ -546,17 +534,17 @@ export default function AuthScreen() {
                 {!isReset && !isRegisterRoleChoice && !isSellerInviteStep ? (
                   <View
                     style={{
-                      height: 54,
+                      height: 50,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 12,
-                      borderRadius: 14,
+                      borderRadius: 12,
                       borderCurve: 'continuous',
                       backgroundColor: '#F5F5F5',
                       paddingHorizontal: 16,
                     }}
                   >
-                    <Feather name="mail" size={21} color="#292929" />
+                    <Feather name="mail" size={18} color="#292929" />
                     <TextInput
                       value={email}
                       onChangeText={setEmail}
@@ -574,17 +562,17 @@ export default function AuthScreen() {
                 {!isRecover && !isRegisterRoleChoice && !isSellerInviteStep ? (
                   <View
                     style={{
-                      height: 54,
+                      height: 50,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 12,
-                      borderRadius: 14,
+                      borderRadius: 12,
                       borderCurve: 'continuous',
                       backgroundColor: '#F5F5F5',
                       paddingHorizontal: 16,
                     }}
                   >
-                    <Feather name="lock" size={21} color="#292929" />
+                    <Feather name="lock" size={18} color="#292929" />
                     <TextInput
                       value={password}
                       onChangeText={setPassword}
@@ -595,7 +583,7 @@ export default function AuthScreen() {
                       style={{ flex: 1, color: '#111111', fontSize: 16, fontWeight: '600' }}
                     />
                     <Pressable onPress={() => setPasswordVisible((current) => !current)} hitSlop={10}>
-                      <Feather name={passwordVisible ? 'eye-off' : 'eye'} size={21} color="#8A8A8A" />
+                      <Feather name={passwordVisible ? 'eye-off' : 'eye'} size={18} color="#8A8A8A" />
                     </Pressable>
                   </View>
                 ) : null}
@@ -603,17 +591,17 @@ export default function AuthScreen() {
                 {isReset ? (
                   <View
                     style={{
-                      height: 54,
+                      height: 50,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 12,
-                      borderRadius: 14,
+                      borderRadius: 12,
                       borderCurve: 'continuous',
                       backgroundColor: '#F5F5F5',
                       paddingHorizontal: 16,
                     }}
                   >
-                    <Feather name="lock" size={21} color="#292929" />
+                    <Feather name="lock" size={18} color="#292929" />
                     <TextInput
                       value={passwordConfirm}
                       onChangeText={setPasswordConfirm}
@@ -651,10 +639,11 @@ export default function AuthScreen() {
                   onPress={isSellerInviteStep ? handleVerifySellerInvite : handleSubmit}
                   disabled={saving}
                   style={({ pressed }: { pressed: boolean }) => ({
-                    height: 56,
+                    height: 52,
+                    marginTop: 8,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 28,
+                    borderRadius: 24,
                     backgroundColor: saving ? '#2A2A2A' : '#000000',
                     opacity: pressed ? 0.86 : 1,
                   })}
@@ -662,7 +651,7 @@ export default function AuthScreen() {
                   {saving ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
-                    <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>
+                    <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
                       {isReset
                         ? 'Mettre a jour'
                         : isRecover
@@ -687,11 +676,11 @@ export default function AuthScreen() {
 
                   <Text
                     style={{
-                      color: '#3A3A3A',
-                      fontSize: 13,
-                      lineHeight: 18,
+                      color: '#8A8A8A',
+                      fontSize: 12,
+                      lineHeight: 17,
                       textAlign: 'center',
-                      fontWeight: '800',
+                      fontWeight: '600',
                     }}
                   >
                     Continuer avec vos réseaux préférés
@@ -701,7 +690,7 @@ export default function AuthScreen() {
                     style={{
                       flexDirection: 'row',
                       justifyContent: 'center',
-                      gap: 16,
+                      gap: 12,
                     }}
                   >
                     {socialProviders.map((item) => (
@@ -712,11 +701,11 @@ export default function AuthScreen() {
                         onPress={() => handleSocialPress(item.provider)}
                         disabled={saving}
                         style={({ pressed }: { pressed: boolean }) => ({
-                          width: 58,
-                          height: 58,
+                          width: 48,
+                          height: 48,
                           alignItems: 'center',
                           justifyContent: 'center',
-                          borderRadius: 14,
+                          borderRadius: 12,
                           borderCurve: 'continuous',
                           backgroundColor: '#F7F7F7',
                           opacity: saving ? 0.45 : pressed ? 0.7 : 1,
@@ -726,6 +715,20 @@ export default function AuthScreen() {
                       </Pressable>
                     ))}
                   </View>
+                </View>
+              ) : null}
+
+              {!isRecover && !isReset ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 6, rowGap: 3, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#9A9A9A', fontSize: 13, lineHeight: 19, fontWeight: '500' }}>
+                    {isRegister ? 'Déjà inscrit' : 'Nouveau ici'}
+                  </Text>
+                  <Text style={{ color: '#C8C8C8', fontSize: 13, lineHeight: 19 }}>·</Text>
+                  <Pressable onPress={toggleMode} disabled={saving} hitSlop={8}>
+                    <Text style={{ color: '#111111', fontSize: 13, lineHeight: 19, fontWeight: '700' }}>
+                      {isRegister ? 'Connexion' : 'Créer un compte'}
+                    </Text>
+                  </Pressable>
                 </View>
               ) : null}
             </View>

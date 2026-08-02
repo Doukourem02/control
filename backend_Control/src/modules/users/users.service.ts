@@ -6,7 +6,7 @@ import { devError, userError } from '../../utils/http';
 import { getOrCreateCurrentShop } from '../shops/shops.service';
 import { getShopById, type ShopRow } from '../shops/shops.repository';
 import { getActiveMemberByUserId, getMemberByInviteCode } from '../team/team.repository';
-import { joinShop } from '../team/team.service';
+import { assertInviteUsable, joinShop } from '../team/team.service';
 import {
   getUserProfileByUserId,
   upsertUserProfile,
@@ -153,13 +153,7 @@ export async function registerUser(input: AuthInput) {
       throw userError('Code d\'invitation invalide.', 404, 'TEAM_CODE_INVALID');
     }
 
-    if (invite.status === 'removed') {
-      throw userError('Cette invitation a ete revoquee.', 410, 'TEAM_CODE_REVOKED');
-    }
-
-    if (invite.status === 'active') {
-      throw userError('Ce code a deja ete utilise.', 409, 'TEAM_CODE_USED');
-    }
+    assertInviteUsable(invite);
 
     if (invite.email.toLowerCase().trim() !== email) {
       throw userError('Ce code ne correspond pas a cet email.', 403, 'TEAM_CODE_EMAIL_MISMATCH');
@@ -233,13 +227,7 @@ export async function verifySellerInvite(input: InviteCheckInput) {
     throw userError('Code d\'invitation invalide.', 404, 'TEAM_CODE_INVALID');
   }
 
-  if (invite.status === 'removed') {
-    throw userError('Cette invitation a ete revoquee.', 410, 'TEAM_CODE_REVOKED');
-  }
-
-  if (invite.status === 'active') {
-    throw userError('Ce code a deja ete utilise.', 409, 'TEAM_CODE_USED');
-  }
+  assertInviteUsable(invite);
 
   if (invite.email.toLowerCase().trim() !== email) {
     throw userError('Ce code ne correspond pas a cet email.', 403, 'TEAM_CODE_EMAIL_MISMATCH');

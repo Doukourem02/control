@@ -4,7 +4,7 @@ import {
   getTodaySummary,
   type TodaySummary,
 } from '@/lib/control-data';
-import { ClosureForm, formatClosureMoney, parseClosureAmount } from '@/components/closure-form';
+import { ClosureForm, formatClosureMoney } from '@/components/closure-form';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -61,20 +61,16 @@ export default function ClosureScreen() {
   const todayKey = dateToKey(new Date());
   const [businessDate, setBusinessDate] = useState(todayKey);
   const [summary, setSummary] = useState<TodaySummary>(emptySummary);
-  const [physicalCashAmount, setPhysicalCashAmount] = useState('');
   const [note, setNote] = useState('');
-  const [isPartial, setIsPartial] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const hasPhysicalCashInput = physicalCashAmount.trim().length > 0;
-  const parsedPhysicalCash = parseClosureAmount(physicalCashAmount);
   const closureStatusText = summary.isClosed
     ? summary.latestCashGap === 0
-      ? 'Journee deja cloturee sans ecart.'
-      : `Journee deja cloturee avec un ecart de ${formatClosureMoney(summary.latestCashGap)}.`
-    : 'Journee ouverte : compte le cash pour cloturer.';
+      ? 'Journee deja cloturee.'
+      : `Journee deja cloturee avec un ecart caisse de ${formatClosureMoney(summary.latestCashGap)}.`
+    : 'Journee ouverte : verifie le bilan puis cloture.';
   const closureStatusColor = summary.isClosed
     ? summary.latestCashGap === 0
       ? '#34C875'
@@ -99,9 +95,7 @@ export default function ClosureScreen() {
   }, [loadSummary]);
 
   useEffect(() => {
-    setPhysicalCashAmount('');
     setNote('');
-    setIsPartial(false);
     setFormError('');
     setSuccessMessage('');
   }, [businessDate]);
@@ -109,32 +103,17 @@ export default function ClosureScreen() {
   async function handleCreateClosure() {
     setFormError('');
     setSuccessMessage('');
-
-    if (!hasPhysicalCashInput) {
-      setFormError('Renseigne le cash compte avant de cloturer.');
-      return;
-    }
-
-    if (Number.isNaN(parsedPhysicalCash) || parsedPhysicalCash < 0) {
-      setFormError('Le montant compte doit etre valide.');
-      return;
-    }
-
     setSaving(true);
 
     try {
       const closure = await createCashClosure({
         businessDate,
-        physicalCashAmount: Math.round(parsedPhysicalCash),
+        physicalCashAmount: Math.round(summary.physicalCashExpected),
         note: note.trim(),
-        isPartial,
+        isPartial: false,
       });
 
-      setSuccessMessage(
-        closure.cashGap === 0
-          ? `Caisse cloturee : ${formatClosureMoney(closure.physicalCashActual)} comptes, aucun ecart.`
-          : `Caisse cloturee : ecart ${formatClosureMoney(closure.cashGap)}.`
-      );
+      setSuccessMessage(`Journee cloturee : ${formatClosureMoney(closure.cashSalesAmount + closure.mobileMoneySalesAmount)} de ventes.`);
       await loadSummary({ silent: true });
     } catch (error) {
       setFormError(getControlErrorMessage(error));
@@ -199,10 +178,10 @@ export default function ClosureScreen() {
 
             <View style={{ marginTop: 26, gap: 8 }}>
               <Text style={{ color: '#111111', fontSize: 34, lineHeight: 39, fontWeight: '800' }}>
-                Cloture
+                Bilan du jour
               </Text>
               <Text style={{ color: '#9A9A9A', fontSize: 15, lineHeight: 21 }}>
-                Compte le cash present dans la caisse.
+                Regarde combien la journee a fait, puis cloture.
               </Text>
             </View>
 
@@ -311,15 +290,11 @@ export default function ClosureScreen() {
             ) : (
               <ClosureForm
                 summary={summary}
-                physicalCashAmount={physicalCashAmount}
                 note={note}
-                isPartial={isPartial}
                 saving={saving}
                 formError={formError}
                 successMessage={successMessage}
-                onPhysicalCashAmountChange={setPhysicalCashAmount}
                 onNoteChange={setNote}
-                onPartialChange={setIsPartial}
                 onSubmit={handleCreateClosure}
               />
             )}

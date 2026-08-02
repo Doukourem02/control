@@ -374,15 +374,7 @@ export default function StockScreen() {
     }
   }
 
-  const ALL_EMOJIS = [
-    '🍅','🥦','🧅','🧄','🌽','🥕',
-    '🍆','🥬','🍋','🍌','🍊','🍇',
-    '🍞','🥚','🧈','🌾','🫘','🥜',
-    '🐟','🥩','🐔','🐑','🐷','🦐',
-    '🥓','🧀','🥛','🧃','🫙','☕',
-    '🍫','🧴','🧹','🧺','🧻','🪣',
-    '💊','🏷️','📦','🛒',
-  ];
+  const ALL_EMOJIS = ['📦', '🐟', '🥩', '🐔', '🍅', '🥬', '🌽', '🥚', '🍞', '🥛', '🧴', '🧹'];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -564,30 +556,6 @@ export default function StockScreen() {
               ) : (
                 <>
                   <Field label="Nom" value={name} onChangeText={setName} placeholder="Poisson, boeuf, tripe" />
-
-                  <View style={{ gap: 8 }}>
-                    <Text style={{ color: '#777777', fontSize: 13, fontWeight: '600' }}>Emoji du produit</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      {ALL_EMOJIS.map((emoji) => {
-                        const effectiveEmoji = newProductEmoji || selectedCategory?.emoji || '📦';
-                        const selected = effectiveEmoji === emoji;
-                        return (
-                          <Pressable
-                            key={emoji}
-                            onPress={() => setNewProductEmoji(emoji)}
-                            style={({ pressed }: { pressed: boolean }) => ({
-                              width: 44, height: 44, borderRadius: 14, borderCurve: 'continuous',
-                              backgroundColor: selected ? '#111111' : '#F2F2F2',
-                              alignItems: 'center', justifyContent: 'center',
-                              opacity: pressed ? 0.7 : 1,
-                            })}
-                          >
-                            <Text style={{ fontSize: 22 }}>{emoji}</Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
 
                   <View style={{ gap: 9 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

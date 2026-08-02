@@ -14,6 +14,7 @@ export type MemberRow = {
   role: MemberRole;
   inviteCode: string;
   status: MemberStatus;
+  expiresAt: string;
 };
 
 function toMemberRow(doc: any): MemberRow {
@@ -27,7 +28,12 @@ function toMemberRow(doc: any): MemberRow {
     role: (doc.role ?? 'seller') as MemberRole,
     inviteCode: doc.inviteCode as string,
     status: (doc.status ?? 'pending') as MemberStatus,
+    expiresAt: (doc.expiresAt ?? '') as string,
   };
+}
+
+export function createInviteExpiryDate() {
+  return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 }
 
 export async function createMember(input: {
@@ -44,6 +50,7 @@ export async function createMember(input: {
     role: 'seller',
     inviteCode: input.inviteCode,
     status: 'pending',
+    expiresAt: createInviteExpiryDate(),
   });
   return toMemberRow(doc);
 }

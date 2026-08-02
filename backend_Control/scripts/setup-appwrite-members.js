@@ -33,6 +33,7 @@ const stringAttributes = [
   { key: 'role',       size: 16,  required: true },
   { key: 'inviteCode', size: 32,  required: true },
   { key: 'status',     size: 16,  required: true },
+  { key: 'expiresAt',  size: 64,  required: false },
 ];
 
 const indexes = [
