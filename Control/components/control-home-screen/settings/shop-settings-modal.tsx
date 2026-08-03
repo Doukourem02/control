@@ -82,6 +82,14 @@ export function ShopSettingsModal({
     setLogoPhoto({ uri: asset.uri, base64: asset.base64!, mimeType: asset.mimeType || 'image/jpeg' });
   }
 
+  function choosePhotoSource() {
+    Alert.alert('Photo de la boutique', undefined, [
+      { text: 'Caméra', onPress: () => pickLogoPhoto('camera') },
+      { text: 'Galerie', onPress: () => pickLogoPhoto('library') },
+      { text: 'Annuler', style: 'cancel' },
+    ]);
+  }
+
   async function handleSave() {
     const trimmedName = name.trim();
 
@@ -156,27 +164,51 @@ export function ShopSettingsModal({
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            {logoPhoto || logoUri ? (
-              <Image
-                source={{ uri: logoPhoto?.uri ?? logoUri ?? undefined }}
-                style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: colors.gray100 }}
-              />
-            ) : (
-              <View
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 20,
-                  backgroundColor: colors.primarySoft,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ color: colors.primary, fontSize: 22, fontWeight: '800' }}>
-                  {getInitials(name || 'Boutique')}
-                </Text>
-              </View>
-            )}
+            <Pressable
+              onPress={choosePhotoSource}
+              style={({ pressed }: { pressed: boolean }) => ({ opacity: pressed ? 0.72 : 1 })}
+            >
+              {logoPhoto || logoUri ? (
+                <Image
+                  source={{ uri: logoPhoto?.uri ?? logoUri ?? undefined }}
+                  style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: colors.gray100 }}
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 20,
+                    backgroundColor: colors.primarySoft,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: colors.primary, fontSize: 22, fontWeight: '800' }}>
+                    {getInitials(name || 'Boutique')}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable
+              onPress={choosePhotoSource}
+              style={({ pressed }: { pressed: boolean }) => ({
+                position: 'absolute',
+                left: 40,
+                top: 40,
+                width: 26,
+                height: 26,
+                borderRadius: 13,
+                backgroundColor: colors.primary,
+                borderWidth: 2,
+                borderColor: colors.white,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.72 : 1,
+              })}
+            >
+              <Feather name="camera" size={12} color={colors.white} />
+            </Pressable>
             <View style={{ flex: 1, flexDirection: 'row', gap: 8 }}>
               <Pressable
                 onPress={() => pickLogoPhoto('camera')}

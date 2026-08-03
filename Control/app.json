@@ -46,8 +46,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "CONTROL a besoin d'accéder à tes photos pour joindre un justificatif à une dépense.",
-          "cameraPermission": "CONTROL a besoin de la caméra pour photographier un justificatif de dépense."
+          "photosPermission": "CONTROL a besoin d'accéder à tes photos pour ajouter une image (logo boutique, justificatif de dépense).",
+          "cameraPermission": "CONTROL a besoin de la caméra pour ajouter une photo (logo boutique, justificatif de dépense)."
         }
       ]
     ],
